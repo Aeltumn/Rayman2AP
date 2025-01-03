@@ -21,12 +21,18 @@
     <ClInclude Include="Connector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\APCpp\Archipelago.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Connector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\APCpp\Archipelago.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -51,6 +51,9 @@
     <LinkIncremental>false</LinkIncremental>
     <SourcePath>$(VC_SourcePath)\src;</SourcePath>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -98,6 +101,7 @@
   <ItemGroup>
     <ClCompile Include="src/dllmain.c" />
     <ClCompile Include="src/mod.c" />
+    <ClCompile Include="src\commands.c" />
     <ClCompile Include="src\connector.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

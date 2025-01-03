@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#pragma comment (lib, "crypt32")
 
 #define MESSAGE_TYPE_DEBUG 0
 #define MESSAGE_TYPE_CHECK 1

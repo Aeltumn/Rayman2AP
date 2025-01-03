@@ -5,6 +5,8 @@ VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rayman2APMod", "Rayman2APMod\Rayman2APMod.vcxproj", "{2B7CDCCE-40A9-4AB5-8A3F-D0E25D229092}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rayman2APConnector", "Rayman2APConnector\Rayman2APConnector.vcxproj", "{7E05AEA7-6CE6-4061-B858-DD890A834D47}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -15,6 +17,10 @@ Global
 		{2B7CDCCE-40A9-4AB5-8A3F-D0E25D229092}.Debug|x86.Build.0 = Debug|Win32
 		{2B7CDCCE-40A9-4AB5-8A3F-D0E25D229092}.Release|x86.ActiveCfg = Release|Win32
 		{2B7CDCCE-40A9-4AB5-8A3F-D0E25D229092}.Release|x86.Build.0 = Release|Win32
+		{7E05AEA7-6CE6-4061-B858-DD890A834D47}.Debug|x86.ActiveCfg = Debug|Win32
+		{7E05AEA7-6CE6-4061-B858-DD890A834D47}.Debug|x86.Build.0 = Debug|Win32
+		{7E05AEA7-6CE6-4061-B858-DD890A834D47}.Release|x86.ActiveCfg = Release|Win32
+		{7E05AEA7-6CE6-4061-B858-DD890A834D47}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

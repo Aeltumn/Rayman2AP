@@ -5,10 +5,12 @@
 
 void fn_vAttachHooks( void )
 {
+	// FHK_M_lCreateHook();
 }
 
 void fn_vDetachHooks( void )
 {
+	// FML_M_lDestroyHook();
 }
 
 __declspec(dllexport)

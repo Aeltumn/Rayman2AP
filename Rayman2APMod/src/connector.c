@@ -170,4 +170,18 @@ int MOD_SendMessage(int type, const char* data) {
 
 int MOD_HandleMessage(int type, const char* data) {
     MOD_Print("[parent] Received type %d: %s", type, data);
+
+    switch (type) {
+    case MESSAGE_TYPE_DEATH:
+        // Ignore a death if death link is currently not enabled
+        if (!MOD_GetDeathLink()) return;
+
+        // Trigger a death for th player
+        MOD_TriggerDeath();
+        break;
+    case MESSAGE_TYPE_UPDATE_DEATHLINK:
+        // Update the death link state
+        MOD_SetDeathLink(data[0] - '0' ? 1 : 0);
+        break;
+    }
 }

@@ -18,8 +18,15 @@ void Connector::send(int type, std::string data ){
 }
 
 void Connector::handle(int type, std::string data) {
-    // Temporarily send a message that we received something as verification
-    send(MESSAGE_TYPE_DEBUG, "[child] Received type " + std::to_string(type) + ": " + data);
-
-    // TODO Actually handle messages!
+    switch (type) {
+    case MESSAGE_TYPE_UPDATE_DEATHLINK:
+        // TODO: Sync death link state with AP
+        send(MESSAGE_TYPE_UPDATE_DEATHLINK, data);
+        break;
+    case MESSAGE_TYPE_TEST:
+        send(MESSAGE_TYPE_DEATH, "");
+        break;
+    default:
+        send(MESSAGE_TYPE_DEBUG, "[child] Received type " + std::to_string(type) + ": " + data);
+    }
 }

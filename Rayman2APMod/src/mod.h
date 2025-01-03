@@ -2,6 +2,10 @@
 #include "framework.h"
 
 void MOD_Print(char*, ...);
-void MOD_Main(void);
+void MOD_Main();
+void MOD_TriggerDeath();
 
-extern void MOD_InitCommands(void);
+BOOL MOD_GetDeathLink();
+void MOD_SetDeathLink(BOOL value);
+
+extern void MOD_InitCommands();

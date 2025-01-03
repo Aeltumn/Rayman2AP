@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <math.h>
+#include <time.h>
 
 #include <ACP_Ray2.h>
 #include <console.h>

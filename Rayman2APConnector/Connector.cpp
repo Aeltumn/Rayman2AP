@@ -23,8 +23,11 @@ void Connector::handle(int type, std::string data) {
         // TODO: Sync death link state with AP
         send(MESSAGE_TYPE_UPDATE_DEATHLINK, data);
         break;
+    case MESSAGE_TYPE_DEATH:
+        send(MESSAGE_TYPE_DEATH, data);
+        break;
     case MESSAGE_TYPE_TEST:
-        send(MESSAGE_TYPE_DEATH, "");
+        send(MESSAGE_TYPE_DEATH, "Hat Kid got MYURRDERRRRED and so will you");
         break;
     default:
         send(MESSAGE_TYPE_DEBUG, "[child] Received type " + std::to_string(type) + ": " + data);

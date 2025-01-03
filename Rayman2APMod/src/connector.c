@@ -17,7 +17,9 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
     DWORD bytesRead;
     while (ReadFile(hChildStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
         // Replace the \n with the null terminator otherwise add it after
-        if (buffer[bytesRead - 1] == '\n') {
+        if (buffer[bytesRead - 2] == '\r') {
+            buffer[bytesRead - 2] = '\0';
+        } else if (buffer[bytesRead - 1] == '\n') {
             buffer[bytesRead - 1] = '\0';
         } else {
             buffer[bytesRead] = '\0';
@@ -178,10 +180,11 @@ int MOD_HandleMessage(int type, const char* data) {
 
         // Trigger a death for th player
         MOD_TriggerDeath();
+        MOD_ShowScreenText(data);
         break;
     case MESSAGE_TYPE_UPDATE_DEATHLINK:
         // Update the death link state
-        MOD_SetDeathLink(data[0] - '0' ? 1 : 0);
+        MOD_SetDeathLink(data[0] - '0' ? TRUE : FALSE);
         break;
     }
 }

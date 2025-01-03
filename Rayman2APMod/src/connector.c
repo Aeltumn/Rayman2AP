@@ -28,7 +28,7 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
 
         if (ready == 0) {
             ready = 1;
-            MOD_Print("[parent] Ready to handle input after receiving first packet\n");
+            MOD_Print("[parent] Ready to handle input after receiving first packet");
             SetEvent(readyEvent);
         }
     }
@@ -42,11 +42,11 @@ int MOD_StartConnector() {
 
     // Create the pipes for communication
     if (!CreatePipe(&hChildStdOutRead, &hChildStdOutWrite, &saAttr, 0)) {
-        MOD_Print("Error creating stdout pipe\n");
+        MOD_Print("Error creating stdout pipe");
         return 1;
     }
     if (!CreatePipe(&hChildStdInRead, &hChildStdInWrite, &saAttr, 0)) {
-        MOD_Print("Error creating stdin pipe\n");
+        MOD_Print("Error creating stdin pipe");
         return 1;
     }
 
@@ -69,7 +69,14 @@ int MOD_StartConnector() {
     // Create the job to share with the child process so we can close it
     job = CreateJobObjectA(NULL, NULL);
     if (!job) {
-        MOD_Print("Error creating job object\n");
+        MOD_Print("Error creating job object");
+        return 1;
+    }
+
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
+    jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    if (SetInformationJobObject(job, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)) == 0) {
+        MOD_Print("Error configuring job object");
         return 1;
     }
 
@@ -89,7 +96,7 @@ int MOD_StartConnector() {
         &si,                 // Startup information
         &pi                  // Process information
     )) {
-        MOD_Print("Error creating process\n");
+        MOD_Print("Error creating process");
         return 1;
     }
 
@@ -109,7 +116,7 @@ int MOD_StartConnector() {
     );
 
     if (readyEvent == NULL) {
-        MOD_Print("Error creating event\n");
+        MOD_Print("Error creating event");
         return 1;
     }
 
@@ -122,7 +129,7 @@ int MOD_StartConnector() {
         &threadId            // Receives the thread ID
     );
     if (threadHandle == NULL) {
-        MOD_Print("Error creating thread\n");
+        MOD_Print("Error creating thread");
         return 1;
     }
 
@@ -154,13 +161,13 @@ int MOD_SendMessage(int type, const char* data) {
     strcpy(message + 1, data);
     message[length - 2] = '\n';
     message[length - 1] = '\0';
-    MOD_Print("[parent] Sending type %d with data %s to connector\n", type, data);
+    MOD_Print("[parent] Sending type %d with data %s to connector", type, data);
     if (!WriteFile(hChildStdInWrite, message, strlen(message), &bytesWritten, NULL)) {
-        MOD_Print("Encountered error while writing to connector %lu\n", GetLastError());
+        MOD_Print("Encountered error while writing to connector %lu", GetLastError());
     }
     free(message);
 }
 
 int MOD_HandleMessage(int type, const char* data) {
-    MOD_Print("[parent] Received type %d: %s\n", type, data);
+    MOD_Print("[parent] Received type %d: %s", type, data);
 }

@@ -1,6 +1,5 @@
 #include <windows.h>
 #include <stdio.h>
-#include "connector.h"
 
 // Copy the definition of the injection function from Twofold
 #define LDR_C_InitProc "ModMain"
@@ -8,15 +7,6 @@
 typedef int (*td_pfn_lInitProc)(BOOL bInit, void* reserved);
 
 int main() {
-    if (MOD_StartConnector()) {
-        printf("Error starting connector\n");
-        return 1;
-    }
-    MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
-    return 0;
-}
-
-void runDLL() {
     // Load in the DLL
     char buffer[MAX_PATH];
     GetCurrentDirectoryA(MAX_PATH, buffer);

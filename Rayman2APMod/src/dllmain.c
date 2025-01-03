@@ -18,8 +18,9 @@ int ModMain( BOOL bInit )
 	{
 		fn_vAttachHooks();
 
-		// Try to start the AP connector, quit out if it fails!
+		// Try to start the AP connector, shut down the program on failure!
 		if (MOD_StartConnector()) {
+			exit(2);
 			return 1;
 		}
 		MOD_Main();

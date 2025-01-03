@@ -14,7 +14,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{2b7cdcce-40a9-4ab5-8a3f-d0e25d229092}</ProjectGuid>
-    <RootNamespace>Rayman2Archipelago</RootNamespace>
+    <RootNamespace>Rayman2APMod</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -68,7 +68,7 @@
       <Command>xcopy /Y "C:\Repositories\Visual Studio\ACP_Ray2\bin\lib\ACP_Ray2x.dll" "$(OutDir)"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(OutDir)Rayman2Archipelago.dll" "D:\Games\GOG\Rayman 2\Mods\"</Command>
+      <Command>xcopy /Y "$(OutDir)Rayman2APMod.dll" "D:\Games\GOG\Rayman 2\Mods\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

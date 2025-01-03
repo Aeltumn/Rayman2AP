@@ -1,4 +1,5 @@
 #include "connector.h"
+#include "mod.h"
 #include <windows.h>
 #include <stdio.h>
 
@@ -27,7 +28,7 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
 
         if (ready == 0) {
             ready = 1;
-            printf("[parent] Ready to handle input after receiving first packet\n");
+            MOD_Print("[parent] Ready to handle input after receiving first packet\n");
             SetEvent(readyEvent);
         }
     }
@@ -41,11 +42,11 @@ int MOD_StartConnector() {
 
     // Create the pipes for communication
     if (!CreatePipe(&hChildStdOutRead, &hChildStdOutWrite, &saAttr, 0)) {
-        fprintf(stderr, "Error creating stdout pipe\n");
+        MOD_Print("Error creating stdout pipe\n");
         return 1;
     }
     if (!CreatePipe(&hChildStdInRead, &hChildStdInWrite, &saAttr, 0)) {
-        fprintf(stderr, "Error creating stdin pipe\n");
+        MOD_Print("Error creating stdin pipe\n");
         return 1;
     }
 
@@ -75,13 +76,13 @@ int MOD_StartConnector() {
         NULL,                // Process security attributes
         NULL,                // Thread security attributes
         TRUE,                // Inherit handles
-        0,                   // Creation flags
+        CREATE_NO_WINDOW,    // Creation flags
         NULL,                // Environment
         NULL,                // Current directory
         &si,                 // Startup information
         &pi                  // Process information
     )) {
-        fprintf(stderr, "Error creating process\n");
+        MOD_Print("Error creating process\n");
         return 1;
     }
 
@@ -98,7 +99,7 @@ int MOD_StartConnector() {
     );
 
     if (readyEvent == NULL) {
-        printf("Error creating event\n");
+        MOD_Print("Error creating event\n");
         return 1;
     }
 
@@ -111,7 +112,7 @@ int MOD_StartConnector() {
         &threadId            // Receives the thread ID
     );
     if (threadHandle == NULL) {
-        printf("Error creating thread\n");
+        MOD_Print("Error creating thread\n");
         return 1;
     }
 
@@ -139,13 +140,13 @@ int MOD_SendMessage(int type, const char* data) {
     strcpy(message + 1, data);
     message[length - 2] = '\n';
     message[length - 1] = '\0';
-    printf("[parent] Sending type %d with data %s to connector\n", type, data);
+    MOD_Print("[parent] Sending type %d with data %s to connector\n", type, data);
     if (!WriteFile(hChildStdInWrite, message, strlen(message), &bytesWritten, NULL)) {
-        printf("Encountered error while writing to connector %lu\n", GetLastError());
+        MOD_Print("Encountered error while writing to connector %lu\n", GetLastError());
     }
     free(message);
 }
 
 int MOD_HandleMessage(int type, const char* data) {
-    printf("[parent] Received type %d: %s\n", type, data);
+    MOD_Print("[parent] Received type %d: %s\n", type, data);
 }

@@ -58,17 +58,14 @@
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsC</CompileAs>
-      <AdditionalIncludeDirectories>$(ACPLIB)\include;$(ACPLIB)\detours;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ACPLIB)\include;$(detours)\include;C:\Repositories\Visual Studio\R2Console\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ACPLIB)\lib;$(ACPLIB)\detours;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ACP_Ray2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ACPLIB)\lib;$(detours)\lib;C:\Repositories\Visual Studio\R2Console\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ACP_Ray2.lib;R2Console.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PreBuildEvent>
-      <Command>xcopy /Y "C:\Repositories\Visual Studio\ACP_Ray2\bin\lib\ACP_Ray2x.dll" "$(OutDir)"</Command>
-    </PreBuildEvent>
     <PostBuildEvent>
       <Command>xcopy /Y "$(OutDir)Rayman2APMod.dll" "D:\Games\GOG\Rayman 2\Mods\"</Command>
     </PostBuildEvent>
@@ -82,19 +79,16 @@
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_WINDOWS;_USRDLL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsC</CompileAs>
-      <AdditionalIncludeDirectories>$(ACPLIB)\include;$(ACPLIB)\detours;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ACPLIB)\include;$(detours)\include;C:\Repositories\Visual Studio\R2Console\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ACPLIB)\lib;$(ACPLIB)\detours;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ACP_Ray2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ACPLIB)\lib;$(detours)\lib;C:\Repositories\Visual Studio\R2Console\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ACP_Ray2.lib;R2Console.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PreBuildEvent>
-      <Command>xcopy /Y "C:\Repositories\Visual Studio\ACP_Ray2\bin\lib\ACP_Ray2x.dll" "$(OutDir)"</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src/framework.h" />

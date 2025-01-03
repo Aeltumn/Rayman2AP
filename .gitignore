@@ -398,6 +398,3 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
-
-# For included library files
-include/

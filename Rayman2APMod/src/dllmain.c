@@ -5,12 +5,12 @@
 
 void fn_vAttachHooks( void )
 {
-	//FHK_M_lCreateHook(&GAM_fn_WndProc, MOD_WndProc);
+	FHK_M_lCreateHook(&GAM_fn_WndProc, MOD_WndProc);
 }
 
 void fn_vDetachHooks( void )
 {
-	//FHK_M_lDestroyHook(&GAM_fn_WndProc, MOD_WndProc);
+	FHK_M_lDestroyHook(&GAM_fn_WndProc, MOD_WndProc);
 }
 
 __declspec(dllexport)

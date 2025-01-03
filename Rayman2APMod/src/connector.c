@@ -7,7 +7,7 @@ HANDLE hChildStdOutRead, hChildStdOutWrite;
 HANDLE hChildStdInRead, hChildStdInWrite;
 SECURITY_ATTRIBUTES saAttr;
 PROCESS_INFORMATION pi;
-HANDLE threadHandle, readyEvent;
+HANDLE threadHandle, readyEvent, job;
 DWORD threadId;
 
 DWORD WINAPI MOD_ReadInput(LPVOID param) {
@@ -66,6 +66,13 @@ int MOD_StartConnector() {
     // Set up the PROCESS_INFORMATION structure
     ZeroMemory(&pi, sizeof(pi));
 
+    // Create the job to share with the child process so we can close it
+    job = CreateJobObjectA(NULL, NULL);
+    if (!job) {
+        MOD_Print("Error creating job object\n");
+        return 1;
+    }
+
     // Create the child process
     char path[MAX_PATH];
     GetCurrentDirectoryA(MAX_PATH, path);
@@ -85,6 +92,9 @@ int MOD_StartConnector() {
         MOD_Print("Error creating process\n");
         return 1;
     }
+
+    // Assign the child to the job
+    AssignProcessToJobObject(job, pi.hProcess);
 
     // Close the write ends of the pipes in the parent process
     CloseHandle(hChildStdOutWrite);
@@ -129,6 +139,10 @@ int MOD_StopConnector() {
     CloseHandle(hChildStdInWrite);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+
+    // Destroy the child process
+    TerminateJobObject(job, 0);
+    CloseHandle(job);
     return 0;
 }
 

@@ -1,6 +1,7 @@
 #include "mod.h"
 
 #define SCREEN_TEXT_FADE_TIME 8
+#define TEXT_MARGIN 2
 
 BOOL MOD_DeathLink = 0;
 BOOL MOD_IgnoreDeath = 0;
@@ -12,6 +13,13 @@ long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
 	long lSize = vsnprintf(NULL, 0, szFmt, args);
 	return lSize + 1;
 }
+
+long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
+	MTH_tdxReal size = 15.0f - xSize;
+	MTH_tdxReal height = 38.0f - size * 2.5f;
+	return (long)height + TEXT_MARGIN + TEXT_MARGIN;
+}
+
 
 void MOD_TriggerDeath() {
 	// Ignore deaths until the next time the player is alive
@@ -101,6 +109,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 	pInfo->xSize = 6;
 	pInfo->X = 10;
 	pInfo->Y = 1000-10;
+	pInfo->bFrame = TRUE;
 
 	for (int i = 0; i < 10; i++) {
 		// Ignore any lines that have finished fading out
@@ -108,11 +117,10 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 		int timePassed = currentTime - startTime;
 		if (timePassed > SCREEN_TEXT_FADE_TIME) continue;
 
-		// Write the line and then move the Y up as it goes down automatically
+		// Write the line and then move the Y up
 		char* screen = MOD_ScreenText[i];
-		MTH_tdxReal y = pInfo->Y;
-		SPTXT_vPrintLine(screen);
-		pInfo->Y = pInfo->Y + (pInfo->Y - y) * 2;
+		pInfo->Y = pInfo->Y - SPTXT_fn_lGetCharHeight(pInfo->xSize);
+		SPTXT_vPrint(screen);
 	}
 	SPTXT_vResetTextInfo(pInfo);
 }

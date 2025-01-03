@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rayman2APMod", "Rayman2APMo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rayman2APConnector", "Rayman2APConnector\Rayman2APConnector.vcxproj", "{7E05AEA7-6CE6-4061-B858-DD890A834D47}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DLLDebugger", "DLLDebugger\DLLDebugger.vcxproj", "{62F78540-4EB7-4FAB-9E98-B6EDEBC97CCF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -21,6 +23,10 @@ Global
 		{7E05AEA7-6CE6-4061-B858-DD890A834D47}.Debug|x86.Build.0 = Debug|Win32
 		{7E05AEA7-6CE6-4061-B858-DD890A834D47}.Release|x86.ActiveCfg = Release|Win32
 		{7E05AEA7-6CE6-4061-B858-DD890A834D47}.Release|x86.Build.0 = Release|Win32
+		{62F78540-4EB7-4FAB-9E98-B6EDEBC97CCF}.Debug|x86.ActiveCfg = Debug|Win32
+		{62F78540-4EB7-4FAB-9E98-B6EDEBC97CCF}.Debug|x86.Build.0 = Debug|Win32
+		{62F78540-4EB7-4FAB-9E98-B6EDEBC97CCF}.Release|x86.ActiveCfg = Release|Win32
+		{62F78540-4EB7-4FAB-9E98-B6EDEBC97CCF}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

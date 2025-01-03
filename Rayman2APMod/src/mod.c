@@ -6,7 +6,7 @@ int g_lSize = 6;
 int g_lPosX = 10;
 int g_lPosY = 10;
 
-void MOD_vDrawDebug( SPTXT_tdstTextInfo *pInfo )
+/*void MOD_vDrawDebug(SPTXT_tdstTextInfo* pInfo)
 {
 	// Based on R2DbgScr while I'm figuring out how this all works.
 
@@ -53,10 +53,10 @@ LRESULT CALLBACK MOD_WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	}
 
 	return GAM_fn_WndProc(hWnd, uMsg, wParam, lParam);
-}
+}*/
 
 void MOD_Main( void )
 {
-	SPTXT_vInit();
-	SPTXT_vAddTextCallback(MOD_vTextCallback);
+	//SPTXT_vInit();
+	//SPTXT_vAddTextCallback(MOD_vTextCallback);
 }

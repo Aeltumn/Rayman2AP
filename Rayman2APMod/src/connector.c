@@ -220,6 +220,11 @@ void MOD_StopConnector() {
     CloseHandle(messageMutex);
 }
 
+/** Sends out a connector message with no metadata. */
+void MOD_SendMessageE(int type) {
+    MOD_SendMessage(type, "");
+}
+
 /** Sends out a connector message. */
 void MOD_SendMessage(int type, const char* data) {
     DWORD bytesWritten;

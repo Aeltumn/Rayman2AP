@@ -19,7 +19,7 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 	}
 
 	char* command = d_szArgs[0];
-	if (command == "connect") {
+	if (_stricmp(command, "connect") == 0) {
 		if (lNbArgs < 4) {
 			fn_vPrint("Usage: ap connect <ip> <game> <slot> [password]");
 			return;
@@ -34,9 +34,9 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 		}
 
 
-	} else if (command == "disconnect") {
+	} else if (_stricmp(command, "disconnect") == 0) {
 
-	} else if (command == "check") {
+	} else if (_stricmp(command, "check") == 0) {
 
 	} else {
 		fn_vPrint("Usage: ap <connect|disconnect|check>");

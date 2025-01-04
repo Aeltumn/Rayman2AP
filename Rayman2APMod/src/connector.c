@@ -26,6 +26,13 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
     BOOL ready = FALSE;
     DWORD bytesRead;
     while (ReadFile(hChildStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
+        // Ignore messages that don't start with a 0
+        if (buffer[0] != '4') {
+            // TODO Remove this, this is just for debugging!
+            MOD_Print(buffer);
+            continue;
+        }
+
         // Replace the \n with the null terminator otherwise add it after
         if (buffer[bytesRead - 2] == '\r') {
             buffer[bytesRead - 2] = '\0';
@@ -34,14 +41,13 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
         } else {
             buffer[bytesRead] = '\0';
         }
-        int type = buffer[0] - '0';
-        memmove(buffer, buffer + 1, strlen(buffer));
+        int type = buffer[1] - '0';
+        memmove(buffer, buffer + 2, strlen(buffer) - 1);
 
         // If we haven't handled any packets yet this is the initial packet and we are now ready
         // and can continue starting the game.
         if (!ready) {
             ready = TRUE;
-            MOD_Print("[parent] Ready to handle input after receiving first packet");
             SetEvent(readyEvent);
         }
 
@@ -206,6 +212,9 @@ int MOD_StartConnector() {
 
 /** Shuts down the connector. */
 void MOD_StopConnector() {
+    // Disconnect if we have to
+    MOD_SendMessageE(MESSAGE_TYPE_SHUTDOWN);
+
     // Clean up everything
     CloseHandle(threadHandle);
     CloseHandle(hChildStdOutRead);
@@ -251,9 +260,8 @@ void MOD_HandleMessage(int type, const char* data) {
         MOD_TriggerDeath();
         MOD_ShowScreenText(data);
         break;
-    case MESSAGE_TYPE_UPDATE_DEATHLINK:
-        // Update the death link state
-        MOD_SetDeathLink(data[0] - '0' ? TRUE : FALSE);
+    case MESSAGE_TYPE_MESSAGE:
+        MOD_Print(data);
         break;
     default:
         MOD_Print("[parent] Received type %d: %s", type, data);

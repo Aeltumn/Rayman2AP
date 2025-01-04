@@ -21,7 +21,7 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 
 	char* command = d_szArgs[0];
 	if (_stricmp(command, "connect") == 0) {
-		if (lNbArgs < 4) {
+		if (lNbArgs < 3) {
 			MOD_Print("Usage: ap connect <ip> <slot> [password]");
 			return;
 		}
@@ -47,7 +47,7 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 
 // Toggles whether death link is currently enabled.
 void fn_vDeathlinkCommand(int lNbArgs, char** d_szArgs) {
-	MOD_SendMessage(MESSAGE_TYPE_UPDATE_DEATHLINK, MOD_GetDeathLink() ? "0" : "1");
+	MOD_SetDeathLink(MOD_GetDeathLink() ? FALSE : TRUE);
 }
 
 // Triggers a test message.

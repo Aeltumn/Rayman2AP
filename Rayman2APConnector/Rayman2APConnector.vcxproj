@@ -59,7 +59,7 @@
       <AdditionalDependencies>bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(OutDir)Rayman2APConnector.exe" "D:\Games\GOG\Rayman 2\"</Command>
+      <Command>xcopy /Y "$(OutDir)Rayman2APConnector.exe" "$(R2_DIRECTORY)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -79,7 +79,7 @@
       <AdditionalDependencies>bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(OutDir)Rayman2APConnector.exe" "D:\Games\GOG\Rayman 2\"</Command>
+      <Command>xcopy /Y "$(OutDir)Rayman2APConnector.exe" "$(R2_DIRECTORY)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

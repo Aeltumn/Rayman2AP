@@ -3,8 +3,8 @@
 #define SCREEN_TEXT_FADE_TIME 8
 #define TEXT_MARGIN 2
 
-BOOL MOD_DeathLink = 0;
-BOOL MOD_IgnoreDeath = 0;
+BOOL MOD_DeathLink = TRUE;
+BOOL MOD_IgnoreDeath = FALSE;
 char MOD_ScreenText[10][128];
 time_t MOD_ScreenTextStart[10];
 

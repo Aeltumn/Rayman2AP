@@ -70,7 +70,7 @@
       <AdditionalDependencies>ACP_Ray2.lib;R2Console.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(OutDir)Rayman2APMod.dll" "${R2_DIRECTORY}\Mods\"</Command>
+      <Command>xcopy /Y "$(OutDir)Rayman2APMod.dll" "$(R2_DIRECTORY)\Mods\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

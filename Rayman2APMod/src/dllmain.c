@@ -10,7 +10,7 @@ void fn_vAttachHooks( void )
 
 void fn_vDetachHooks( void )
 {
-	FML_M_lDestroyHook(&GAM_fn_vEngine, MOD_EngineTick);
+	FHK_M_lDestroyHook(&GAM_fn_vEngine, MOD_EngineTick);
 }
 
 __declspec(dllexport)

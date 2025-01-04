@@ -12,14 +12,14 @@ HANDLE threadHandle, readyEvent, job, messageMutex;
 DWORD threadId;
 
 // Store messages that were received, we handle them the next tick
-incomingMessage* incomingMessages;
-int incomingMessageCount;
-int incomingMessagesSize;
-
 typedef struct {
     int type;
     char* text;
 } incomingMessage;
+
+incomingMessage* incomingMessages;
+int incomingMessageCount;
+int incomingMessagesSize;
 
 /** Task run in a separate thread to handle incoming packets. */
 DWORD WINAPI MOD_ReadInput(LPVOID param) {
@@ -59,7 +59,7 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
                     }
                 }
                 else {
-                    incomingMessages = malloc(incomingMessages, incomingMessagesSize * sizeof(incomingMessage));
+                    incomingMessages = malloc(incomingMessagesSize * sizeof(incomingMessage));
                 }
             }
             incomingMessages[incomingMessageCount - 1] = message;

@@ -21,5 +21,5 @@ How to install
 3. Run R2FixCfg.exe and choose your preferred display settings in the General tab.
 4. Install [Twofold](https://github.com/spitfirex86/Twofold/releases) by downloading the zip file of its latest release and extracting the contents of the zip into the Rayman 2 game folder.
 5. Install [R2Console](https://github.com/spitfirex86/R2Console/releases) by downloading the zip file of its latest release and extracting the contents of the zip into the Rayman 2 game folder.
-6. Download the [latest release](https://github.com/Aeltumn/Rayman2AP/releases) of this project, extracting the contents of the zip into the Rayman 2 game folder.\
+6. Download the [latest release](https://github.com/Aeltumn/Rayman2AP/releases) of this project, extracting the contents of the zip into the Rayman 2 game folder.
 7. Run the game through `Ray2x.exe` to launch the modded version. `Rayman2.exe` will launch the unmodded version of the game.

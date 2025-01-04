@@ -401,3 +401,6 @@ FodyWeavers.xsd
 
 # vcpkg
 vcpkg_installed/
+
+# Exclude exported build
+Build/

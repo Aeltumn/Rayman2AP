@@ -21,24 +21,22 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 }
 
 /** Ticked by the engine every frame, runs all messages received since last tick. */
-void MOD_EngineTick() {
+void CALLBACK MOD_EngineTick() {
 	MOD_RunPendingMessages();
+	return GAM_fn_vEngine();
+}
 
-	// Test if the player has died
-	GAM_tdeEngineMode engineMode = GAM_fn_ucGetEngineMode();
-	if (MOD_IgnoreDeath) {
-		// This waits for the player to be alive and playing before we
-		// start looking for deaths again!
-		if (engineMode == 9) {
-			MOD_IgnoreDeath = FALSE;
+/** Ticked every frame and can be used to check when the player is dead. */
+void CALLBACK MOD_DesInit() {
+	// Test if the player has died, this gets triggered once on death
+	if (GAM_fn_ucGetEngineMode() == 8) {
+		if (MOD_DeathLink && !MOD_IgnoreDeath) {
+			MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
 		}
+		MOD_IgnoreDeath = FALSE;
 	}
 
-	// Wait for the player to be dead, then trigger a death link.
-	if (MOD_DeathLink && !MOD_IgnoreDeath && engineMode == 8) {
-		MOD_IgnoreDeath = TRUE;
-		MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
-	}
+	return GAM_fn_vChooseTheGoodDesInit();
 }
 
 /** Triggers the player to die. */

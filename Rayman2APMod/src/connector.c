@@ -4,11 +4,9 @@
 #include <stdio.h>
 
 // Store information for the connector itself
-HANDLE hChildStdOutRead, hChildStdOutWrite;
-HANDLE hChildStdInRead, hChildStdInWrite;
+HANDLE hChildStdOutRead, hChildStdOutWrite, hChildStdInRead, hChildStdInWrite, threadHandle, readyEvent, job, messageMutex;
 SECURITY_ATTRIBUTES saAttr;
 PROCESS_INFORMATION pi;
-HANDLE threadHandle, readyEvent, job, messageMutex;
 DWORD threadId;
 
 // Store messages that were received, we handle them the next tick
@@ -18,8 +16,8 @@ typedef struct {
 } incomingMessage;
 
 incomingMessage* incomingMessages;
-int incomingMessageCount;
-int incomingMessagesSize;
+int incomingMessageCount = 0;
+int incomingMessagesSize = 0;
 
 /** Task run in a separate thread to handle incoming packets. */
 DWORD WINAPI MOD_ReadInput(LPVOID param) {
@@ -39,38 +37,31 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
         int type = buffer[0] - '0';
         memmove(buffer, buffer + 1, strlen(buffer));
 
+        // If we haven't handled any packets yet this is the initial packet and we are now ready
+        // and can continue starting the game.
+        if (!ready) {
+            ready = TRUE;
+            MOD_Print("[parent] Ready to handle input after receiving first packet");
+            SetEvent(readyEvent);
+        }
+
         // Wait for mutex access
-        WaitForSingleObject(messageMutex, INFINITE);
+        WaitForSingleObject(messageMutex, 50);
 
         __try {
             // Queue up the message for next tick
             incomingMessage message = { type, buffer };
-
-            incomingMessageCount++;
-            if (incomingMessageCount > incomingMessagesSize) {
+            if (incomingMessageCount >= incomingMessagesSize) {
                 incomingMessagesSize = max(2, incomingMessagesSize * 2);
-                if (incomingMessages) {
-                    incomingMessage* reallocated = realloc(incomingMessages, incomingMessagesSize * sizeof(incomingMessage));
-                    if (reallocated) {
-                        incomingMessages = reallocated;
-                    }
-                    else {
-                        MOD_Print("Failed to extend array of incoming messages");
-                    }
+                incomingMessage* reallocated = realloc(incomingMessages, incomingMessagesSize * sizeof(incomingMessage));
+                if (!reallocated) {
+                    MOD_Print("Failed to extend array of incoming messages");
+                    return;
                 }
-                else {
-                    incomingMessages = malloc(incomingMessagesSize * sizeof(incomingMessage));
-                }
+                incomingMessages = reallocated;
             }
-            incomingMessages[incomingMessageCount - 1] = message;
-
-            // If we haven't handled any packets yet this is the initial packet and we are now ready
-            // and can continue starting the game.
-            if (!ready) {
-                ready = TRUE;
-                MOD_Print("[parent] Ready to handle input after receiving first packet");
-                SetEvent(readyEvent);
-            }
+            incomingMessages[incomingMessageCount] = message;
+            incomingMessageCount++;
         }
         __finally {
             // Release the mutex
@@ -85,19 +76,15 @@ void MOD_RunPendingMessages() {
     if (incomingMessageCount == 0) return;
 
     // Wait for mutex access
-    WaitForSingleObject(messageMutex, INFINITE);
+    WaitForSingleObject(messageMutex, 50);
 
     __try {
         incomingMessage* pending = incomingMessages;
-        int length = incomingMessageCount;
-        incomingMessages = malloc(2 * sizeof(incomingMessage));
-        incomingMessagesSize = 2;
-        incomingMessageCount = 0;
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < incomingMessageCount; i++) {
             incomingMessage entry = pending[i];
             MOD_HandleMessage(entry.type, entry.text);
         }
-        free(pending);
+        incomingMessageCount = 0;
     }
     __finally {
         // Release the mutex
@@ -108,7 +95,7 @@ void MOD_RunPendingMessages() {
 /** Starts up the connector which runs Rayman2APConnector in a subprocess. */
 int MOD_StartConnector() {
     // Set up the mutex for synchronization
-    messageMutex = CreateMutex(NULL, FALSE, NULL);
+    messageMutex = CreateMutexA(NULL, FALSE, NULL);
     if (!messageMutex) {
         MOD_Print("Error creating message sync mutex, error code %lu", GetLastError());
         return 1;

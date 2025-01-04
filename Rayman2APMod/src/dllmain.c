@@ -6,13 +6,13 @@
 void fn_vAttachHooks( void )
 {
 	FHK_M_lCreateHook(&GAM_fn_vEngine, MOD_EngineTick);
-	FHK_M_lCreateHook(&GAM_fn_vChooseTheGoodDesInit, MOD_DesInit);
+	FHK_M_lCreateHook(&GAM_fn_vChooseTheGoodInit, MOD_Init);
 }
 
 void fn_vDetachHooks( void )
 {
 	FHK_M_lDestroyHook(&GAM_fn_vEngine, MOD_EngineTick);
-	FHK_M_lDestroyHook(&GAM_fn_vChooseTheGoodDesInit, MOD_DesInit);
+	FHK_M_lDestroyHook(&GAM_fn_vChooseTheGoodInit, MOD_Init);
 }
 
 __declspec(dllexport)

@@ -3,7 +3,7 @@
 #include "connector.h"
 
 void CALLBACK MOD_EngineTick();
-void CALLBACK MOD_DesInit();
+void CALLBACK MOD_Init();
 
 void MOD_Print(char*, ...);
 void MOD_Main();

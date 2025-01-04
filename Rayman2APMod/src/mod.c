@@ -26,17 +26,17 @@ void CALLBACK MOD_EngineTick() {
 	return GAM_fn_vEngine();
 }
 
-/** Ticked every frame and can be used to check when the player is dead. */
-void CALLBACK MOD_DesInit() {
+/** Handles the player dying and triggers a death link. */
+void CALLBACK MOD_Init() {
 	// Test if the player has died, this gets triggered once on death
-	if (GAM_fn_ucGetEngineMode() == 8) {
+	if (GAM_fn_ucGetEngineMode() == 7) {
 		if (MOD_DeathLink && !MOD_IgnoreDeath) {
 			MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
 		}
 		MOD_IgnoreDeath = FALSE;
 	}
 
-	return GAM_fn_vChooseTheGoodDesInit();
+	return GAM_fn_vChooseTheGoodInit();
 }
 
 /** Triggers the player to die. */

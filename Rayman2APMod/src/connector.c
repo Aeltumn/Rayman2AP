@@ -12,7 +12,7 @@ DWORD threadId;
 // Store messages that were received, we handle them the next tick
 typedef struct {
     int type;
-    char* text;
+    char text[127];
 } incomingMessage;
 
 incomingMessage* incomingMessages;
@@ -25,53 +25,71 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
     char buffer[128];
     BOOL ready = FALSE;
     DWORD bytesRead;
-    while (ReadFile(hChildStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
-        // Ignore messages that don't start with a 0
-        if (buffer[0] != '4') {
-            // TODO Remove this, this is just for debugging!
-            MOD_Print(buffer);
-            continue;
-        }
+    while (ReadFile(hChildStdOutRead, buffer, 127, &bytesRead, NULL) && bytesRead > 0) {
+        int remainingLength = bytesRead;
+        char* remaining = buffer;
+        while (remaining) {
+            // Take the line and determine its length
+            int possibleLength = strlen(remaining);
+            int length = remainingLength;
+            char* thisLine = remaining;
 
-        // Replace the \n with the null terminator otherwise add it after
-        if (buffer[bytesRead - 2] == '\r') {
-            buffer[bytesRead - 2] = '\0';
-        } else if (buffer[bytesRead - 1] == '\n') {
-            buffer[bytesRead - 1] = '\0';
-        } else {
-            buffer[bytesRead] = '\0';
-        }
-        int type = buffer[1] - '0';
-        memmove(buffer, buffer + 2, strlen(buffer) - 1);
-
-        // If we haven't handled any packets yet this is the initial packet and we are now ready
-        // and can continue starting the game.
-        if (!ready) {
-            ready = TRUE;
-            SetEvent(readyEvent);
-        }
-
-        // Wait for mutex access
-        WaitForSingleObject(messageMutex, 50);
-
-        __try {
-            // Queue up the message for next tick
-            incomingMessage message = { type, buffer };
-            if (incomingMessageCount >= incomingMessagesSize) {
-                incomingMessagesSize = max(2, incomingMessagesSize * 2);
-                incomingMessage* reallocated = realloc(incomingMessages, incomingMessagesSize * sizeof(incomingMessage));
-                if (!reallocated) {
-                    MOD_Print("Failed to extend array of incoming messages");
-                    return;
-                }
-                incomingMessages = reallocated;
+            // Determine if there is a second line included already
+            remaining = strstr(thisLine, "\r\n");
+            if (remaining) {
+                int consumedBytes = possibleLength - strlen(remaining);
+                remainingLength -= consumedBytes + 2;
+                length = consumedBytes;
+                memmove(remaining, remaining + 2, strlen(remaining) - 1);
             }
-            incomingMessages[incomingMessageCount] = message;
-            incomingMessageCount++;
-        }
-        __finally {
-            // Release the mutex
-            ReleaseMutex(messageMutex);
+
+            // Ignore lines that don't start with a 4
+            if (thisLine[0] != '4') {
+                // TODO Remove this, this is just for debugging!
+                if (length > 0) {
+                    char* msg = malloc(129);
+                    strncpy(msg, thisLine, length);
+                    if (msg[length - 1] != 0) msg[length] = 0;
+                    MOD_Print(msg);
+                    free(msg);
+                }
+                continue;
+            }
+            
+            // Determine the type of the message
+            int type = thisLine[1] - '0';
+
+            // If we haven't handled any packets yet this is the initial packet and we are now ready
+            // and can continue starting the game.
+            if (!ready) {
+                ready = TRUE;
+                SetEvent(readyEvent);
+            }
+
+            // Wait for mutex access
+            WaitForSingleObject(messageMutex, 50);
+
+            __try {
+                // Queue up the message for next tick
+                if (incomingMessageCount >= incomingMessagesSize) {
+                    incomingMessagesSize = max(2, incomingMessagesSize * 2);
+                    incomingMessage* reallocated = realloc(incomingMessages, incomingMessagesSize * sizeof(incomingMessage));
+                    if (!reallocated) {
+                        MOD_Print("Failed to extend array of incoming messages");
+                        return;
+                    }
+                    incomingMessages = reallocated;
+                }
+                incomingMessage message = { 0 };
+                message.type = type;
+                strncpy(message.text, thisLine + 2, length - 2);
+                message.text[length - 2] = 0;
+                incomingMessages[incomingMessageCount++] = message;
+            }
+            __finally {
+                // Release the mutex
+                ReleaseMutex(messageMutex);
+            }
         }
     }
 }
@@ -85,9 +103,8 @@ void MOD_RunPendingMessages() {
     WaitForSingleObject(messageMutex, 50);
 
     __try {
-        incomingMessage* pending = incomingMessages;
         for (int i = 0; i < incomingMessageCount; i++) {
-            incomingMessage entry = pending[i];
+            incomingMessage entry = incomingMessages[i];
             MOD_HandleMessage(entry.type, entry.text);
         }
         incomingMessageCount = 0;

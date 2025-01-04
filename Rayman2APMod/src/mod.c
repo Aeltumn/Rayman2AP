@@ -55,6 +55,21 @@ void MOD_TriggerDeath() {
 
 /** Prints a message to the console. */
 void MOD_Print(char* text, ...) {
+	// Remove any carriage returns from the input as they crash the game
+	int length = strlen(text);
+	int nullIndex = length;
+	for (int i = length - 1; i >= 0; i--) {
+		if (text[i] == '\r') {
+			// Move the null terminator forward to remove trailing \r's
+			if (i == nullIndex - 1) {
+				text[i] = 0;
+				nullIndex--;
+			} else {
+				text[i] = ' ';
+			}
+		}
+	}
+
 	va_list args;
 	va_start(args, text);
 

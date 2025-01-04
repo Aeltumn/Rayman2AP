@@ -5,12 +5,12 @@
 
 void fn_vAttachHooks( void )
 {
-	// FHK_M_lCreateHook();
+	FHK_M_lCreateHook(&GAM_fn_vEngine, MOD_EngineTick);
 }
 
 void fn_vDetachHooks( void )
 {
-	// FML_M_lDestroyHook();
+	FML_M_lDestroyHook(&GAM_fn_vEngine, MOD_EngineTick);
 }
 
 __declspec(dllexport)

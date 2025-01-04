@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "connector.h"
 
+void MOD_EngineTick();
 void MOD_Print(char*, ...);
 void MOD_Main();
 void MOD_TriggerDeath();

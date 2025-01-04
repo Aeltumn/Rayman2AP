@@ -20,7 +20,28 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 	return (long)height + TEXT_MARGIN + TEXT_MARGIN;
 }
 
+/** Ticked by the engine every frame, runs all messages received since last tick. */
+void MOD_EngineTick() {
+	MOD_RunPendingMessages();
 
+	// Test if the player has died
+	GAM_tdeEngineMode engineMode = GAM_fn_ucGetEngineMode();
+	if (MOD_IgnoreDeath) {
+		// This waits for the player to be alive and playing before we
+		// start looking for deaths again!
+		if (engineMode == 9) {
+			MOD_IgnoreDeath = FALSE;
+		}
+	}
+
+	// Wait for the player to be dead, then trigger a death link.
+	if (MOD_DeathLink && !MOD_IgnoreDeath && engineMode == 8) {
+		MOD_IgnoreDeath = TRUE;
+		MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
+	}
+}
+
+/** Triggers the player to die. */
 void MOD_TriggerDeath() {
 	// Ignore deaths until the next time the player is alive
 	// so we don't trigger a death from this death.
@@ -34,6 +55,7 @@ void MOD_TriggerDeath() {
 	}
 }
 
+/** Prints a message to the console. */
 void MOD_Print(char* text, ...) {
 	va_list args;
 	va_start(args, text);
@@ -49,6 +71,7 @@ void MOD_Print(char* text, ...) {
 	va_end(args);
 }
 
+/** Shows the given text on the screen for the next 8 seconds. */
 void MOD_ShowScreenText(char* text) {
 	time_t currentTime = time(NULL);
 
@@ -85,23 +108,8 @@ void MOD_ShowScreenText(char* text) {
 	}
 }
 
+/** Draws text to the screen with the recent screen text. */
 void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
-	// Test if the player has died
-	GAM_tdeEngineMode engineMode = GAM_fn_ucGetEngineMode();
-	if (MOD_IgnoreDeath) {
-		// This waits for the player to be alive and playing before we
-		// start looking for deaths again!
-		if (engineMode == 9) {
-			MOD_IgnoreDeath = FALSE;
-		}
-	}
-
-	// Wait for the player to be dead, then trigger a death link.
-	if (MOD_DeathLink && !MOD_IgnoreDeath && engineMode == 8) {
-		MOD_IgnoreDeath = TRUE;
-		MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
-	}
-
 	// Determine the current time
 	time_t currentTime = time(NULL);
 
@@ -125,17 +133,12 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 	SPTXT_vResetTextInfo(pInfo);
 }
 
-void MOD_Main(void) {
-	MOD_InitCommands();
-
-	SPTXT_vInit();
-	SPTXT_vAddTextCallback(MOD_vTextCallback);
-}
-
+/** Returns whether death link is currently enabled. */
 BOOL MOD_GetDeathLink() {
 	return MOD_DeathLink;
 }
 
+/** Updates the current state of the death link setting. */
 void MOD_SetDeathLink(BOOL value) {
 	// Ignore if no changes were made
 	if (MOD_DeathLink == value) return;
@@ -146,4 +149,11 @@ void MOD_SetDeathLink(BOOL value) {
 	} else {
 		MOD_Print("Deathlink has been disabled, you're safe now!");
 	}
+}
+
+void MOD_Main(void) {
+	MOD_InitCommands();
+
+	SPTXT_vInit();
+	SPTXT_vAddTextCallback(MOD_vTextCallback);
 }

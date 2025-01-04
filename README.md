@@ -23,3 +23,5 @@ How to install
 5. Install [R2Console](https://github.com/spitfirex86/R2Console/releases) by downloading the zip file of its latest release and extracting the contents of the zip into the Rayman 2 game folder.
 6. Download the [latest release](https://github.com/Aeltumn/Rayman2AP/releases) of this project, extracting the contents of the zip into the Rayman 2 game folder.
 7. Run the game through `Ray2x.exe` to launch the modded version. `Rayman2.exe` will launch the unmodded version of the game.
+8. In-game you can press `~` to open up the console. Use the `ap connect <ip> <slot> [password]` command to connect to an Archipelago room.
+9. Starting a new game after connecting to a room will use the configured random settings.

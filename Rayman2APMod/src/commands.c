@@ -4,12 +4,12 @@
 
 tdfnCommand fn_vApCmd;
 tdfnCommand fn_vDeathlinkCommand;
-tdfnCommand fn_vTestCommand;
+tdfnCommand fn_vSayCommand;
 
 void MOD_InitCommands(void) {
 	fn_vRegisterCommand("ap", fn_vApCmd);
 	fn_vRegisterCommand("deathlink", fn_vDeathlinkCommand);
-	fn_vRegisterCommand("test", fn_vTestCommand);
+	fn_vRegisterCommand("say", fn_vSayCommand);
 }
 
 // Adds /ap which lets you connect to the AP server
@@ -50,7 +50,15 @@ void fn_vDeathlinkCommand(int lNbArgs, char** d_szArgs) {
 	MOD_SetDeathLink(MOD_GetDeathLink() ? FALSE : TRUE);
 }
 
-// Triggers a test message.
-void fn_vTestCommand(int lNbArgs, char** d_szArgs) {
-	MOD_SendMessageE(MESSAGE_TYPE_TEST);
+// Allows sending messages to the Archipelago server.
+void fn_vSayCommand(int lNbArgs, char** d_szArgs) {
+	char result[C_MaxLine];
+	for (int i = 0; i < lNbArgs; i++) {
+		// Add a space between arguments as it gets removed by the argument parser but we want to greedily include all arguments
+		if (i > 0) {
+			strcpy(result, " ");
+		}
+		strcpy(result, d_szArgs[i]);
+	}
+	MOD_SendMessageE(MESSAGE_TYPE_MESSAGE, result);
 }

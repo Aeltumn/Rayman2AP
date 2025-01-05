@@ -40,6 +40,10 @@ void Connector::handle(int type, std::string data) {
         // Trigger a death link!
         AP_DeathLinkSend();
         break;
+    case MESSAGE_TYPE_MESSAGE:
+        // Send the message up to AP.
+        AP_Say(data);
+        break;
     case MESSAGE_TYPE_CONNECT:
     {
         // Read out the information from the input

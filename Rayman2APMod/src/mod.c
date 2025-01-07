@@ -20,14 +20,46 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 	return (long)height + TEXT_MARGIN + TEXT_MARGIN;
 }
 
+// Hook into level transitions and randomize them
+void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
+	// Ignore going back to the main menu
+	if (strcmp(szLevelName, "mapmonde") == 0) {
+		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+		return;
+	}
+
+	// Intercept level transitions and go elsewhere
+	if (strcmp(szLevelName, "Learn_30") == 0) {
+		GAM_fn_vAskToChangeLevel("Bast_10", bSaveGame);
+		return;
+	}
+	MOD_Print("GAM_fn_vAskToChangeLevel: %s, %s", szLevelName, bSaveGame ? "save" : "-");
+	GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+}
+
+void MOD_SetLevel(const char* szName) {
+	MOD_Print("GAM_fn_vSetLevelName: %s", szName);
+	GAM_fn_vSetLevelName(szName);
+}
+
+void MOD_SetNextLevel(const char* szName) {
+	MOD_Print("GAM_fn_vSetNextLevelName: %s", szName);
+	GAM_fn_vSetNextLevelName(szName);
+}
+
+void MOD_SetFirstLevel(const char* szName) {
+	MOD_Print("GAM_fn_vSetFirstLevelName: %s", szName);
+	GAM_fn_vSetFirstLevelName(szName);
+}
+
 /** Ticked by the engine every frame, runs all messages received since last tick. */
-void CALLBACK MOD_EngineTick() {
+void MOD_EngineTick() {
 	MOD_RunPendingMessages();
-	return GAM_fn_vEngine();
+	GAM_fn_vEngine();
 }
 
 /** Handles the player dying and triggers a death link. */
-void CALLBACK MOD_Init() {
+void MOD_Init() {
 	// Test if the player has died, this gets triggered once on death
 	if (GAM_fn_ucGetEngineMode() == 7) {
 		if (MOD_DeathLink && !MOD_IgnoreDeath) {
@@ -36,7 +68,7 @@ void CALLBACK MOD_Init() {
 		MOD_IgnoreDeath = FALSE;
 	}
 
-	return GAM_fn_vChooseTheGoodInit();
+	GAM_fn_vChooseTheGoodInit();
 }
 
 /** Triggers the player to die. */
@@ -55,6 +87,17 @@ void MOD_TriggerDeath() {
 
 /** Prints a message to the console. */
 void MOD_Print(char* text, ...) {
+#ifdef DEBUG_PRINT
+	FILE* pFile = fopen("output_log.txt", "a");
+	if (pFile != NULL) {
+		fprintf(pFile, "\n");
+		va_list args;
+		va_start(args, text);
+		vfprintf(pFile, text, args);
+		va_end(args);
+		fclose(pFile);
+	}
+#else
 	// Remove any carriage returns from the input as they crash the game
 	int length = strlen(text);
 	int nullIndex = length;
@@ -82,6 +125,7 @@ void MOD_Print(char* text, ...) {
 	}
 
 	va_end(args);
+#endif
 }
 
 /** Shows the given text on the screen for the next 8 seconds. */

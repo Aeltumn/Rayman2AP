@@ -2,8 +2,12 @@
 #include "framework.h"
 #include "connector.h"
 
-void CALLBACK MOD_EngineTick();
-void CALLBACK MOD_Init();
+void MOD_EngineTick();
+void MOD_Init();
+void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame);
+void MOD_SetLevel(const char* szName);
+void MOD_SetNextLevel(const char* szName);
+void MOD_SetFirstLevel(const char* szName);
 
 void MOD_Print(char*, ...);
 void MOD_Main();

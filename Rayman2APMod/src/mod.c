@@ -2,11 +2,92 @@
 
 #define SCREEN_TEXT_FADE_TIME 8
 #define TEXT_MARGIN 2
+#define LEVEL_COUNT 62
+#define MAX_LENGTH 32
 
 BOOL MOD_DeathLink = TRUE;
 BOOL MOD_IgnoreDeath = FALSE;
 char MOD_ScreenText[10][128];
 time_t MOD_ScreenTextStart[10];
+
+const char* MOD_LevelNames[] = {
+	"Astro_00",
+	"Astro_10",
+	"Ball",
+	"Bast_09",
+	"Bast_10",
+	"Bast_20",
+	"Bast_22",
+	"Batam_10",
+	"Batam_20",
+	"Boat01",
+	"Boat02",
+	"Cask_10",
+	"Cask_30",
+	"Chase_10",
+	"Chase_22",
+	"Earth_10",
+	"Earth_20",
+	"Earth_30",
+	"End_10",
+	"GLob_10",
+	"GLob_20",
+	"GLob_30",
+	"Helic_10",
+	"Helic_20",
+	"Helic_30",
+	"Ile_10",
+	"Jail_10",
+	"Jail_20",
+	"Learn_10",
+	"Learn_30",
+	"Learn_31",
+	"Learn_40",
+	"Learn_60",
+	"Ly_10",
+	"Ly_20",
+	"Mine_10",
+	"Morb_00",
+	"Morb_10",
+	"Morb_20",
+	"Nave_10",
+	"Nave_15",
+	"Nave_20",
+	"Nego_10",
+	"Plum_00",
+	"Plum_10",
+	"Plum_20",
+	"Rhop_10",
+	"Rodeo_10",
+	"Rodeo_40",
+	"Rodeo_60",
+	"Seat_10",
+	"Seat_11",
+	"Ski_10",
+	"Ski_60",
+	"Staff_10",
+	"Vulca_10",
+	"Vulca_20",
+	"Water_10",
+	"Water_20",
+	"Whale_00",
+	"Whale_05",
+	"Whale_10"
+};
+char* MOD_LevelNamesShuffled[LEVEL_COUNT];
+
+// Utility method for shuffling array.
+void shuffle(char* array[], size_t n) {
+	if (n > 1) {
+		size_t i;
+		for (i = 0; i < n - 1; i++)	{
+			size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+			char* t = array[j];
+			array[j] = array[i];
+			array[i] = t;
+		}
+	}
+}
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
@@ -23,18 +104,28 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 // Hook into level transitions and randomize them
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// Ignore going back to the main menu
-	if (strcmp(szLevelName, "mapmonde") == 0) {
+	if (strcmp(szLevelName, "menu") == 0 || strcmp(szLevelName, "mapmonde") == 0) {
+		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+		MOD_Print("GAM_fn_vAskToChangeLevel: %s", szLevelName);
+		return;
+	}
+
+	// Find which map to send the player to
+	int oldId = -1;
+	for (int i = 0; i < LEVEL_COUNT; i++) {
+		if (strcmp(szLevelName, MOD_LevelNames[i]) == 0) {
+			oldId = i;
+		}
+	}
+	if (oldId == -1) {
 		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 		return;
 	}
 
-	// Intercept level transitions and go elsewhere
-	if (strcmp(szLevelName, "Learn_30") == 0) {
-		GAM_fn_vAskToChangeLevel("Bast_10", bSaveGame);
-		return;
-	}
-	MOD_Print("GAM_fn_vAskToChangeLevel: %s, %s", szLevelName, bSaveGame ? "save" : "-");
-	GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+	// Get the new target and send them there
+	char* targetLevelName = MOD_LevelNamesShuffled[oldId];
+	MOD_Print("GAM_fn_vAskToChangeLevel: %s -> %s", szLevelName, targetLevelName);
+	GAM_fn_vAskToChangeLevel(targetLevelName, bSaveGame);
 }
 
 void MOD_SetLevel(const char* szName) {
@@ -43,6 +134,22 @@ void MOD_SetLevel(const char* szName) {
 }
 
 void MOD_SetNextLevel(const char* szName) {
+	// TODO: This needs to happen earlier!
+	// Whenever we go back to the hall of doors we need to restore the original level name
+	if (strcmp(szName, "mapmonde") == 0) {
+		char* currentMap = GAM_fn_p_szGetLevelName();
+		int oldId = -1;
+		for (int i = 0; i < LEVEL_COUNT; i++) {
+			if (strcmp(currentMap, MOD_LevelNamesShuffled[i]) == 0) {
+				oldId = i;
+			}
+		}
+		if (oldId != -1) {
+			GAM_fn_vSetLevelName(MOD_LevelNames[oldId]);
+			MOD_Print("Restored level name to %s", MOD_LevelNames[oldId]);
+		}
+	}
+
 	MOD_Print("GAM_fn_vSetNextLevelName: %s", szName);
 	GAM_fn_vSetNextLevelName(szName);
 }
@@ -209,8 +316,19 @@ void MOD_SetDeathLink(BOOL value) {
 }
 
 void MOD_Main(void) {
+	// Seed the random number generator
+	srand(time(NULL));
+
+	// Shuffle the list of levels to create a unique mapping
+	for (int i = 0; i < LEVEL_COUNT; i++) {
+		MOD_LevelNamesShuffled[i] = (char*)MOD_LevelNames[i];
+	}
+	shuffle(MOD_LevelNamesShuffled, LEVEL_COUNT);
+
+	// Initialize commands
 	MOD_InitCommands();
 
+	// Initialize on-screen text
 	SPTXT_vInit();
 	SPTXT_vAddTextCallback(MOD_vTextCallback);
 }

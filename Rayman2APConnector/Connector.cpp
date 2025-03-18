@@ -109,27 +109,27 @@ void Connector::handle(int type, std::string data) {
 
 /** Handles clearing cached item checks. */
 void handleItemClear() {
-
+    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP item clear");
 }
 
 /** Handles an item being checked. */
 void handleItem(int64_t id, bool notify) {
-
+    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP item check: " + std::to_string(id));
 }
 
 /** Handles a location being checked. */
 void handleLocation(int64_t id) {
-
+    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP location check: " + std::to_string(id));
 }
 
 /** Handles level swap data being delivered. */
 void handleLevelSwaps(std::string data) {
-
+    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP level_swaps: " + data);
 }
 
 /** Handles lum gate thresholds being delivered. */
 void handleLumGates(std::string data) {
-
+    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP lum_gates: " + data);
 }
 
 /** Handles an incoming death link from other games. */

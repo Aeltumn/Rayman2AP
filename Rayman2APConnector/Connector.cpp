@@ -41,7 +41,7 @@ void Connector::handle(int type, std::string data) {
         AP_DeathLinkSend();
         break;
     case MESSAGE_TYPE_MESSAGE:
-        // Send the message up to AP.
+        // Send the message up to Archipelago server.
         AP_Say(data);
         break;
     case MESSAGE_TYPE_CONNECT:
@@ -64,11 +64,13 @@ void Connector::handle(int type, std::string data) {
     }
         break;
     case MESSAGE_TYPE_SHUTDOWN:
+        // Disconnect if connected, used on shutdown.
         if (isConnected()) {
             disconnect();
         }
         break;
     case MESSAGE_TYPE_DISCONNECT:
+        // Disconnect from the Archipelago server.
         if (disconnect()) {
             send(MESSAGE_TYPE_MESSAGE, "Succesfully disconnected from " + lastIp);
         } else {
@@ -76,15 +78,58 @@ void Connector::handle(int type, std::string data) {
         }
         break;
     case MESSAGE_TYPE_CHECK:
+        // Check if the connection is valid.
         if (isConnected()) {
             send(MESSAGE_TYPE_MESSAGE, "You are currently connected to " + lastIp);
         } else {
             send(MESSAGE_TYPE_MESSAGE, "You are not connected to any Archipelago server");
         }
         break;
+    case MESSAGE_TYPE_ITEM:
+    {
+        // Communicate up that an item is collected.
+        std::istringstream f(data);
+        std::string id;
+        std::getline(f, id, ' ');
+        if (isConnected()) {
+            AP_SendItem(std::stoi(id));
+        }
+    }
+        break;
+    case MESSAGE_TYPE_COMPLETE:
+        // The game is done; pass it on!
+        if (isConnected()) {
+            AP_StoryComplete();
+        }
+        break;
     default:
         send(MESSAGE_TYPE_DEBUG, "[child] Received type " + std::to_string(type) + ": " + data);
     }
+}
+
+/** Handles clearing cached item checks. */
+void handleItemClear() {
+
+}
+
+/** Handles an item being checked. */
+void handleItem(int64_t id, bool notify) {
+
+}
+
+/** Handles a location being checked. */
+void handleLocation(int64_t id) {
+
+}
+
+/** Handles level swap data being delivered. */
+void handleLevelSwaps(std::string data) {
+
+}
+
+/** Handles lum gate thresholds being delivered. */
+void handleLumGates(std::string data) {
+
 }
 
 /** Handles an incoming death link from other games. */
@@ -97,7 +142,12 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     lastIp = ip;
     AP_Init(ip.c_str(), "Rayman 2", slot.c_str(), password.c_str());
     AP_SetDeathLinkSupported(true);
+    AP_SetItemClearCallback(handleItemClear);
+    AP_SetItemRecvCallback(handleItem);
+    AP_SetLocationCheckedCallback(handleLocation);
     AP_SetDeathLinkRecvCallback(handleDeathLink);
+    AP_RegisterSlotDataRawCallback("level_swaps", handleLevelSwaps);
+    AP_RegisterSlotDataRawCallback("lum_gates", handleLumGates);
     AP_Start();
     return true;
 }

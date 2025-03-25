@@ -1,15 +1,13 @@
 #include "Connector.h"
 #include <iomanip>
+#include <unordered_map>
 
 Connector *instance;
+std::vector<int64_t> unlockedChecks;
+std::unordered_map<std::string, std::string> levelSwaps;
+std::unordered_map<std::string, int> lumGates;
+std::unordered_map<int64_t, std::string> idMap;
 std::string lastIp;
-
-/** Removes any trailing newlines. */
-void removeTrailingNewlines(std::string& str) {
-    str.erase(std::find_if(str.rbegin(), str.rend(), [](char ch) {
-        return ch != '\n' && ch != '\r';
-    }).base(), str.end());
-}
 
 /** Prints the current connection status. */
 void printConnectionStatus() {
@@ -160,35 +158,120 @@ void handleItemClear() {
     // We don't propagate item state clears because we store within the save file what the client has.
     // Instead we clear the local state of the connector which is what it communicates to the client whenever
     // a new save file is loaded and we need to update the collected objects.
-    // TODO Clear local state
+    unlockedChecks.clear();
 }
 
 /** Handles an item being checked. */
 void handleItem(int64_t id, bool notify) {
-    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP item check: " + std::to_string(id) + ", notify? " + (notify ? "yes" : "no"));
+    unlockedChecks.push_back(id);
+
+    // TODO Redirect to the game client if a save got selected and send all unlocked checks across when a save is picked, also send level swaps and lum gates when we do!
 }
 
 /** Handles a location being checked. */
 void handleLocation(int64_t id) {
-    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP location check: " + std::to_string(id));
+    // We don't care about external location checks coming in. We don't
+    // want to hand out checks because they won't result in a send. We
+    // assume Archipelago ignores it if we later check these.
 }
 
 /** Handles level swap data being delivered. */
 void handleLevelSwaps(std::string data) {
-    removeTrailingNewlines(data);
-    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP level_swaps: " + data);
+    try {
+        // Parses the level swaps from the archipelago input
+        levelSwaps.clear();
+        if (data.length() < 3) return;
+        std::string inner = data.substr(1, data.length() - 2);
+        std::stringstream stream(inner);
+        std::string token;
+        while (std::getline(stream, token, ',')) {
+            size_t colonPos = token.find(":");
+            if (colonPos == std::string::npos) continue;
+            std::string key = token.substr(0, colonPos);
+            std::string value = token.substr(colonPos + 1);
+            levelSwaps[key.substr(1, key.length() - 2)] = value.substr(1, value.length() - 2);
+        }
+
+        // Debug print to the log
+        std::stringstream ss;
+        for (auto it = levelSwaps.begin(); it != levelSwaps.end(); ++it) {
+            ss << it->first << " = " << it->second;
+            if (std::next(it) != levelSwaps.end()) {
+                ss << ", ";
+            }
+        }
+        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP level_swaps: " + ss.str());
+    } catch (const std::exception& e) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[handleLevelSwaps] Caught exception: " + std::string(e.what()));
+    } catch (...) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[handleLevelSwaps] Caught an unknown exception!");
+    }
 }
 
 /** Handles lum gate thresholds being delivered. */
 void handleLumGates(std::string data) {
-    removeTrailingNewlines(data);
-    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP lum_gates: " + data);
+    try {
+        // Parse the lum gates from the archipelago input
+        lumGates.clear();
+        if (data.length() < 3) return;
+        std::string inner = data.substr(1, data.length() - 2);
+        std::stringstream stream(inner);
+        std::string token;
+        while (std::getline(stream, token, ',')) {
+            size_t colonPos = token.find(":");
+            if (colonPos == std::string::npos) continue;
+            std::string key = token.substr(0, colonPos);
+            std::string value = token.substr(colonPos + 1);
+            lumGates[key.substr(1, key.length() - 2)] = std::stoi(value);
+        }
+
+        // Debug print the lum gates to the log
+        std::stringstream ss;
+        for (auto it = lumGates.begin(); it != lumGates.end(); ++it) {
+            ss << it->first << " = " << std::to_string(it->second);
+            if (std::next(it) != lumGates.end()) {
+                ss << ", ";
+            }
+        }
+        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP lum_gates: " + ss.str());
+    } catch (const std::exception& e) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[handleLumGates] Caught exception: " + std::string(e.what()));
+    } catch (...) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[handleLumGates] Caught an unknown exception!");
+    }
 }
 
 /** Handles id map being delivered. */
 void handleIdMap(std::string data) {
-    removeTrailingNewlines(data);
-    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP id_map: " + data);
+    try {
+        // Parses the id map from the archipelago input
+        idMap.clear();
+        if (data.length() < 3) return;
+        std::string inner = data.substr(1, data.length() - 2);
+        std::stringstream stream(inner);
+        std::string token;
+        while (std::getline(stream, token, ',')) {
+            size_t colonPos = token.find(":");
+            if (colonPos == std::string::npos) continue;
+            std::string key = token.substr(0, colonPos);
+            std::string value = token.substr(colonPos + 1);
+            idMap[std::stol(key.substr(1, key.length() - 2))] = value.substr(1, value.length() - 2);
+        }
+
+        // Debug print to the log
+        std::stringstream ss;
+        for (auto it = idMap.begin(); it != idMap.end(); ++it) {
+            ss << std::to_string(it->first) << " = " << it->second;
+            if (std::next(it) != idMap.end()) {
+                ss << ", ";
+            }
+        }
+        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP id_map: " + ss.str());
+    } catch (const std::exception& e) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[handleIdMap] Caught exception: " + std::string(e.what()));
+    } catch (...) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[handleIdMap] Caught an unknown exception!");
+    }
 }
 
 /** Handles an incoming death link from other games. */
@@ -216,6 +299,10 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
 bool Connector::disconnect() {
     if (!AP_IsInit()) return false;
     AP_Shutdown();
+    unlockedChecks.clear();
+    levelSwaps.clear();
+    lumGates.clear();
+    idMap.clear();
     return true;
 }
 

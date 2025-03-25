@@ -91,7 +91,6 @@ void Connector::handle(int type, std::string data) {
         break;
     case MESSAGE_TYPE_MESSAGE:
         // Send the message up to Archipelago server.
-        send(MESSAGE_TYPE_MESSAGE, "[child] Informing AP about: " + data);
         AP_Say(data);
         break;
     case MESSAGE_TYPE_CONNECT:

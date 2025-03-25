@@ -52,15 +52,19 @@ void fn_vDeathlinkCommand(int lNbArgs, char** d_szArgs) {
 
 // Allows sending messages to the Archipelago server.
 void fn_vSayCommand(int lNbArgs, char** d_szArgs) {
-	// Add a space between arguments as it gets removed by the argument parser but we want to greedily include all arguments
-	char result[C_MaxLine];
-	int pos = 0;
+	int totalLength = 0;
+	for (int i = 0; i < lNbArgs; i++) {
+		totalLength += strlen(d_szArgs[i]);
+	}
+	totalLength += lNbArgs - 1;
+	char* result = malloc(totalLength + 1);
+	result[0] = '\0';
 	for (int i = 0; i < lNbArgs; i++) {
 		if (i > 0) {
-			result[pos++] = " ";
+			strcat(result, " ");
 		}
-		strcpy(result + pos, d_szArgs[i]);
-		pos += strlen(d_szArgs[i]);
+		strcat(result, d_szArgs[i]);
 	}
-	MOD_SendMessageE(MESSAGE_TYPE_MESSAGE, result);
+	MOD_SendMessage(MESSAGE_TYPE_MESSAGE, result);
+	free(result);
 }

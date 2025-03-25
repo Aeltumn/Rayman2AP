@@ -12,7 +12,7 @@ DWORD threadId;
 // Store messages that were received, we handle them the next tick
 typedef struct {
     int type;
-    char text[127];
+    char* text;
 } incomingMessage;
 
 incomingMessage* incomingMessages;
@@ -22,74 +22,80 @@ int incomingMessagesSize = 0;
 /** Task run in a separate thread to handle incoming packets. */
 DWORD WINAPI MOD_ReadInput(LPVOID param) {
     // Start reading from the child process's stdout
-    char buffer[128];
+    char buffer[1];
     BOOL ready = FALSE;
     DWORD bytesRead;
-    while (ReadFile(hChildStdOutRead, buffer, 127, &bytesRead, NULL) && bytesRead > 0) {
-        int remainingLength = bytesRead;
-        char* remaining = buffer;
-        while (remaining) {
-            // Take the line and determine its length
-            int possibleLength = strlen(remaining);
-            int length = remainingLength;
-            char* thisLine = remaining;
+    while (ReadFile(hChildStdOutRead, buffer, 1, &bytesRead, NULL) && bytesRead > 0) {
+        // Ignore all input until we find our special character!
+        if (buffer[0] != (char)26) continue;
 
-            // Determine if there is a second line included already
-            remaining = strstr(thisLine, "\r\n");
-            if (remaining) {
-                int consumedBytes = possibleLength - strlen(remaining);
-                remainingLength -= consumedBytes + 2;
-                length = consumedBytes;
-                memmove(remaining, remaining + 2, strlen(remaining) - 1);
-            }
+        // Read the length of the message that will follow
+        char lengthChar[7];
+        ReadFile(hChildStdOutRead, lengthChar, 6, &bytesRead, NULL);
+        if (bytesRead == 0) continue;
+        lengthChar[6] = '\0';
+        int messageLength = atoi(lengthChar);
+        if (messageLength <= 0) continue;
 
-            // Ignore lines that don't start with a 4
-            if (thisLine[0] != '4') {
-                // TODO Remove this, this is just for debugging!
-                if (length > 0) {
-                    char* msg = malloc(129);
-                    strncpy(msg, thisLine, length);
-                    if (msg[length - 1] != 0) msg[length] = 0;
-                    MOD_Print(msg);
-                    free(msg);
+        // Determine the type of the message
+        char typeChar[1];
+        ReadFile(hChildStdOutRead, typeChar, 1, &bytesRead, NULL);
+        if (bytesRead == 0) continue;
+        int type = typeChar[0] - '0';
+
+        // Read out the message
+        char* messageBuffer = malloc(messageLength + 1);
+        if (!messageBuffer) {
+            MOD_Print("Failed to allocate memory for incoming message");
+            return;
+        }
+        ReadFile(hChildStdOutRead, messageBuffer, messageLength, &bytesRead, NULL);
+        if (bytesRead == 0) {
+            free(messageBuffer);
+            continue;
+        }
+        messageBuffer[messageLength] = '\0';
+
+        // If we haven't handled any packets yet this is the initial packet and we are now ready
+        // and can continue starting the game.
+        if (!ready) {
+            ready = TRUE;
+            SetEvent(readyEvent);
+        }
+
+        // Wait for mutex access
+        WaitForSingleObject(messageMutex, 50);
+
+        __try {
+            // Queue up the message for next tick
+            if (incomingMessageCount >= incomingMessagesSize) {
+                incomingMessagesSize = max(2, incomingMessagesSize * 2);
+                incomingMessage* reallocated = realloc(incomingMessages, incomingMessagesSize * sizeof(incomingMessage));
+                if (!reallocated) {
+                    MOD_Print("Failed to extend array of incoming messages");
+                    free(messageBuffer);
+                    return;
                 }
-                continue;
+                incomingMessages = reallocated;
             }
-            
-            // Determine the type of the message
-            int type = thisLine[1] - '0';
+            incomingMessage message = { 0 };
+            message.type = type;
+            message.text = messageBuffer;
 
-            // If we haven't handled any packets yet this is the initial packet and we are now ready
-            // and can continue starting the game.
-            if (!ready) {
-                ready = TRUE;
-                SetEvent(readyEvent);
+            // Print all incoming messages to the output log
+            FILE* pFile = fopen("output_log.txt", "a");
+            if (pFile != NULL) {
+                fprintf(pFile, messageBuffer);
+                fprintf(pFile, "\n");
+                fclose(pFile);
             }
-
-            // Wait for mutex access
-            WaitForSingleObject(messageMutex, 50);
-
-            __try {
-                // Queue up the message for next tick
-                if (incomingMessageCount >= incomingMessagesSize) {
-                    incomingMessagesSize = max(2, incomingMessagesSize * 2);
-                    incomingMessage* reallocated = realloc(incomingMessages, incomingMessagesSize * sizeof(incomingMessage));
-                    if (!reallocated) {
-                        MOD_Print("Failed to extend array of incoming messages");
-                        return;
-                    }
-                    incomingMessages = reallocated;
-                }
-                incomingMessage message = { 0 };
-                message.type = type;
-                strncpy(message.text, thisLine + 2, length - 2);
-                message.text[length - 2] = 0;
-                incomingMessages[incomingMessageCount++] = message;
-            }
-            __finally {
-                // Release the mutex
-                ReleaseMutex(messageMutex);
-            }
+        
+            // Store the incoming message last
+            incomingMessages[incomingMessageCount++] = message;
+        }
+        __finally {
+            // Release the mutex
+            ReleaseMutex(messageMutex);
         }
     }
 }
@@ -106,6 +112,7 @@ void MOD_RunPendingMessages() {
         for (int i = 0; i < incomingMessageCount; i++) {
             incomingMessage entry = incomingMessages[i];
             MOD_HandleMessage(entry.type, entry.text);
+            free(entry.text);
         }
         incomingMessageCount = 0;
     }
@@ -254,13 +261,14 @@ void MOD_SendMessageE(int type) {
 /** Sends out a connector message. */
 void MOD_SendMessage(int type, const char* data) {
     DWORD bytesWritten;
-    int length = strlen(data) + 3;
+    int length = strlen(data) + 2;
     char* message = malloc(length);
     message[0] = type + '0';
-    strcpy(message + 1, data);
-    message[length - 2] = '\n';
-    message[length - 1] = '\0';
-    if (!WriteFile(hChildStdInWrite, message, strlen(message), &bytesWritten, NULL)) {
+    if (length > 2) {
+        strcpy(message + 1, data);
+    }
+    message[length - 1] = '\n';
+    if (!WriteFile(hChildStdInWrite, message, length, &bytesWritten, NULL)) {
         MOD_Print("Encountered error while writing to connector %lu", GetLastError());
     }
     free(message);

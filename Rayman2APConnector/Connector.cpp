@@ -1,26 +1,71 @@
 #include "Connector.h"
+#include <iomanip>
 
 Connector *instance;
 std::string lastIp;
 
- void Connector::waitForInput() {
-    // Keep reading characters until the null terminator is encountered
-    std::string input;
-    while (std::getline(std::cin, input)) {
-        int type = input[0] - '0';
-        input.erase(0, 1);
-        instance->handle(type, input);
+/** Removes any trailing newlines. */
+void removeTrailingNewlines(std::string& str) {
+    str.erase(std::find_if(str.rbegin(), str.rend(), [](char ch) {
+        return ch != '\n' && ch != '\r';
+    }).base(), str.end());
+}
+
+/** Prints the current connection status. */
+void printConnectionStatus() {
+    switch (AP_GetConnectionStatus()) {
+    case AP_ConnectionStatus::Disconnected:
+        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP Status: Disconnected");
+        break;
+    case AP_ConnectionStatus::Connected:
+        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP Status: Connected");
+        break;
+    case AP_ConnectionStatus::Authenticated:
+        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP Status: Authenticated");
+        break;
+    case AP_ConnectionStatus::ConnectionRefused:
+        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP Status: Connection Refused");
+        break;
     }
 }
 
+/** Returns the number as a padded string. */
+std::string paddedString(int num) {
+    std::ostringstream oss;
+    oss << std::setw(6) << std::setfill('0') << num;
+    return oss.str();
+}
+
+ void Connector::waitForInput() {
+     try {
+         // Keep reading characters until the null terminator is encountered
+         std::string input;
+         while (std::getline(std::cin, input)) {
+             int type = input[0] - '0';
+             input.erase(0, 1);
+             instance->handle(type, input);
+         }
+     } catch (const std::exception& e) {
+         instance->send(MESSAGE_TYPE_MESSAGE, "[waitForInput] Caught exception: " + std::string(e.what()));
+     } catch (...) {
+         instance->send(MESSAGE_TYPE_MESSAGE, "[waitForInput] Caught an unknown exception!");
+     }
+}
+
 void Connector::waitForAP() {
-    // Keep waiting for AP to have messages
-    while (true) {
-        if (AP_IsInit() && AP_IsMessagePending()) {
-            AP_Message* message = AP_GetLatestMessage();
-            AP_ClearLatestMessage();
-            instance->send(MESSAGE_TYPE_MESSAGE, message->text);
+    try {
+        // Keep waiting for AP to have messages
+        while (true) {
+            if (AP_IsInit() && AP_IsMessagePending()) {
+                AP_Message* message = AP_GetLatestMessage();
+                instance->send(MESSAGE_TYPE_MESSAGE, message->text);
+                AP_ClearLatestMessage();
+            }
         }
+    } catch (const std::exception& e) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[waitForAP] Caught exception: " + std::string(e.what()));
+    } catch (...) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[waitForAP] Caught an unknown exception!");
     }
 }
 
@@ -31,7 +76,11 @@ void Connector::init() {
 
 void Connector::send(int type, std::string data) {
     char typeChar = (type + '0');
-	std::cout << '4' << typeChar << data << std::endl;
+    int length = data.length();
+    if (length < 0 || length > 999999) {
+        throw std::runtime_error("Invalidly long strong, length was " + std::to_string(length));
+    }
+    std::cout << (char)26 << paddedString(length) << typeChar << data;
 }
 
 void Connector::handle(int type, std::string data) {
@@ -42,6 +91,7 @@ void Connector::handle(int type, std::string data) {
         break;
     case MESSAGE_TYPE_MESSAGE:
         // Send the message up to Archipelago server.
+        send(MESSAGE_TYPE_MESSAGE, "[child] Informing AP about: " + data);
         AP_Say(data);
         break;
     case MESSAGE_TYPE_CONNECT:
@@ -55,10 +105,7 @@ void Connector::handle(int type, std::string data) {
         std::getline(f, slot, ' ');
         std::getline(f, password, ' ');
 
-        if (connect(ip, slot, password)) {
-            send(MESSAGE_TYPE_MESSAGE, "You are now connected to " + lastIp);
-        }
-        else {
+        if (!connect(ip, slot, password)) {
             send(MESSAGE_TYPE_MESSAGE, "You are already connected to an Archipelago server");
         }
     }
@@ -81,6 +128,7 @@ void Connector::handle(int type, std::string data) {
         // Check if the connection is valid.
         if (isConnected()) {
             send(MESSAGE_TYPE_MESSAGE, "You are currently connected to " + lastIp);
+            printConnectionStatus();
         } else {
             send(MESSAGE_TYPE_MESSAGE, "You are not connected to any Archipelago server");
         }
@@ -98,38 +146,50 @@ void Connector::handle(int type, std::string data) {
         break;
     case MESSAGE_TYPE_COMPLETE:
         // The game is done; pass it on!
+        send(MESSAGE_TYPE_MESSAGE, "[child] Informing AP that story is done");
         if (isConnected()) {
             AP_StoryComplete();
         }
         break;
     default:
-        send(MESSAGE_TYPE_DEBUG, "[child] Received type " + std::to_string(type) + ": " + data);
+        send(MESSAGE_TYPE_MESSAGE, "[child] Received type " + std::to_string(type) + ": " + data);
     }
 }
 
 /** Handles clearing cached item checks. */
 void handleItemClear() {
-    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP item clear");
+    // We don't propagate item state clears because we store within the save file what the client has.
+    // Instead we clear the local state of the connector which is what it communicates to the client whenever
+    // a new save file is loaded and we need to update the collected objects.
+    // TODO Clear local state
 }
 
 /** Handles an item being checked. */
 void handleItem(int64_t id, bool notify) {
-    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP item check: " + std::to_string(id));
+    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP item check: " + std::to_string(id) + ", notify? " + (notify ? "yes" : "no"));
 }
 
 /** Handles a location being checked. */
 void handleLocation(int64_t id) {
-    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP location check: " + std::to_string(id));
+    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP location check: " + std::to_string(id));
 }
 
 /** Handles level swap data being delivered. */
 void handleLevelSwaps(std::string data) {
-    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP level_swaps: " + data);
+    removeTrailingNewlines(data);
+    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP level_swaps: " + data);
 }
 
 /** Handles lum gate thresholds being delivered. */
 void handleLumGates(std::string data) {
-    instance->send(MESSAGE_TYPE_DEBUG, "[child] AP lum_gates: " + data);
+    removeTrailingNewlines(data);
+    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP lum_gates: " + data);
+}
+
+/** Handles id map being delivered. */
+void handleIdMap(std::string data) {
+    removeTrailingNewlines(data);
+    instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP id_map: " + data);
 }
 
 /** Handles an incoming death link from other games. */
@@ -140,6 +200,7 @@ void handleDeathLink() {
 bool Connector::connect(std::string ip, std::string slot, std::string password) {
     if (AP_IsInit()) return false;
     lastIp = ip;
+    instance->send(MESSAGE_TYPE_MESSAGE, "[child] Connecting to ip: " + ip + ", game: Rayman 2, slot: " + slot + ", password: " + password);
     AP_Init(ip.c_str(), "Rayman 2", slot.c_str(), password.c_str());
     AP_SetDeathLinkSupported(true);
     AP_SetItemClearCallback(handleItemClear);
@@ -148,6 +209,7 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_SetDeathLinkRecvCallback(handleDeathLink);
     AP_RegisterSlotDataRawCallback("level_swaps", handleLevelSwaps);
     AP_RegisterSlotDataRawCallback("lum_gates", handleLumGates);
+    AP_RegisterSlotDataRawCallback("id_map", handleIdMap);
     AP_Start();
     return true;
 }

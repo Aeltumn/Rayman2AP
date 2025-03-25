@@ -10,78 +10,6 @@ BOOL MOD_IgnoreDeath = FALSE;
 char MOD_ScreenText[10][128];
 time_t MOD_ScreenTextStart[10];
 
-// TODO First areas of each level will need to randomise between one another otherwise you can't exit properly!
-const char* MOD_LevelNames[] = {
-	"Astro_00",
-	"Astro_10",
-	"Bast_09", // Iron Mountains intro cutscene.
-	"Bast_10",
-	"Bast_20",
-	"Bast_22",
-	"Boat01",
-	"Boat02",
-	"Cask_10",
-	"Cask_30",
-	"Chase_10",
-	"Chase_22",
-	"Earth_10",
-	"Earth_20",
-	"Earth_30",
-	"GLob_10",
-	"GLob_20",
-	"GLob_30",
-	"Helic_10",
-	"Helic_20",
-	"Helic_30",
-	"Ile_10",
-	"Learn_10",
-	"Learn_30",
-	"Learn_31",
-	"Learn_40",
-	"Learn_60",
-	"Ly_10",
-	"Ly_20",
-	"Mine_10",
-	"Morb_00",
-	"Morb_10",
-	"Morb_20",
-	"Nave_10",
-	"Nave_15",
-	"Nave_20",
-	"Plum_00$01$00",
-	"Plum_10",
-	"Plum_20",
-	"Rhop_10", // Ending Boss Fight
-	"Rodeo_10",
-	"Rodeo_40",
-	"Rodeo_60",
-	"Seat_10",
-	"Seat_11",
-	"Ski_10",
-	"Ski_60",
-	"Vulca_10",
-	"Vulca_20",
-	"Water_10",
-	"Water_20",
-	"Whale_00",
-	"Whale_05",
-	"Whale_10"
-};
-char* MOD_LevelNamesShuffled[LEVEL_COUNT];
-
-// Utility method for shuffling array.
-void shuffle(char* array[], size_t n) {
-	if (n > 1) {
-		size_t i;
-		for (i = 0; i < n - 1; i++)	{
-			size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
-			char* t = array[j];
-			array[j] = array[i];
-			array[i] = t;
-		}
-	}
-}
-
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
 	long lSize = vsnprintf(NULL, 0, szFmt, args);
@@ -103,22 +31,8 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		return;
 	}
 
-	// Find which map to send the player to
-	int oldId = -1;
-	for (int i = 0; i < LEVEL_COUNT; i++) {
-		if (_stricmp(szLevelName, MOD_LevelNames[i]) == 0) {
-			oldId = i;
-		}
-	}
-	if (oldId == -1) {
-		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
-		return;
-	}
-
-	// Get the new target and send them there
-	char* targetLevelName = MOD_LevelNamesShuffled[oldId];
-	MOD_Print("GAM_fn_vAskToChangeLevel: %s -> %s", szLevelName, targetLevelName);
-	GAM_fn_vAskToChangeLevel(targetLevelName, bSaveGame);
+	MOD_Print("GAM_fn_vAskToChangeLevel: %s", szLevelName);
+	GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 }
 
 void MOD_SetLevel(const char* szName) {
@@ -127,22 +41,6 @@ void MOD_SetLevel(const char* szName) {
 }
 
 void MOD_SetNextLevel(const char* szName) {
-	// TODO: This needs to happen earlier!
-	// Whenever we go back to the hall of doors we need to restore the original level name
-	if (_stricmp(szName, "mapmonde") == 0) {
-		char* currentMap = GAM_fn_p_szGetLevelName();
-		int oldId = -1;
-		for (int i = 0; i < LEVEL_COUNT; i++) {
-			if (_stricmp(currentMap, MOD_LevelNamesShuffled[i]) == 0) {
-				oldId = i;
-			}
-		}
-		if (oldId != -1) {
-			GAM_fn_vSetLevelName(MOD_LevelNames[oldId]);
-			MOD_Print("Restored level name to %s", MOD_LevelNames[oldId]);
-		}
-	}
-
 	MOD_Print("GAM_fn_vSetNextLevelName: %s", szName);
 	GAM_fn_vSetNextLevelName(szName);
 }
@@ -187,17 +85,7 @@ void MOD_TriggerDeath() {
 
 /** Prints a message to the console. */
 void MOD_Print(char* text, ...) {
-#ifdef DEBUG_PRINT
-	FILE* pFile = fopen("output_log.txt", "a");
-	if (pFile != NULL) {
-		fprintf(pFile, "\n");
-		va_list args;
-		va_start(args, text);
-		vfprintf(pFile, text, args);
-		va_end(args);
-		fclose(pFile);
-	}
-#else
+#ifndef DISABLE_CONSOLE_PRINT
 	// Remove any carriage returns from the input as they crash the game
 	int length = strlen(text);
 	int nullIndex = length;
@@ -311,12 +199,6 @@ void MOD_SetDeathLink(BOOL value) {
 void MOD_Main(void) {
 	// Seed the random number generator
 	srand(time(NULL));
-
-	// Shuffle the list of levels to create a unique mapping
-	for (int i = 0; i < LEVEL_COUNT; i++) {
-		MOD_LevelNamesShuffled[i] = (char*)MOD_LevelNames[i];
-	}
-	shuffle(MOD_LevelNamesShuffled, LEVEL_COUNT);
 
 	// Initialize commands
 	MOD_InitCommands();

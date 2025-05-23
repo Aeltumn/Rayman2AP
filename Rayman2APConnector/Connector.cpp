@@ -165,14 +165,22 @@ void handleItemClear() {
 void handleItem(int64_t id, bool notify) {
     unlockedChecks.push_back(id);
 
+    // Archipelago increments all ids by 1651615, so we subtract that to get the ID used
+    // by Rayman 2 in its internal lookup table.
+    int64_t r2Id = id - 1651615;
+
     // TODO Redirect to the game client if a save got selected and send all unlocked checks across when a save is picked, also send level swaps and lum gates when we do!
 }
 
 /** Handles a location being checked. */
 void handleLocation(int64_t id) {
-    // We don't care about external location checks coming in. We don't
-    // want to hand out checks because they won't result in a send. We
-    // assume Archipelago ignores it if we later check these.
+    // Whenever a location comes in we need to check off that location in the internal lookup
+    // table so the game removes the cage/lum at that location.
+    int64_t r2Id = id - 1651615;
+
+    // TODO Mark off r2Id in the lookup table
+
+    // TODO Update the lum/cage object if it's currently loaded
 }
 
 /** Handles level swap data being delivered. */
@@ -241,39 +249,6 @@ void handleLumGates(std::string data) {
     }
 }
 
-/** Handles id map being delivered. */
-void handleIdMap(std::string data) {
-    try {
-        // Parses the id map from the archipelago input
-        idMap.clear();
-        if (data.length() < 3) return;
-        std::string inner = data.substr(1, data.length() - 2);
-        std::stringstream stream(inner);
-        std::string token;
-        while (std::getline(stream, token, ',')) {
-            size_t colonPos = token.find(":");
-            if (colonPos == std::string::npos) continue;
-            std::string key = token.substr(0, colonPos);
-            std::string value = token.substr(colonPos + 1);
-            idMap[std::stol(key.substr(1, key.length() - 2))] = value.substr(1, value.length() - 2);
-        }
-
-        // Debug print to the log
-        std::stringstream ss;
-        for (auto it = idMap.begin(); it != idMap.end(); ++it) {
-            ss << std::to_string(it->first) << " = " << it->second;
-            if (std::next(it) != idMap.end()) {
-                ss << ", ";
-            }
-        }
-        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP id_map: " + ss.str());
-    } catch (const std::exception& e) {
-        instance->send(MESSAGE_TYPE_MESSAGE, "[handleIdMap] Caught exception: " + std::string(e.what()));
-    } catch (...) {
-        instance->send(MESSAGE_TYPE_MESSAGE, "[handleIdMap] Caught an unknown exception!");
-    }
-}
-
 /** Handles an incoming death link from other games. */
 void handleDeathLink() {
     instance->send(MESSAGE_TYPE_DEATH, "");
@@ -291,7 +266,6 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_SetDeathLinkRecvCallback(handleDeathLink);
     AP_RegisterSlotDataRawCallback("level_swaps", handleLevelSwaps);
     AP_RegisterSlotDataRawCallback("lum_gates", handleLumGates);
-    AP_RegisterSlotDataRawCallback("id_map", handleIdMap);
     AP_Start();
     return true;
 }
@@ -302,7 +276,6 @@ bool Connector::disconnect() {
     unlockedChecks.clear();
     levelSwaps.clear();
     lumGates.clear();
-    idMap.clear();
     return true;
 }
 

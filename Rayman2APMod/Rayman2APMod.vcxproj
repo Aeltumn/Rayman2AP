@@ -94,15 +94,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src/bitset.h" />
     <ClInclude Include="src/framework.h" />
     <ClInclude Include="src/mod.h" />
-    <ClInclude Include="src\connector.h" />
+    <ClInclude Include="src/connector.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src/bitset.c" />
     <ClCompile Include="src/dllmain.c" />
     <ClCompile Include="src/mod.c" />
-    <ClCompile Include="src\commands.c" />
-    <ClCompile Include="src\connector.c" />
+    <ClCompile Include="src/commands.c" />
+    <ClCompile Include="src/connector.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

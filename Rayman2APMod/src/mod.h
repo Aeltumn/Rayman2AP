@@ -1,6 +1,7 @@
 #pragma once
 #include "framework.h"
 #include "connector.h"
+#include "bitset.h"
 
 void MOD_EngineTick();
 void MOD_Init();

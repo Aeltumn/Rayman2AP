@@ -9,6 +9,7 @@ BOOL MOD_DeathLink = TRUE;
 BOOL MOD_IgnoreDeath = FALSE;
 char MOD_ScreenText[10][128];
 time_t MOD_ScreenTextStart[10];
+BitSet MOD_LastCollected;
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
@@ -50,9 +51,55 @@ void MOD_SetFirstLevel(const char* szName) {
 	GAM_fn_vSetFirstLevelName(szName);
 }
 
+/** Sets the value of the boolean array. */
+void AI_fn_bSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value) {
+	AI_tdstArray* p_stArray;
+	AI_fn_bGetDsgVar(p_stSuperObj, ucDsgVarId, NULL, &p_stArray);
+
+	ulIndex--;
+	unsigned long ulIndexFirstLong = (ulIndex >> 5);
+	unsigned long ulIndexFirstBit = (ulIndex & 31);
+	unsigned long mask = 1 << ulIndexFirstBit;
+	long* pValue = &AI_M_pArrayElement(p_stArray, ulIndexFirstLong)->lValue;
+	if (value) {
+		*pValue |= mask;
+	} else {
+		*pValue &= ~mask;
+	}
+}
+
+/** Checks if any lums/cages have been collected since last frame. */
+void MOD_CheckVariables() {
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+	if (pGlobal) {
+		for (int i = 1; i <= 1400; i++) {
+			unsigned char last = getBitSet(&MOD_LastCollected, i);
+			ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+			
+			// If there's a desync between the local storage and the DSG variables
+			// we collected an item, send it across!
+			if (last != dsg) {
+				setBitSet(&MOD_LastCollected, i, dsg);
+
+				// Only if the item is now collected, send a check!
+				if (dsg) {
+					MOD_Print("Collected item: %d", i);
+					
+					// Send up the id of the item directly
+					char str[2];
+					str[0] = (char)i;
+					str[1] = '\0';
+					MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
+				}
+			}
+		}
+	}
+}
+
 /** Ticked by the engine every frame, runs all messages received since last tick. */
 void MOD_EngineTick() {
 	MOD_RunPendingMessages();
+	MOD_CheckVariables();
 	GAM_fn_vEngine();
 }
 
@@ -199,6 +246,9 @@ void MOD_SetDeathLink(BOOL value) {
 void MOD_Main(void) {
 	// Seed the random number generator
 	srand(time(NULL));
+
+	// Clear the collection bitset
+	clearBitSet(&MOD_LastCollected);
 
 	// Initialize commands
 	MOD_InitCommands();

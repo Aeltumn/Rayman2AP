@@ -130,7 +130,7 @@ void Connector::handle(int type, std::string data) {
             send(MESSAGE_TYPE_MESSAGE, "You are not connected to any Archipelago server");
         }
         break;
-    case MESSAGE_TYPE_ITEM:
+    case MESSAGE_TYPE_COLLECTED:
     {
         // Communicate up that an item is collected.
         std::istringstream f(data);

@@ -23,19 +23,13 @@ void fn_vDetachHooks( void )
 }
 
 /*
-	DsgVar_3 on a lum is its index into DsgVar_42 on the global data which is all collected lums
-	DsgVar_45 is the amount of lums collected
-	DsgVar_43 is the amount of remaining lums
-
-	Every lum in the game has a globally unique index!
-	Every cage has DsgVar_0 for its globally unique index and DsgVar_8 for its lums' globally unique index.
-	DsgVar_4 on a cage decides its contents, it always spawns as many 5 lums as possible then 1 lums.
-	When it sets a 5 lum the id increments by 5, otherwise by 1.
-
-	YLT_InitLevel in each level sets the lum counter:
-	((GlobalActorModel__World)Refs.Perso["global"]).DsgVar_43 = (50-ACT_GetNumberOfBooleanInArray(((GlobalActorModel__World)Refs.Perso["global"]).DsgVar_42, 251, ((251+50)-1)));
-
-	DsgVar_42 needs to store which objects can still be picked up.
+	Information on currently collected information is stored into the global AI object.
+	4 (int): Total cages in current level
+	5 (int): Collected cages in current level
+	42 (integer array): All collected objects (1-800 and 1201-1400 are yellow lums, 962-963 is silver lums, 840-481 are cages in Learn10, 849-853 are cages in Ski10, ranges are inclusive)
+	43 (unsigned byte): Remaining lums in current level
+	44 (unsigned byte): Total lums in current level
+	45 (signed byte): Collected lums in current level
 */
 
 __declspec(dllexport)

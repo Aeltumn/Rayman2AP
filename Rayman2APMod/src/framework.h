@@ -10,4 +10,5 @@
 #include <time.h>
 
 #include <ACP_Ray2.h>
+#include <AI/AI_Array.h>
 #include <console.h>

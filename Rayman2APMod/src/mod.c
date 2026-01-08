@@ -17,21 +17,20 @@ long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
 	return lSize + 1;
 }
 
+long SPTXT_fn_lGetCharWidth(MTH_tdxReal xSize)
+{
+	MTH_tdxReal size = 15.0f - xSize;
+	MTH_tdxReal width = 46.0f - size * 4.0f;
+	return (long)width;
+}
+
 long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 	MTH_tdxReal size = 15.0f - xSize;
 	MTH_tdxReal height = 38.0f - size * 2.5f;
 	return (long)height + TEXT_MARGIN + TEXT_MARGIN;
 }
 
-// Hook into level transitions and randomize them
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
-	// Ignore going back to the main menu
-	if (_stricmp(szLevelName, "menu") == 0 || _stricmp(szLevelName, "mapmonde") == 0) {
-		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
-		MOD_Print("GAM_fn_vAskToChangeLevel: %s", szLevelName);
-		return;
-	}
-
 	MOD_Print("GAM_fn_vAskToChangeLevel: %s", szLevelName);
 	GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 }
@@ -83,7 +82,8 @@ void MOD_CheckVariables() {
 
 				// Only if the item is now collected, send a check!
 				if (dsg) {
-					MOD_Print("Collected item: %d", i);
+					// While testing we show collected items on screen
+					MOD_vShowScreenText("Collected item: %d", i);
 					
 					// Send up the id of the item directly
 					char str[2];
@@ -163,6 +163,19 @@ void MOD_Print(char* text, ...) {
 #endif
 }
 
+/** Prints a message to the console. */
+void MOD_vShowScreenText(char* text, ...) {
+	va_list args;
+	va_start(args, text);
+	long lSize = SPTXT_fn_lGetFmtStringLength(text, args);
+	char* szBuffer = _alloca(lSize);
+	if (szBuffer) {
+		vsprintf(szBuffer, text, args);
+		MOD_ShowScreenText(szBuffer);
+	}
+	va_end(args);
+}
+
 /** Shows the given text on the screen for the next 8 seconds. */
 void MOD_ShowScreenText(char* text) {
 	time_t currentTime = time(NULL);
@@ -200,31 +213,6 @@ void MOD_ShowScreenText(char* text) {
 	}
 }
 
-/** Draws text to the screen with the recent screen text. */
-void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
-	// Determine the current time
-	time_t currentTime = time(NULL);
-
-	// Draw the text to the screen
-	pInfo->xSize = 6;
-	pInfo->X = 10;
-	pInfo->Y = 1000-10;
-	pInfo->bFrame = TRUE;
-
-	for (int i = 0; i < 10; i++) {
-		// Ignore any lines that have finished fading out
-		time_t startTime = MOD_ScreenTextStart[i];
-		int timePassed = currentTime - startTime;
-		if (timePassed > SCREEN_TEXT_FADE_TIME) continue;
-
-		// Write the line and then move the Y up
-		char* screen = MOD_ScreenText[i];
-		pInfo->Y = pInfo->Y - SPTXT_fn_lGetCharHeight(pInfo->xSize);
-		SPTXT_vPrint(screen);
-	}
-	SPTXT_vResetTextInfo(pInfo);
-}
-
 /** Returns whether death link is currently enabled. */
 BOOL MOD_GetDeathLink() {
 	return MOD_DeathLink;
@@ -241,6 +229,45 @@ void MOD_SetDeathLink(BOOL value) {
 	} else {
 		MOD_Print("Deathlink has been disabled, you're safe now!");
 	}
+}
+
+/** Draws text to the screen with the recent screen text and progression statistics. */
+void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
+	// Determine the current time
+	time_t currentTime = time(NULL);
+
+	// Draw the screen text to the screen
+	pInfo->xSize = 6;
+	pInfo->X = 10;
+	pInfo->Y = 990;
+	pInfo->bFrame = TRUE;
+
+	long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
+	for (int i = 0; i < 10; i++) {
+		// Ignore any lines that have finished fading out
+		time_t startTime = MOD_ScreenTextStart[i];
+		int timePassed = currentTime - startTime;
+		if (timePassed > SCREEN_TEXT_FADE_TIME) continue;
+
+		// Write the line and then move the Y up
+		char* screen = MOD_ScreenText[i];
+		pInfo->Y = pInfo->Y - lineHeight;
+		SPTXT_vPrint(screen);
+	}
+
+	// Draw the current Archipelago progression to the bottom in the hall of doors
+	const char* szLevelName = GAM_fn_p_szGetLevelName();
+	if (_stricmp(szLevelName, "mapmonde") == 0) {
+		pInfo->bRightAlign = TRUE;
+		pInfo->X = 990;
+		pInfo->Y = 990 - 3 * lineHeight;
+		SPTXT_vPrintFmtLine("/o200:Archipelago Received");
+		pInfo->Y = 990 - 2 * lineHeight;
+		SPTXT_vPrintFmtLine("/o400:Lums: /o0:0/o400:, Cages: /o0:0");
+		pInfo->Y = 990 - lineHeight;
+		SPTXT_vPrintFmtLine("/o400:Masks: /o0:0/o400:, Elixir: /o200:No");
+	}
+	SPTXT_vResetTextInfo(pInfo);
 }
 
 void MOD_Main(void) {

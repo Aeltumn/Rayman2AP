@@ -89,12 +89,11 @@ void MOD_CheckVariables() {
 				// Only if the item is now collected, send a check!
 				if (dsg) {
 					// While testing we show collected items on screen
-					MOD_vShowScreenText("Collected item: %d", i);
+					MOD_vShowScreenText("Collected %d", i);
 					
 					// Send up the id of the item directly
-					char str[2];
-					str[0] = (char)i;
-					str[1] = '\0';
+					char str[6];
+					sprintf(str, "%d", i);
 					MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
 				}
 			}
@@ -279,17 +278,17 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 		SPTXT_vPrint(screen);
 	}
 
-	// Draw the current Archipelago progression to the bottom in the hall of doors
+	// Draw the current Archipelago progression to the bottom in the hall of doors or on the pause screen
 	const char* szLevelName = GAM_fn_p_szGetLevelName();
-	if (MOD_Connected && _stricmp(szLevelName, "mapmonde") == 0) {
+	if (MOD_Connected && (_stricmp(szLevelName, "mapmonde") == 0 || GAM_g_stEngineStructure->bEngineIsInPaused)) {
 		pInfo->bRightAlign = TRUE;
 		pInfo->X = 995;
 		pInfo->Y = 990 - 3 * lineHeight;
 		SPTXT_vPrintFmtLine("/o200:Archipelago Received");
 		pInfo->Y = 990 - 2 * lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Lums: /o0:%d/1000/o400:, Cages: /o0:%d/80", MOD_Lums, MOD_Cages);
+		SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_Lums, MOD_Cages);
 		pInfo->Y = 990 - lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Masks: /o0:%d/4/o400:, Elixir: %s", MOD_Masks, MOD_Elixir ? "/o0:Yes" : "/o200:No");
+		SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Elixir %s", MOD_Masks, MOD_Elixir ? "/o0:Yes" : "/o200:No");
 	}
 	SPTXT_vResetTextInfo(pInfo);
 }

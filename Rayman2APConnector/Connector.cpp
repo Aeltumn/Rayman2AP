@@ -16,6 +16,9 @@ std::unordered_map<std::string, int> lumGates;
 std::unordered_map<int64_t, std::string> idMap;
 std::string lastIp;
 
+// Dummy method so we don't have to add the gifting module which requires C++17
+void handleGiftAPISetReply(const AP_SetReply& reply) {}
+
 /** Prints the current connection status. */
 void printConnectionStatus() {
     switch (AP_GetConnectionStatus()) {
@@ -145,11 +148,16 @@ void Connector::handle(int type, std::string data) {
     }
     case MESSAGE_TYPE_COLLECTED: {
         // Communicate up that an item is collected.
-        std::istringstream f(data);
-        std::string id;
-        std::getline(f, id, ' ');
         if (isConnected()) {
-            AP_SendItem(1651615 + std::stoi(id));
+            // Ignore if this is not a valid check!
+            int value = atoi(data.c_str());
+            if (value != ELIXIR_ID && !(value >= 840 && value <= 919) && !(value >= 1 && value <= 800) && !(value >= 1201 && value <= 1400)) {
+                return;
+            }
+
+            // Send back down that we received the data
+            send(MESSAGE_TYPE_MESSAGE, "[child] Managed to parse " + std::to_string(value));
+            AP_SendItem(1651615 + value);
         }
         break;
     }
@@ -200,6 +208,8 @@ void handleItem(int64_t id, bool notify) {
     // Archipelago increments all ids by 1651615, so we subtract that to get the ID used
     // by Rayman 2.
     int64_t r2Id = id - 1651615;
+
+    instance->send(MESSAGE_TYPE_MESSAGE, "[child] Handling incoming item check " + std::to_string(r2Id));
 
     // Determine what type of item was collected
     const char* type;

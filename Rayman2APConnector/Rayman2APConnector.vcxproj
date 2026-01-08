@@ -89,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\APCpp\Archipelago.cpp" />
+    <ClCompile Include="..\APCpp\Archipelago_DataStorageSim.cpp" />
     <ClCompile Include="Connector.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>

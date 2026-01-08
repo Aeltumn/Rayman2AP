@@ -9,6 +9,7 @@
 #define MESSAGE_TYPE_DISCONNECT 6
 #define MESSAGE_TYPE_MESSAGE 7
 #define MESSAGE_TYPE_COMPLETE 8
+#define MESSAGE_TYPE_STATE 9
 
 int MOD_StartConnector();
 void MOD_StopConnector();

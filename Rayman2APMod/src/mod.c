@@ -5,6 +5,12 @@
 #define LEVEL_COUNT 56
 #define MAX_LENGTH 32
 
+BOOL MOD_Connected = FALSE;
+int MOD_Lums = 0;
+int MOD_Cages = 0;
+int MOD_Masks = 0;
+BOOL MOD_Elixir = FALSE;
+int* MOD_LumGates[6];
 BOOL MOD_DeathLink = TRUE;
 BOOL MOD_IgnoreDeath = FALSE;
 char MOD_ScreenText[10][128];
@@ -99,7 +105,9 @@ void MOD_CheckVariables() {
 /** Ticked by the engine every frame, runs all messages received since last tick. */
 void MOD_EngineTick() {
 	MOD_RunPendingMessages();
-	MOD_CheckVariables();
+	if (MOD_Connected) {
+		MOD_CheckVariables();
+	}
 	GAM_fn_vEngine();
 }
 
@@ -114,6 +122,22 @@ void MOD_Init() {
 	}
 
 	GAM_fn_vChooseTheGoodInit();
+}
+
+/** Updates the current progression state. */
+void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, BOOL elixir, int* lumGates) {
+	if (MOD_Connected != connected) {
+		// Clear the collection cache whenever we reconnect so we resend all the information!
+		clearBitSet(&MOD_LastCollected);
+	}
+	MOD_Connected = connected;
+	MOD_Lums = lums;
+	MOD_Cages = cages;
+	MOD_Masks = masks;
+	MOD_Elixir = elixir;
+	for (int i = 0; i < 6; i++) {
+		MOD_LumGates[i] = lumGates[i];
+	}
 }
 
 /** Triggers the player to die. */
@@ -257,15 +281,15 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 
 	// Draw the current Archipelago progression to the bottom in the hall of doors
 	const char* szLevelName = GAM_fn_p_szGetLevelName();
-	if (_stricmp(szLevelName, "mapmonde") == 0) {
+	if (MOD_Connected && _stricmp(szLevelName, "mapmonde") == 0) {
 		pInfo->bRightAlign = TRUE;
-		pInfo->X = 990;
+		pInfo->X = 995;
 		pInfo->Y = 990 - 3 * lineHeight;
 		SPTXT_vPrintFmtLine("/o200:Archipelago Received");
 		pInfo->Y = 990 - 2 * lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Lums: /o0:0/o400:, Cages: /o0:0");
+		SPTXT_vPrintFmtLine("/o400:Lums: /o0:%d/1000/o400:, Cages: /o0:%d/80", MOD_Lums, MOD_Cages);
 		pInfo->Y = 990 - lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Masks: /o0:0/o400:, Elixir: /o200:No");
+		SPTXT_vPrintFmtLine("/o400:Masks: /o0:%d/4/o400:, Elixir: %s", MOD_Masks, MOD_Elixir ? "/o0:Yes" : "/o200:No");
 	}
 	SPTXT_vResetTextInfo(pInfo);
 }

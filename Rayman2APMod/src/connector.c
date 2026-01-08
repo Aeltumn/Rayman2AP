@@ -277,7 +277,44 @@ void MOD_SendMessage(int type, const char* data) {
 /** Handles a connector message. */
 void MOD_HandleMessage(int type, const char* data) {
     switch (type) {
-    case MESSAGE_TYPE_DEATH:
+    case MESSAGE_TYPE_STATE: {
+        // Parse all data from the input message in order
+        char* copy = strdup(data);
+        if (!copy) break;
+
+        char* token;
+        int index = 0;
+        int gateIndex = 0;
+
+        BOOL connected = FALSE;
+        int lums = 0;
+        int cages = 0;
+        int masks = 0;
+        BOOL elixir = FALSE;
+        int* lumGates[6];
+
+        token = strtok(copy, ",");
+        while (token) {
+            switch (index) {
+            case 0: connected = atoi(token); break;
+            case 1: lums = atoi(token); break;
+            case 2: cages = atoi(token); break;
+            case 3: masks = atoi(token); break;
+            case 4: elixir = atoi(token); break;
+            default:
+                lumGates[gateIndex++] = atoi(token);
+                break;
+            }
+            index++;
+            token = strtok(NULL, ",");
+        }
+        free(copy);
+
+        // Send this data across to the main mod file
+        MOD_UpdateState(connected, lums, cages, masks, elixir, lumGates);
+        break;
+    }
+    case MESSAGE_TYPE_DEATH: {
         // Ignore a death if death link is currently not enabled
         if (!MOD_GetDeathLink()) return;
 
@@ -285,11 +322,20 @@ void MOD_HandleMessage(int type, const char* data) {
         MOD_TriggerDeath();
         MOD_ShowScreenText(data);
         break;
-    case MESSAGE_TYPE_MESSAGE:
+    }
+    case MESSAGE_TYPE_COLLECTED: {
+        // If we receive collected from another source it means another
+        // player obtained something we should be informed about on the screen
+        MOD_ShowScreenText(data);
+        break;
+    }
+    case MESSAGE_TYPE_MESSAGE: {
         MOD_Print(data);
         break;
-    default:
+    }
+    default: {
         MOD_Print("[parent] Received type %d: %s", type, data);
         break;
+    }
     }
 }

@@ -2,8 +2,15 @@
 #include <iomanip>
 #include <unordered_map>
 
+// Stores the ids of all super lums.
+const int ELIXIR_ID = 1188;
+const int SUPER_LUM_IDS[] = { 1 };
+
 Connector *instance;
-std::vector<int64_t> unlockedChecks;
+int lums = 0;
+int cages = 0;
+int masks = 0;
+bool elixir = false;
 std::unordered_map<std::string, std::string> levelSwaps;
 std::unordered_map<std::string, int> lumGates;
 std::unordered_map<int64_t, std::string> idMap;
@@ -83,16 +90,17 @@ void Connector::send(int type, std::string data) {
 
 void Connector::handle(int type, std::string data) {
     switch (type) {
-    case MESSAGE_TYPE_DEATH:
+    case MESSAGE_TYPE_DEATH: {
         // Trigger a death link!
         AP_DeathLinkSend();
         break;
-    case MESSAGE_TYPE_MESSAGE:
+    }
+    case MESSAGE_TYPE_MESSAGE: {
         // Send the message up to Archipelago server.
         AP_Say(data);
         break;
-    case MESSAGE_TYPE_CONNECT:
-    {
+    }
+    case MESSAGE_TYPE_CONNECT: {
         // Read out the information from the input
         std::istringstream f(data);
         std::string ip;
@@ -105,52 +113,74 @@ void Connector::handle(int type, std::string data) {
         if (!connect(ip, slot, password)) {
             send(MESSAGE_TYPE_MESSAGE, "You are already connected to an Archipelago server");
         }
-    }
         break;
-    case MESSAGE_TYPE_SHUTDOWN:
+    }
+    case MESSAGE_TYPE_SHUTDOWN: {
         // Disconnect if connected, used on shutdown.
         if (isConnected()) {
             disconnect();
         }
         break;
-    case MESSAGE_TYPE_DISCONNECT:
+    }
+    case MESSAGE_TYPE_DISCONNECT: {
         // Disconnect from the Archipelago server.
         if (disconnect()) {
             send(MESSAGE_TYPE_MESSAGE, "Succesfully disconnected from " + lastIp);
-        } else {
+        }
+        else {
             send(MESSAGE_TYPE_MESSAGE, "You are not connected to any Archipelago server");
         }
         break;
-    case MESSAGE_TYPE_CHECK:
+    }
+    case MESSAGE_TYPE_CHECK: {
         // Check if the connection is valid.
         if (isConnected()) {
             send(MESSAGE_TYPE_MESSAGE, "You are currently connected to " + lastIp);
             printConnectionStatus();
-        } else {
+        }
+        else {
             send(MESSAGE_TYPE_MESSAGE, "You are not connected to any Archipelago server");
         }
         break;
-    case MESSAGE_TYPE_COLLECTED:
-    {
+    }
+    case MESSAGE_TYPE_COLLECTED: {
         // Communicate up that an item is collected.
         std::istringstream f(data);
         std::string id;
         std::getline(f, id, ' ');
         if (isConnected()) {
-            AP_SendItem(std::stoi(id));
+            AP_SendItem(1651615 + std::stoi(id));
         }
-    }
         break;
-    case MESSAGE_TYPE_COMPLETE:
+    }
+    case MESSAGE_TYPE_COMPLETE: {
         // The game is done; pass it on!
         send(MESSAGE_TYPE_MESSAGE, "[child] Informing AP that story is done");
         if (isConnected()) {
             AP_StoryComplete();
         }
         break;
-    default:
-        send(MESSAGE_TYPE_MESSAGE, "[child] Received type " + std::to_string(type) + ": " + data);
     }
+    default: {
+        send(MESSAGE_TYPE_MESSAGE, "[child] Received type " + std::to_string(type) + ": " + data);
+        break;
+    }
+    }
+}
+
+/** Sends a state update to the game client. */
+void sendStateUpdate() {
+    instance->send(MESSAGE_TYPE_STATE, std::to_string(AP_IsInit()) + "," + 
+        std::to_string(lums) + "," +
+        std::to_string(cages) + "," +
+        std::to_string(masks) + "," +
+        std::to_string(elixir) + "," +
+        "0," +
+        "0," +
+        "0," +
+        "0," +
+        "0," +
+        "0");
 }
 
 /** Handles clearing cached item checks. */
@@ -158,29 +188,58 @@ void handleItemClear() {
     // We don't propagate item state clears because we store within the save file what the client has.
     // Instead we clear the local state of the connector which is what it communicates to the client whenever
     // a new save file is loaded and we need to update the collected objects.
-    unlockedChecks.clear();
+    lums = 0;
+    cages = 0;
+    masks = 0;
+    elixir = false;
+    sendStateUpdate();
 }
 
 /** Handles an item being checked. */
 void handleItem(int64_t id, bool notify) {
-    unlockedChecks.push_back(id);
-
     // Archipelago increments all ids by 1651615, so we subtract that to get the ID used
-    // by Rayman 2 in its internal lookup table.
+    // by Rayman 2.
     int64_t r2Id = id - 1651615;
 
-    // TODO Redirect to the game client if a save got selected and send all unlocked checks across when a save is picked, also send level swaps and lum gates when we do!
+    // Determine what type of item was collected
+    const char* type;
+    if (r2Id == ELIXIR_ID) {
+        type = "Elixir of Life";
+        elixir = true;
+    } else if (r2Id >= 840 && r2Id <= 919) {
+        type = "Cage";
+        cages++;
+    } else if ((r2Id >= 1 && r2Id <= 800) || (r2Id >= 1201 && r2Id <= 1400)) {
+        if (std::find(
+            std::begin(SUPER_LUM_IDS),
+            std::end(SUPER_LUM_IDS),
+            r2Id
+        ) != std::end(SUPER_LUM_IDS)) {
+            type = "Super Lum";
+            lums += 5;
+        } else {
+            type = "Lum";
+            lums++;
+        }
+    } else {
+        // The item type is invalid, send a debug log!
+        instance->send(MESSAGE_TYPE_MESSAGE, "[child] Received invalid item: " + std::to_string(r2Id));
+        return;
+    }
+
+    // Send an update to the client with the new information
+    sendStateUpdate();
+
+    // If we have to notify the player we send a second message with the information that
+    // they received the item externally!
+    if (notify) {
+        instance->send(MESSAGE_TYPE_COLLECTED, std::string("Received ") + type);
+    }
 }
 
 /** Handles a location being checked. */
 void handleLocation(int64_t id) {
-    // Whenever a location comes in we need to check off that location in the internal lookup
-    // table so the game removes the cage/lum at that location.
-    int64_t r2Id = id - 1651615;
-
-    // TODO Mark off r2Id in the lookup table
-
-    // TODO Update the lum/cage object if it's currently loaded
+    // We currently don't support checking off locations.
 }
 
 /** Handles level swap data being delivered. */
@@ -267,15 +326,16 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_RegisterSlotDataRawCallback("level_swaps", handleLevelSwaps);
     AP_RegisterSlotDataRawCallback("lum_gates", handleLumGates);
     AP_Start();
+    sendStateUpdate();
     return true;
 }
 
 bool Connector::disconnect() {
     if (!AP_IsInit()) return false;
     AP_Shutdown();
-    unlockedChecks.clear();
     levelSwaps.clear();
     lumGates.clear();
+    handleItemClear();
     return true;
 }
 

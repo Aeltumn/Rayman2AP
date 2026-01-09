@@ -8,6 +8,7 @@ HANDLE hChildStdOutRead, hChildStdOutWrite, hChildStdInRead, hChildStdInWrite, t
 SECURITY_ATTRIBUTES saAttr;
 PROCESS_INFORMATION pi;
 DWORD threadId;
+BOOL MOD_Running;
 
 // Store messages that were received, we handle them the next tick
 typedef struct {
@@ -19,13 +20,80 @@ incomingMessage* incomingMessages;
 int incomingMessageCount = 0;
 int incomingMessagesSize = 0;
 
+
+/** Handles a connector message. */
+void MOD_HandleMessage(int type, const char* data) {
+    switch (type) {
+    case MESSAGE_TYPE_STATE: {
+        // Parse all data from the input message in order
+        char* copy = strdup(data);
+        if (!copy) break;
+
+        char* token;
+        int index = 0;
+        int gateIndex = 0;
+
+        BOOL connected = FALSE;
+        int lums = 0;
+        int cages = 0;
+        int masks = 0;
+        BOOL elixir = FALSE;
+        int* lumGates[6];
+
+        token = strtok(copy, ",");
+        while (token) {
+            switch (index) {
+            case 0: connected = atoi(token); break;
+            case 1: lums = atoi(token); break;
+            case 2: cages = atoi(token); break;
+            case 3: masks = atoi(token); break;
+            case 4: elixir = atoi(token); break;
+            default:
+                lumGates[gateIndex++] = atoi(token);
+                break;
+            }
+            index++;
+            token = strtok(NULL, ",");
+        }
+        free(copy);
+
+        // Send this data across to the main mod file
+        MOD_UpdateState(connected, lums, cages, masks, elixir, lumGates);
+        break;
+    }
+    case MESSAGE_TYPE_DEATH: {
+        // Ignore a death if death link is currently not enabled
+        if (!MOD_GetDeathLink()) return;
+
+        // Trigger a death for th player
+        MOD_TriggerDeath();
+        MOD_ShowScreenText(data);
+        break;
+    }
+    case MESSAGE_TYPE_COLLECTED: {
+        // If we receive collected from another source it means another
+        // player obtained something we should be informed about on the screen
+        MOD_ShowScreenText(data);
+        break;
+    }
+    case MESSAGE_TYPE_MESSAGE: {
+        MOD_Print(data);
+        break;
+    }
+    default: {
+        MOD_Print("[parent] Received type %d: %s", type, data);
+        break;
+    }
+    }
+}
+
 /** Task run in a separate thread to handle incoming packets. */
 DWORD WINAPI MOD_ReadInput(LPVOID param) {
     // Start reading from the child process's stdout
     char buffer[1];
     BOOL ready = FALSE;
     DWORD bytesRead;
-    while (ReadFile(hChildStdOutRead, buffer, 1, &bytesRead, NULL) && bytesRead > 0) {
+    while (MOD_Running && ReadFile(hChildStdOutRead, buffer, 1, &bytesRead, NULL) && bytesRead > 0) {
         // Ignore all input until we find our special character!
         if (buffer[0] != (char)26) continue;
 
@@ -98,6 +166,21 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
             ReleaseMutex(messageMutex);
         }
     }
+
+    // Clean up everything
+    CloseHandle(threadHandle);
+    CloseHandle(hChildStdOutRead);
+    CloseHandle(hChildStdInWrite);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    // Destroy the child process
+    TerminateJobObject(job, 0);
+    CloseHandle(job);
+    CloseHandle(messageMutex);
+
+    // Ensure the child process is destroyed!
+    TerminateProcess(pi.hProcess, 1);
 }
 
 /** Handles all pending messages that were received since the last tick. */
@@ -131,6 +214,9 @@ int MOD_StartConnector() {
         MOD_Print("Error creating message sync mutex, error code %lu", GetLastError());
         return 1;
     }
+
+    // Start the reading thread later
+    MOD_Running = true;
 
     // Set up the security attributes to allow the child process to inherit the pipe handles
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
@@ -241,21 +327,15 @@ int MOD_StartConnector() {
 
 /** Shuts down the connector. */
 void MOD_StopConnector() {
-    // Disconnect if we have to
+    // Print a debug line to the logs
+    MOD_Print("Shutting down connector");
+
+    // Stop waiting for messages
+    MOD_Running = false;
+
+    // Send a disconnect which sends back something
+    // that will end the waiting thread
     MOD_SendMessageE(MESSAGE_TYPE_SHUTDOWN);
-
-    // Clean up everything
-    CloseHandle(threadHandle);
-    CloseHandle(hChildStdOutRead);
-    CloseHandle(hChildStdInWrite);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-
-    // Destroy the child process
-    TerminateJobObject(job, 0);
-    CloseHandle(job);
-
-    CloseHandle(messageMutex);
 }
 
 /** Sends out a connector message with no metadata. */
@@ -266,81 +346,16 @@ void MOD_SendMessageE(int type) {
 /** Sends out a connector message. */
 void MOD_SendMessage(int type, const char* data) {
     DWORD bytesWritten;
-    int length = strlen(data) + 2;
-    char* message = malloc(length);
-    message[0] = type + '0';
-    if (length > 2) {
-        strcpy(message + 1, data);
+    int length = strlen(data);
+    char* message = malloc(length + 8);
+    message[0] = 26;
+    snprintf(message + 1, 7, "%06d", length);
+    message[7] = type + '0';
+    if (length > 0) {
+        memcpy(message + 8, data, length);
     }
-    message[length - 1] = '\n';
-    if (!WriteFile(hChildStdInWrite, message, length, &bytesWritten, NULL)) {
+    if (!WriteFile(hChildStdInWrite, message, length + 8, &bytesWritten, NULL)) {
         MOD_Print("Encountered error while writing to connector %lu", GetLastError());
     }
     free(message);
-}
-
-/** Handles a connector message. */
-void MOD_HandleMessage(int type, const char* data) {
-    switch (type) {
-    case MESSAGE_TYPE_STATE: {
-        // Parse all data from the input message in order
-        char* copy = strdup(data);
-        if (!copy) break;
-
-        char* token;
-        int index = 0;
-        int gateIndex = 0;
-
-        BOOL connected = FALSE;
-        int lums = 0;
-        int cages = 0;
-        int masks = 0;
-        BOOL elixir = FALSE;
-        int* lumGates[6];
-
-        token = strtok(copy, ",");
-        while (token) {
-            switch (index) {
-            case 0: connected = atoi(token); break;
-            case 1: lums = atoi(token); break;
-            case 2: cages = atoi(token); break;
-            case 3: masks = atoi(token); break;
-            case 4: elixir = atoi(token); break;
-            default:
-                lumGates[gateIndex++] = atoi(token);
-                break;
-            }
-            index++;
-            token = strtok(NULL, ",");
-        }
-        free(copy);
-
-        // Send this data across to the main mod file
-        MOD_UpdateState(connected, lums, cages, masks, elixir, lumGates);
-        break;
-    }
-    case MESSAGE_TYPE_DEATH: {
-        // Ignore a death if death link is currently not enabled
-        if (!MOD_GetDeathLink()) return;
-
-        // Trigger a death for th player
-        MOD_TriggerDeath();
-        MOD_ShowScreenText(data);
-        break;
-    }
-    case MESSAGE_TYPE_COLLECTED: {
-        // If we receive collected from another source it means another
-        // player obtained something we should be informed about on the screen
-        MOD_ShowScreenText(data);
-        break;
-    }
-    case MESSAGE_TYPE_MESSAGE: {
-        MOD_Print(data);
-        break;
-    }
-    default: {
-        MOD_Print("[parent] Received type %d: %s", type, data);
-        break;
-    }
-    }
 }

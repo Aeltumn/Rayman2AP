@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <unordered_map>
 #include <thread>
+#include <windows.h>
 
 // Stores the ids of all super lums.
 const int ELIXIR_ID = 1188;
@@ -38,31 +39,6 @@ void printConnectionStatus() {
     }
 }
 
-/** Returns the number as a padded string. */
-std::string paddedString(int num) {
-    std::ostringstream oss;
-    oss << std::setw(6) << std::setfill('0') << num;
-    return oss.str();
-}
-
- void Connector::waitForInput() {
-     try {
-         while (true) {
-             // Keep reading characters until the null terminator is encountered
-             std::string input;
-             while (std::getline(std::cin, input)) {
-                 int type = input[0] - '0';
-                 input.erase(0, 1);
-                 instance->handle(type, input);
-             }
-         }
-     } catch (const std::exception& e) {
-         instance->send(MESSAGE_TYPE_MESSAGE, "[waitForInput] Caught exception: " + std::string(e.what()));
-     } catch (...) {
-         instance->send(MESSAGE_TYPE_MESSAGE, "[waitForInput] Caught an unknown exception!");
-     }
-}
-
 void Connector::waitForAP() {
     try {
         // Keep waiting for AP to have messages
@@ -74,25 +50,13 @@ void Connector::waitForAP() {
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         instance->send(MESSAGE_TYPE_MESSAGE, "[waitForAP] Caught exception: " + std::string(e.what()));
-    } catch (...) {
+    }
+    catch (...) {
         instance->send(MESSAGE_TYPE_MESSAGE, "[waitForAP] Caught an unknown exception!");
     }
-}
-
-void Connector::init() {
-    // Store the instance so we can use it in the death link
-    instance = this;
-}
-
-void Connector::send(int type, std::string data) {
-    char typeChar = (type + '0');
-    int length = data.length();
-    if (length < 0 || length > 999999) {
-        throw std::runtime_error("Invalidly long strong, length was " + std::to_string(length));
-    }
-    std::cout << (char)26 << paddedString(length) << typeChar << data;
 }
 
 void Connector::handle(int type, std::string data) {
@@ -127,6 +91,7 @@ void Connector::handle(int type, std::string data) {
         if (isConnected()) {
             disconnect();
         }
+        send(MESSAGE_TYPE_MESSAGE, "Shutdown completed");
         break;
     }
     case MESSAGE_TYPE_DISCONNECT: {
@@ -355,4 +320,91 @@ bool Connector::disconnect() {
 
 bool Connector::isConnected() {
     return AP_IsInit();
+}
+
+void Connector::init() {
+    // Store the instance so we can use it in the death link
+    instance = this;
+}
+
+void Connector::waitForInput() {
+    try {
+        // Get the std::in handle
+        HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
+        if (!hStdIn) {
+            throw std::runtime_error("Could not get std::in handle");
+        }
+
+        while (true) {
+            // Start reading from the child process's stdout
+            char buffer[1];
+            BOOL ready = FALSE;
+            DWORD bytesRead;
+            while (ReadFile(hStdIn, buffer, 1, &bytesRead, NULL) && bytesRead > 0) {
+                // Ignore all input until we find our special character!
+                if (buffer[0] != (char)26) continue;
+
+                // Read the length of the message that will follow
+                char lengthChar[7];
+                ReadFile(hStdIn, lengthChar, 6, &bytesRead, NULL);
+                if (bytesRead == 0) continue;
+                lengthChar[6] = '\0';
+                int messageLength = atoi(lengthChar);
+                if (messageLength <= 0) continue;
+
+                // Determine the type of the message
+                char typeChar;
+                ReadFile(hStdIn, &typeChar, 1, &bytesRead, NULL);
+                if (bytesRead == 0) continue;
+                int type = typeChar - '0';
+
+                // Read out the message
+                char* messageBuffer = static_cast<char*>(std::malloc(messageLength + 1));
+                if (!messageBuffer) {
+                    throw std::runtime_error("Failed to allocate memory for incoming message");
+                    return;
+                }
+                ReadFile(hStdIn, messageBuffer, messageLength, &bytesRead, NULL);
+                if (bytesRead == 0) {
+                    free(messageBuffer);
+                    continue;
+                }
+                messageBuffer[messageLength] = '\0';
+                handle(type, std::string(messageBuffer));
+                std::free(messageBuffer);
+            }
+        }
+    }
+    catch (const std::exception& e) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[waitForInput] Caught exception: " + std::string(e.what()));
+    }
+    catch (...) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "[waitForInput] Caught an unknown exception!");
+    }
+}
+
+/** Returns the number as a padded string. */
+std::string paddedString(int num) {
+    std::ostringstream oss;
+    oss << std::setw(6) << std::setfill('0') << num;
+    return oss.str();
+}
+
+/** Sends the given data of the given type to the game. */
+void Connector::send(int type, std::string data) {
+    DWORD bytesWritten;
+    int length = data.length();
+    std::string message;
+    message.reserve(length + 8);
+
+    message.push_back(26);
+    message += paddedString(length);
+    message.push_back(type + '0');
+    message += data;
+
+    // Get the std::out handle
+    HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (!hStdOut || !WriteFile(hStdOut, message.data(), length + 8, &bytesWritten, NULL)) {
+        throw std::runtime_error("Encountered error while writing to game " + std::to_string(GetLastError()));
+    }
 }

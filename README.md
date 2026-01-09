@@ -22,6 +22,7 @@ How to install
 4. Install [Twofold](https://github.com/spitfirex86/Twofold/releases) by downloading the zip file of its latest release and extracting the contents of the zip into the Rayman 2 game folder.
 5. Install [R2Console](https://github.com/spitfirex86/R2Console/releases) by downloading the zip file of its latest release and extracting the contents of the zip into the Rayman 2 game folder.
 6. Download the [latest release](https://github.com/Aeltumn/Rayman2AP/releases) of this project, extracting the contents of the zip into the Rayman 2 game folder.
-7. Run the game through `Ray2x.exe` to launch the modded version. `Rayman2.exe` will launch the unmodded version of the game.
-8. In-game you can press `~` to open up the console. Use the `ap connect <ip> <slot> [password]` command to connect to an Archipelago room.
-9. Starting a new game after connecting to a room will use the configured random settings.
+7. Install [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version) which are required to run the Archipelago integration.
+8. Run the game through `Ray2x.exe` to launch the modded version. `Rayman2.exe` will launch the unmodded version of the game.
+9. In-game you can press `~` to open up the console. Use the `ap connect <ip> <slot> [password]` command to connect to an Archipelago room.
+10. Starting a new game after connecting to a room will use the configured random settings.

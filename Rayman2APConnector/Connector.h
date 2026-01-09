@@ -18,8 +18,8 @@
 
 class Connector {
 public:
-	static void waitForInput();
-	static void waitForAP();
+	void waitForInput();
+	void waitForAP();
 
 	void init();
 	void send(int type, std::string data);

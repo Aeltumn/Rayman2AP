@@ -90,6 +90,7 @@ void MOD_CheckVariables() {
 				if (dsg) {
 					// While testing we show collected items on screen
 					MOD_vShowScreenText("Collected %d", i);
+					MOD_Print("Collected %d", i);
 					
 					// Send up the id of the item directly
 					char str[6];
@@ -104,7 +105,7 @@ void MOD_CheckVariables() {
 /** Ticked by the engine every frame, runs all messages received since last tick. */
 void MOD_EngineTick() {
 	MOD_RunPendingMessages();
-	if (MOD_Connected) {
+	if (true || MOD_Connected) {
 		MOD_CheckVariables();
 	}
 	GAM_fn_vEngine();
@@ -155,7 +156,9 @@ void MOD_TriggerDeath() {
 
 /** Prints a message to the console. */
 void MOD_Print(char* text, ...) {
-#ifndef DISABLE_CONSOLE_PRINT
+	va_list args;
+	va_start(args, text);
+
 	// Remove any carriage returns from the input as they crash the game
 	int length = strlen(text);
 	int nullIndex = length;
@@ -171,19 +174,26 @@ void MOD_Print(char* text, ...) {
 		}
 	}
 
-	va_list args;
-	va_start(args, text);
-
 	long lSize = SPTXT_fn_lGetFmtStringLength(text, args);
 	char* szBuffer = _alloca(lSize);
 
 	if (szBuffer) {
 		vsprintf(szBuffer, text, args);
-		fn_vPrint(szBuffer);
-	}
 
-	va_end(args);
+		// Print the message to the cosole
+#ifndef DISABLE_CONSOLE_PRINT
+		fn_vPrint(szBuffer);
 #endif
+
+		// Print all messages to a log file
+		FILE* pFile = fopen("parent_log.txt", "a");
+		if (pFile != NULL) {
+			fprintf(pFile, szBuffer);
+			fprintf(pFile, "\n");
+			fclose(pFile);
+		}
+	}
+	va_end(args);
 }
 
 /** Prints a message to the console. */

@@ -1,6 +1,7 @@
 #include "Connector.h"
 #include <iomanip>
 #include <unordered_map>
+#include <thread>
 
 // Stores the ids of all super lums.
 const int ELIXIR_ID = 1188;
@@ -46,12 +47,14 @@ std::string paddedString(int num) {
 
  void Connector::waitForInput() {
      try {
-         // Keep reading characters until the null terminator is encountered
-         std::string input;
-         while (std::getline(std::cin, input)) {
-             int type = input[0] - '0';
-             input.erase(0, 1);
-             instance->handle(type, input);
+         while (true) {
+             // Keep reading characters until the null terminator is encountered
+             std::string input;
+             while (std::getline(std::cin, input)) {
+                 int type = input[0] - '0';
+                 input.erase(0, 1);
+                 instance->handle(type, input);
+             }
          }
      } catch (const std::exception& e) {
          instance->send(MESSAGE_TYPE_MESSAGE, "[waitForInput] Caught exception: " + std::string(e.what()));
@@ -69,6 +72,7 @@ void Connector::waitForAP() {
                 instance->send(MESSAGE_TYPE_MESSAGE, message->text);
                 AP_ClearLatestMessage();
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     } catch (const std::exception& e) {
         instance->send(MESSAGE_TYPE_MESSAGE, "[waitForAP] Caught exception: " + std::string(e.what()));

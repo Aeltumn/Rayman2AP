@@ -83,7 +83,7 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
             message.text = messageBuffer;
 
             // Print all incoming messages to the output log
-            FILE* pFile = fopen("output_log.txt", "a");
+            FILE* pFile = fopen("child_log.txt", "a");
             if (pFile != NULL) {
                 fprintf(pFile, messageBuffer);
                 fprintf(pFile, "\n");
@@ -125,6 +125,7 @@ void MOD_RunPendingMessages() {
 /** Starts up the connector which runs Rayman2APConnector in a subprocess. */
 int MOD_StartConnector() {
     // Set up the mutex for synchronization
+    MOD_Print("Starting connector");
     messageMutex = CreateMutexA(NULL, FALSE, NULL);
     if (!messageMutex) {
         MOD_Print("Error creating message sync mutex, error code %lu", GetLastError());
@@ -147,8 +148,10 @@ int MOD_StartConnector() {
     }
 
     // Set the pipe handles to be inherited by the child process
-    SetHandleInformation(hChildStdOutRead, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
-    SetHandleInformation(hChildStdInWrite, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+    SetHandleInformation(hChildStdInWrite, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(hChildStdInRead, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+    SetHandleInformation(hChildStdOutRead, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(hChildStdOutWrite, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
 
     // Set up the STARTUPINFO structure
     STARTUPINFO si;
@@ -198,6 +201,7 @@ int MOD_StartConnector() {
 
     // Assign the child to the job
     AssignProcessToJobObject(job, pi.hProcess);
+    MOD_Print("Created connector process");
 
     // Close the write ends of the pipes in the parent process
     CloseHandle(hChildStdOutWrite);
@@ -230,6 +234,7 @@ int MOD_StartConnector() {
     }
 
     // Wait for the handler to be ready
+    MOD_Print("Starting to wait for connector process ready");
     WaitForSingleObject(readyEvent, INFINITE);
     return 0;
 }

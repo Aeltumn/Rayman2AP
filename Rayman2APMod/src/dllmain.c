@@ -10,12 +10,17 @@
 	42 (integer array): All collected objects (ranges are inclusive)
 		1-800 and 1201-1400 are yellow lums
 		840-919 are cages
-		962-963 is silver lums
 		1188 is the Elixir of Life
+		1146 is game completion
+
+		962-963 is golden fists, 962 & 963 means 3, 962 means 2, 963 means 1
+		1095 and 1143 appear to be projectile upgrades (silver lums)
+		1095 determines if you can grab purple lums.
 
 	43 (unsigned byte): Remaining lums in current level
 	44 (unsigned byte): Total lums in current level
-	45 (signed byte): Collected lums in current level
+	45 (unsigned byte): Collected lums in current level
+	46 (unsigned byte): Collected cages for health increase
 
 	Usage notes:
 	42 should normally be set to contain the current state of the save file so we can generally safely reference against it.

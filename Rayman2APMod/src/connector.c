@@ -37,6 +37,7 @@ void MOD_HandleMessage(int type, const char* data) {
         int lums = 0;
         int cages = 0;
         int masks = 0;
+        int upgrades = 0;
         BOOL elixir = FALSE;
         int* lumGates[6];
 
@@ -47,7 +48,8 @@ void MOD_HandleMessage(int type, const char* data) {
             case 1: lums = atoi(token); break;
             case 2: cages = atoi(token); break;
             case 3: masks = atoi(token); break;
-            case 4: elixir = atoi(token); break;
+            case 4: upgrades = atoi(token); break;
+            case 5: elixir = atoi(token); break;
             default:
                 lumGates[gateIndex++] = atoi(token);
                 break;
@@ -58,7 +60,7 @@ void MOD_HandleMessage(int type, const char* data) {
         free(copy);
 
         // Send this data across to the main mod file
-        MOD_UpdateState(connected, lums, cages, masks, elixir, lumGates);
+        MOD_UpdateState(connected, lums, cages, masks, upgrades, elixir, lumGates);
         break;
     }
     case MESSAGE_TYPE_DEATH: {

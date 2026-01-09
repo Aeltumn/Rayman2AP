@@ -9,12 +9,14 @@ BOOL MOD_Connected = FALSE;
 int MOD_Lums = 0;
 int MOD_Cages = 0;
 int MOD_Masks = 0;
+int MOD_Upgrades = 0;
 BOOL MOD_Elixir = FALSE;
 int* MOD_LumGates[6];
 BOOL MOD_DeathLink = TRUE;
 BOOL MOD_IgnoreDeath = FALSE;
 char MOD_ScreenText[10][128];
 time_t MOD_ScreenTextStart[10];
+int MOD_ScreenTextLatest = -1;
 BitSet MOD_LastCollected;
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
@@ -56,6 +58,24 @@ void MOD_SetFirstLevel(const char* szName) {
 	GAM_fn_vSetFirstLevelName(szName);
 }
 
+/** Sets the value of a DSG variable. */
+BOOL AI_fn_bSetDsgVar(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, void** p_pValue_In) {
+	if (!HIE_M_bSuperObjectIsActor(p_stSuperObj))
+		return FALSE;
+
+	AI_tdstMind* hMind = AI_M_hGetMindOfSuperObj(p_stSuperObj);
+
+	if (ucDsgVarId > AI_M_ucGetNbDsgVar(hMind))
+		return FALSE;
+
+	AI_tdstDsgVarInfo* p_stDsgInfo = AI_M_p_stGetDsgVarInfo(hMind, ucDsgVarId);
+
+	// Update the value at the pointer
+	*(AI_M_p_cGetDsgMemBuffer(hMind) + p_stDsgInfo->ulOffsetInDsgMem) = *p_pValue_In;
+
+	return TRUE;
+}
+
 /** Sets the value of the boolean array. */
 void AI_fn_bSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value) {
 	AI_tdstArray* p_stArray;
@@ -71,12 +91,16 @@ void AI_fn_bSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char u
 	} else {
 		*pValue &= ~mask;
 	}
+
+	// Also update the last collected bitset so we don't trigger an update next tick!
+	setBitSet(&MOD_LastCollected, ulIndex + 1, value);
 }
 
 /** Checks if any lums/cages have been collected since last frame. */
 void MOD_CheckVariables() {
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
+		// Check if any items have been collected
 		for (int i = 1; i <= 1400; i++) {
 			unsigned char last = getBitSet(&MOD_LastCollected, i);
 			ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
@@ -96,9 +120,33 @@ void MOD_CheckVariables() {
 					char str[6];
 					sprintf(str, "%d", i);
 					MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
+
+					// If this is 1146 the game was completed!
+					if (i == 1146) {
+						MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+					}
 				}
 			}
 		}
+
+		// Set the collected cages for health to the custom value so health is overridden
+		unsigned char cages = MOD_Cages;
+		AI_fn_bSetDsgVar(pGlobal, 46, &cages);
+
+		// Set the silver lum states based on the amount of upgrades
+		if (MOD_Upgrades == 0) {
+			AI_fn_bSetBooleanInArray(pGlobal, 42, 1095, FALSE);
+			AI_fn_bSetBooleanInArray(pGlobal, 42, 1143, FALSE);
+		} else if (MOD_Upgrades == 1) {
+			AI_fn_bSetBooleanInArray(pGlobal, 42, 1095, TRUE);
+			AI_fn_bSetBooleanInArray(pGlobal, 42, 1143, FALSE);
+		} else {
+			AI_fn_bSetBooleanInArray(pGlobal, 42, 1095, TRUE);
+			AI_fn_bSetBooleanInArray(pGlobal, 42, 1143, TRUE);
+		}
+
+		// Set whether you have the elixir
+		AI_fn_bSetBooleanInArray(pGlobal, 42, 1188, MOD_Elixir);
 	}
 }
 
@@ -125,7 +173,7 @@ void MOD_Init() {
 }
 
 /** Updates the current progression state. */
-void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, BOOL elixir, int* lumGates) {
+void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, int upgrades, BOOL elixir, int* lumGates) {
 	if (MOD_Connected != connected) {
 		// Clear the collection cache whenever we reconnect so we resend all the information!
 		clearBitSet(&MOD_LastCollected);
@@ -134,6 +182,7 @@ void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, BOOL elixir
 	MOD_Lums = lums;
 	MOD_Cages = cages;
 	MOD_Masks = masks;
+	MOD_Upgrades = upgrades;
 	MOD_Elixir = elixir;
 	for (int i = 0; i < 6; i++) {
 		MOD_LumGates[i] = lumGates[i];
@@ -211,39 +260,25 @@ void MOD_vShowScreenText(char* text, ...) {
 
 /** Shows the given text on the screen for the next 8 seconds. */
 void MOD_ShowScreenText(char* text) {
-	time_t currentTime = time(NULL);
-
-	for (int i = 0; i < 10; i++) {
-		time_t startFrames = MOD_ScreenTextStart[i];
-		if (currentTime - startFrames <= SCREEN_TEXT_FADE_TIME) continue;
-
-		// Move all other text up so we can add this at the end
-		for (int j = i + 1; j < 10; j++) {
-			if (currentTime - MOD_ScreenTextStart[j] <= SCREEN_TEXT_FADE_TIME) {
-				MOD_ScreenTextStart[i] = MOD_ScreenTextStart[j];
-				MOD_ScreenTextStart[j] = 0;
-				char* targetText = MOD_ScreenText[i];
-				char* sourceText = MOD_ScreenText[j];
-				strncpy(targetText, sourceText, strlen(sourceText));
-				i++;
-			}
-		}
-
-		// Determine the text to show
-		MOD_ScreenTextStart[i] = currentTime;
-		char* screen = MOD_ScreenText[i];
-		int size = min(127, strlen(text));
-		strncpy(screen, text, size);
-
-		// Filter out invalid characters that cannot be rendered
-		for (int i = 0; i < size; i++) {
-			if (screen[i] == '\n' || screen[i] == '\r') {
-				screen[i] = ' ';
-			}
-		}
-		screen[size] = 0;
-		break;
+	// Determine where to put this text
+	MOD_ScreenTextLatest++;
+	if (MOD_ScreenTextLatest >= 10) {
+		MOD_ScreenTextLatest = 0;
 	}
+
+	// Determine the text to show
+	MOD_ScreenTextStart[MOD_ScreenTextLatest] = time(NULL);
+	char* screen = MOD_ScreenText[MOD_ScreenTextLatest];
+	int size = min(127, strlen(text));
+	strncpy(screen, text, size);
+
+	// Filter out invalid characters that cannot be rendered
+	for (int i = 0; i < size; i++) {
+		if (screen[i] == '\n' || screen[i] == '\r') {
+			screen[i] = ' ';
+		}
+	}
+	screen[size] = 0;
 }
 
 /** Returns whether death link is currently enabled. */
@@ -276,14 +311,18 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 	pInfo->bFrame = TRUE;
 
 	long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
-	for (int i = 0; i < 10; i++) {
+	for (int i = 9; i >= 0; i--) {
 		// Ignore any lines that have finished fading out
-		time_t startTime = MOD_ScreenTextStart[i];
+		int j = MOD_ScreenTextLatest - i;
+		if (j < 0) {
+			j += 10;
+		}
+		time_t startTime = MOD_ScreenTextStart[j];
 		int timePassed = currentTime - startTime;
 		if (timePassed > SCREEN_TEXT_FADE_TIME) continue;
 
 		// Write the line and then move the Y up
-		char* screen = MOD_ScreenText[i];
+		char* screen = MOD_ScreenText[j];
 		pInfo->Y = pInfo->Y - lineHeight;
 		SPTXT_vPrint(screen);
 	}
@@ -298,7 +337,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 		pInfo->Y = 990 - 2 * lineHeight;
 		SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_Lums, MOD_Cages);
 		pInfo->Y = 990 - lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Elixir %s", MOD_Masks, MOD_Elixir ? "/o0:Yes" : "/o200:No");
+		SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, /o400:Power /o0:%d of 2/o400:, Elixir %s", MOD_Masks, MOD_Upgrades, MOD_Elixir ? "/o0:Yes" : "/o200:No");
 	}
 	SPTXT_vResetTextInfo(pInfo);
 }

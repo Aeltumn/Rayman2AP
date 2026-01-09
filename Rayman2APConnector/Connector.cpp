@@ -6,12 +6,15 @@
 
 // Stores the ids of all super lums.
 const int ELIXIR_ID = 1188;
-const int SUPER_LUM_IDS[] = { 1 };
+const int MASK_IDS[] = { -1 };
+const int SILVER_LUM_IDS[] = { 1095, 1143 };
+const int SUPER_LUM_IDS[] = { 1, 13, 19, 66, 81, 86, 91, 71, 61, 51, 96 };
 
 Connector *instance;
 int lums = 0;
 int cages = 0;
 int masks = 0;
+int upgrades = 0;
 bool elixir = false;
 std::unordered_map<std::string, std::string> levelSwaps;
 std::unordered_map<std::string, int> lumGates;
@@ -151,6 +154,7 @@ void sendStateUpdate() {
         std::to_string(lums) + "," +
         std::to_string(cages) + "," +
         std::to_string(masks) + "," +
+        std::to_string(upgrades) + "," +
         std::to_string(elixir) + "," +
         "0," +
         "0," +
@@ -167,6 +171,7 @@ void handleItemClear() {
     // a new save file is loaded and we need to update the collected objects.
     lums = 0;
     cages = 0;
+    upgrades = 0;
     masks = 0;
     elixir = false;
     sendStateUpdate();
@@ -185,15 +190,17 @@ void handleItem(int64_t id, bool notify) {
     if (r2Id == ELIXIR_ID) {
         type = "Elixir of Life";
         elixir = true;
+    } else if (std::find(std::begin(MASK_IDS), std::end(MASK_IDS), r2Id) != std::end(MASK_IDS)) {
+        type = "Mask";
+        masks++;
+    } else if (std::find(std::begin(SILVER_LUM_IDS), std::end(SILVER_LUM_IDS), r2Id) != std::end(SILVER_LUM_IDS)) {
+        type = "Silver Lum";
+        upgrades++;
     } else if (r2Id >= 840 && r2Id <= 919) {
         type = "Cage";
         cages++;
     } else if ((r2Id >= 1 && r2Id <= 800) || (r2Id >= 1201 && r2Id <= 1400)) {
-        if (std::find(
-            std::begin(SUPER_LUM_IDS),
-            std::end(SUPER_LUM_IDS),
-            r2Id
-        ) != std::end(SUPER_LUM_IDS)) {
+        if (std::find(std::begin(SUPER_LUM_IDS), std::end(SUPER_LUM_IDS), r2Id) != std::end(SUPER_LUM_IDS)) {
             type = "Super Lum";
             lums += 5;
         } else {

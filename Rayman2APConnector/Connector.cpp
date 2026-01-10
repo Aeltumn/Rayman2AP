@@ -5,7 +5,7 @@
 #include <windows.h>
 
 // Stores the ids of all super lums.
-const int ELIXIR_ID = 1188;
+const int ELIXIR_ID = -1;
 const int MASK_IDS[] = { 1112 };
 const int SILVER_LUM_IDS[] = { 1095, 1143 };
 const int SUPER_LUM_IDS[] = { 1, 13, 19, 66, 81, 86, 91, 71, 61, 51, 96 };
@@ -18,8 +18,8 @@ int upgrades = 0;
 bool deathLink = false;
 int endGoal = 1;
 bool elixir = false;
+int lumGates[6] = {100, 300, 450, 550, 60, 475};
 std::unordered_map<std::string, std::string> levelSwaps;
-std::unordered_map<std::string, int> lumGates;
 std::unordered_map<int64_t, std::string> idMap;
 std::string lastIp;
 
@@ -154,12 +154,12 @@ void sendStateUpdate() {
         std::to_string(deathLink) + "," +
         std::to_string(endGoal) + "," +
         std::to_string(elixir) + "," +
-        "0," +
-        "0," +
-        "0," +
-        "0," +
-        "0," +
-        "0");
+        std::to_string(lumGates[0]) + "," +
+        std::to_string(lumGates[1]) + "," +
+        std::to_string(lumGates[2]) + "," +
+        std::to_string(lumGates[3]) + "," +
+        std::to_string(lumGates[4]) + "," +
+        std::to_string(lumGates[5]));
 }
 
 /** Handles clearing cached item checks. */
@@ -174,6 +174,12 @@ void handleItemClear() {
     deathLink = false;
     endGoal = 1;
     elixir = false;
+    lumGates[0] = 100;
+    lumGates[1] = 300;
+    lumGates[2] = 450;
+    lumGates[3] = 550;
+    lumGates[4] = 60;
+    lumGates[5] = 475;
     sendStateUpdate();
 }
 
@@ -263,28 +269,14 @@ void handleLevelSwaps(std::string data) {
 void handleLumGates(std::string data) {
     try {
         // Parse the lum gates from the archipelago input
-        lumGates.clear();
         if (data.length() < 3) return;
         std::string inner = data.substr(1, data.length() - 2);
         std::stringstream stream(inner);
         std::string token;
+        int i = 0;
         while (std::getline(stream, token, ',')) {
-            size_t colonPos = token.find(":");
-            if (colonPos == std::string::npos) continue;
-            std::string key = token.substr(0, colonPos);
-            std::string value = token.substr(colonPos + 1);
-            lumGates[key.substr(1, key.length() - 2)] = std::stoi(value);
+            lumGates[i++] = std::stoi(token);
         }
-
-        // Debug print the lum gates to the log
-        std::stringstream ss;
-        for (auto it = lumGates.begin(); it != lumGates.end(); ++it) {
-            ss << it->first << " = " << std::to_string(it->second);
-            if (std::next(it) != lumGates.end()) {
-                ss << ", ";
-            }
-        }
-        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP lum_gates: " + ss.str());
     } catch (const std::exception& e) {
         instance->send(MESSAGE_TYPE_MESSAGE, "[handleLumGates] Caught exception: " + std::string(e.what()));
     } catch (...) {
@@ -332,7 +324,6 @@ bool Connector::disconnect() {
     if (!AP_IsInit()) return false;
     AP_Shutdown();
     levelSwaps.clear();
-    lumGates.clear();
     handleItemClear();
     return true;
 }
@@ -344,6 +335,12 @@ bool Connector::isConnected() {
 void Connector::init() {
     // Store the instance so we can use it in the death link
     instance = this;
+
+    // Send an initial message to inform the client
+    instance->send(MESSAGE_TYPE_MESSAGE, "Rayman2APConnector has started and is ready to use");
+
+    // Immediately send a state update so lum gates are set on boot
+    sendStateUpdate();
 }
 
 void Connector::waitForInput() {

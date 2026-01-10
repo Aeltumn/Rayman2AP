@@ -216,7 +216,6 @@ void MOD_RunPendingMessages() {
 /** Starts up the connector which runs Rayman2APConnector in a subprocess. */
 int MOD_StartConnector() {
     // Set up the mutex for synchronization
-    MOD_Print("Starting connector");
     messageMutex = CreateMutexA(NULL, FALSE, NULL);
     if (!messageMutex) {
         MOD_Print("Error creating message sync mutex, error code %lu", GetLastError());
@@ -295,7 +294,6 @@ int MOD_StartConnector() {
 
     // Assign the child to the job
     AssignProcessToJobObject(job, pi.hProcess);
-    MOD_Print("Created connector process");
 
     // Close the write ends of the pipes in the parent process
     CloseHandle(hChildStdOutWrite);
@@ -328,7 +326,6 @@ int MOD_StartConnector() {
     }
 
     // Wait for the handler to be ready
-    MOD_Print("Starting to wait for connector process ready");
     WaitForSingleObject(readyEvent, INFINITE);
     return 0;
 }

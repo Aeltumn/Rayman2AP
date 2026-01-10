@@ -4,7 +4,7 @@
 
 int main() {
 	Connector connector = Connector();
-	connector.send(MESSAGE_TYPE_MESSAGE, "Rayman2APConnector has started and is ready to use");
+	connector.init();
 
 	std::thread awaitMainApp(&Connector::waitForInput, &connector);
 	std::thread awaitAPInfo(&Connector::waitForAP, &connector);

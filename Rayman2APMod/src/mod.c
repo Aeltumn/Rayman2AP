@@ -5,6 +5,7 @@
 #define LEVEL_COUNT 56
 #define MAX_LENGTH 32
 
+int* BASE_GAME_LUMS[6] = { 100, 300, 450, 550, 60, 475 };
 BOOL MOD_Connected = FALSE;
 int MOD_Lums = 0;
 int MOD_Cages = 0;
@@ -19,8 +20,10 @@ BOOL MOD_IgnoreDeath = FALSE;
 char MOD_ScreenText[10][128];
 time_t MOD_ScreenTextStart[10];
 int MOD_ScreenTextLatest = -1;
-BitSet MOD_LastCollected;
 BOOL MOD_TreasureComplete = FALSE;
+BitSet MOD_LastCollected;
+BOOL MOD_InLumGate = FALSE;
+BitSet MOD_RealCollected;
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
@@ -99,10 +102,69 @@ void AI_fn_bSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char u
 	setBitSet(&MOD_LastCollected, ulIndex + 1, value);
 }
 
+/** Clears lum gate overrides. */
+void clearLumGateOverrides() {
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+	if (pGlobal && MOD_InLumGate) {
+		MOD_InLumGate = false;
+		for (int i = 1; i <= 1400; i++) {
+			AI_fn_bSetBooleanInArray(pGlobal, 42, i, getBitSet(&MOD_RealCollected, i));
+		}
+	}
+}
+
 /** Checks if any lums/cages have been collected since last frame. */
 void MOD_CheckVariables() {
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
+		// If we're in the lum gate level we customise everything!
+		const char* szLevelName = GAM_fn_p_szGetLevelName();
+		if (_stricmp(szLevelName, "Nego_10") == 0) {
+			// If we're not in lum gate mode, save everything!
+			if (!MOD_InLumGate) {
+				MOD_InLumGate = true;
+
+				// Determine how many lums we should have and what the base game will
+				// expect, then change lums to be at exactly the right value to jank it all together!
+				HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("NIK_DS1_ZyvaEnvoieTesLums");
+				int* levelId;
+				AI_fn_bGetDsgVar(pLums, 27, NULL, &levelId);
+				int lumGateId = 0;
+				if (*levelId == 21) {
+					lumGateId = 1;
+				} else if (*levelId == 33) {
+					lumGateId = 2;
+				} else if (*levelId == 40) {
+					lumGateId = 3;
+				}
+				int baseGameLums = BASE_GAME_LUMS[lumGateId];
+				int lumGateLums = MOD_LumGates[lumGateId];
+				int missingLums = lumGateLums - MOD_Lums;
+				if (missingLums < 0) {
+					missingLums = 0;
+				}
+				int finalLums = baseGameLums - missingLums;
+				int givenLums = 0;
+
+				// Clear data in case it's leftover from a previous load
+				clearBitSet(&MOD_RealCollected);
+
+				for (int i = 1; i <= 1400; i++) {
+					// Copy out the data into the real collection
+					setBitSet(&MOD_RealCollected, i, AI_fn_bGetBooleanInArray(pGlobal, 42, i));
+
+					// Update the data to set the correct lum count we want
+					if ((i >= 1 && i <= 800) || (i >= 1201 && i <= 1400)) {
+						AI_fn_bSetBooleanInArray(pGlobal, 42, i, givenLums++ < finalLums);
+					}
+				}
+			}
+			return;
+		}
+
+		// When we exit the lum gate, restore the data again!
+		clearLumGateOverrides();
+
 		// Check if any items have been collected
 		for (int i = 1; i <= 1400; i++) {
 			unsigned char last = getBitSet(&MOD_LastCollected, i);
@@ -151,7 +213,6 @@ void MOD_CheckVariables() {
 		// If the end goal is treasure% we have to detect if you are in the treasure area
 		// as there is no check for it.
 		if (MOD_EndGoal == 2 && !MOD_TreasureComplete) {
-			const char* szLevelName = GAM_fn_p_szGetLevelName();
 			if (_stricmp(szLevelName, "vulca_20") == 0) {
 				HIE_tdstSuperObject* pMain = HIE_fn_p_stFindObjectByName("StdCamer");
 				if (pMain) {
@@ -189,7 +250,7 @@ void MOD_CheckVariables() {
 		}
 
 		// Set whether you have the elixir
-		AI_fn_bSetBooleanInArray(pGlobal, 42, 1188, MOD_Elixir);
+		// AI_fn_bSetBooleanInArray(pGlobal, 42, ELIXIR_ID, MOD_Elixir);
 
 		// Ensure you can always complete the game
 		if (MOD_EndGoal != 2) {

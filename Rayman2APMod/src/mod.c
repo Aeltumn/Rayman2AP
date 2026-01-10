@@ -10,14 +10,17 @@ int MOD_Lums = 0;
 int MOD_Cages = 0;
 int MOD_Masks = 0;
 int MOD_Upgrades = 0;
+BOOL MOD_DeathLink = FALSE;
+BOOL MOD_DeathLinkOverride = FALSE;
+int MOD_EndGoal = 1;
 BOOL MOD_Elixir = FALSE;
 int* MOD_LumGates[6];
-BOOL MOD_DeathLink = TRUE;
 BOOL MOD_IgnoreDeath = FALSE;
 char MOD_ScreenText[10][128];
 time_t MOD_ScreenTextStart[10];
 int MOD_ScreenTextLatest = -1;
 BitSet MOD_LastCollected;
+BOOL MOD_TreasureComplete = FALSE;
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
@@ -123,6 +126,46 @@ void MOD_CheckVariables() {
 
 					// If this is 1146 the game was completed!
 					if (i == 1146) {
+						if (MOD_EndGoal == 1) {
+							// If the goal is the crow's nest, you got it!
+							MOD_Print("Game completed!");
+							MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+						} else if (MOD_EndGoal == 3) {
+							// If the goal is 100% we also require having everything!
+							int hasEnoughLums = MOD_Lums >= 1000;
+							int hasEnoughCages = MOD_Cages >= 80;
+							if (!hasEnoughLums) {
+								MOD_Print("Game is not complete, not enough lums!");
+							} else if (!hasEnoughCages) {
+								MOD_Print("Game is not complete, not enough cages!");
+							} else {
+								MOD_Print("Game completed 100%!");
+								MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// If the end goal is treasure% we have to detect if you are in the treasure area
+		// as there is no check for it.
+		if (MOD_EndGoal == 2 && !MOD_TreasureComplete) {
+			const char* szLevelName = GAM_fn_p_szGetLevelName();
+			if (_stricmp(szLevelName, "vulca_20") == 0) {
+				HIE_tdstSuperObject* pMain = HIE_fn_p_stFindObjectByName("StdCamer");
+				if (pMain) {
+					MTH3D_tdstVector* pCoords = &pMain->p_stGlobalMatrix->stPos;
+					MTH_tdxReal dx = pCoords->x + 185.04;
+					if (dx < 0) dx = -dx;
+					MTH_tdxReal dy = pCoords->y - 120.24;
+					if (dy < 0) dy = -dy;
+					MTH_tdxReal dz = pCoords->z + 298.92;
+					if (dz < 0) dz = -dz;
+
+					if (dx <= 10 && dy <= 10 && dz <= 10) {
+						MOD_TreasureComplete = TRUE;
+						MOD_Print("Treasure ending complete!");
 						MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
 					}
 				}
@@ -147,6 +190,11 @@ void MOD_CheckVariables() {
 
 		// Set whether you have the elixir
 		AI_fn_bSetBooleanInArray(pGlobal, 42, 1188, MOD_Elixir);
+
+		// Ensure you can always complete the game
+		if (MOD_EndGoal != 2) {
+			AI_fn_bSetBooleanInArray(pGlobal, 42, 1146, FALSE);
+		}
 	}
 }
 
@@ -163,7 +211,7 @@ void MOD_EngineTick() {
 void MOD_Init() {
 	// Test if the player has died, this gets triggered once on death
 	if (GAM_fn_ucGetEngineMode() == 7) {
-		if (MOD_DeathLink && !MOD_IgnoreDeath) {
+		if (MOD_DeathLink && !MOD_DeathLinkOverride && !MOD_IgnoreDeath) {
 			MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
 		}
 		MOD_IgnoreDeath = FALSE;
@@ -173,7 +221,7 @@ void MOD_Init() {
 }
 
 /** Updates the current progression state. */
-void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, int upgrades, BOOL elixir, int* lumGates) {
+void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, int upgrades, BOOL deathLink, int endGoal, BOOL elixir, int* lumGates) {
 	if (MOD_Connected != connected) {
 		// Clear the collection cache whenever we reconnect so we resend all the information!
 		clearBitSet(&MOD_LastCollected);
@@ -183,6 +231,8 @@ void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, int upgrade
 	MOD_Cages = cages;
 	MOD_Masks = masks;
 	MOD_Upgrades = upgrades;
+	MOD_DeathLink = deathLink;
+	MOD_EndGoal = endGoal;
 	MOD_Elixir = elixir;
 	for (int i = 0; i < 6; i++) {
 		MOD_LumGates[i] = lumGates[i];
@@ -287,13 +337,10 @@ BOOL MOD_GetDeathLink() {
 }
 
 /** Updates the current state of the death link setting. */
-void MOD_SetDeathLink(BOOL value) {
-	// Ignore if no changes were made
-	if (MOD_DeathLink == value) return;
-
-	MOD_DeathLink = value;
-	if (value) {
-		MOD_Print("Deathlink is now enabled, be careful!");
+void MOD_ToggleDeathLink() {
+	MOD_DeathLinkOverride = !MOD_DeathLinkOverride;
+	if (!MOD_DeathLinkOverride) {
+		MOD_Print("Deathlink is now enabled again, be careful!");
 	} else {
 		MOD_Print("Deathlink has been disabled, you're safe now!");
 	}

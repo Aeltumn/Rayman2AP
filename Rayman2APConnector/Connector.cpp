@@ -15,6 +15,8 @@ int lums = 0;
 int cages = 0;
 int masks = 0;
 int upgrades = 0;
+bool deathLink = false;
+int endGoal = 1;
 bool elixir = false;
 std::unordered_map<std::string, std::string> levelSwaps;
 std::unordered_map<std::string, int> lumGates;
@@ -155,6 +157,8 @@ void sendStateUpdate() {
         std::to_string(cages) + "," +
         std::to_string(masks) + "," +
         std::to_string(upgrades) + "," +
+        std::to_string(deathLink) + "," +
+        std::to_string(endGoal) + "," +
         std::to_string(elixir) + "," +
         "0," +
         "0," +
@@ -173,6 +177,8 @@ void handleItemClear() {
     cages = 0;
     upgrades = 0;
     masks = 0;
+    deathLink = false;
+    endGoal = 1;
     elixir = false;
     sendStateUpdate();
 }
@@ -294,6 +300,18 @@ void handleLumGates(std::string data) {
     }
 }
 
+/** Handles information on whether death link is enabled. */
+void handleDeathLinkEnabled(std::string data) {
+    deathLink = std::stoi(data) == 1;
+    sendStateUpdate();
+}
+
+/** Handles information on the selected end goal. */
+void handleEndGoal(std::string data) {
+    endGoal = std::stoi(data);
+    sendStateUpdate();
+}
+
 /** Handles an incoming death link from other games. */
 void handleDeathLink() {
     instance->send(MESSAGE_TYPE_DEATH, "");
@@ -311,6 +329,8 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_SetDeathLinkRecvCallback(handleDeathLink);
     AP_RegisterSlotDataRawCallback("level_swaps", handleLevelSwaps);
     AP_RegisterSlotDataRawCallback("lum_gates", handleLumGates);
+    AP_RegisterSlotDataRawCallback("death_link", handleDeathLinkEnabled);
+    AP_RegisterSlotDataRawCallback("end_goal", handleEndGoal);
     AP_Start();
     sendStateUpdate();
     return true;

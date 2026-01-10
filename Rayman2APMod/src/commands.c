@@ -47,7 +47,11 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 
 // Toggles whether death link is currently enabled.
 void fn_vDeathlinkCommand(int lNbArgs, char** d_szArgs) {
-	MOD_SetDeathLink(MOD_GetDeathLink() ? FALSE : TRUE);
+	if (!MOD_GetDeathLink()) {
+		MOD_Print("Death linking is not enabled currently");
+		return;
+	}
+	MOD_ToggleDeathLink();
 }
 
 // Allows sending messages to the Archipelago server.

@@ -10,7 +10,8 @@
 	42 (integer array): All collected objects (ranges are inclusive)
 		1-800 and 1201-1400 are yellow lums
 		840-919 are cages
-		1188 is the Elixir of Life
+		1188 is nomovies
+		??? is the Elixir of Life
 		1146 is game completion
 
 		962-963 is golden fists, 962 & 963 means 3, 962 means 2, 963 means 1

@@ -6,7 +6,7 @@
 
 // Stores the ids of all super lums.
 const int ELIXIR_ID = 1188;
-const int MASK_IDS[] = { -1 };
+const int MASK_IDS[] = { 1112 };
 const int SILVER_LUM_IDS[] = { 1095, 1143 };
 const int SUPER_LUM_IDS[] = { 1, 13, 19, 66, 81, 86, 91, 71, 61, 51, 96 };
 
@@ -123,14 +123,8 @@ void Connector::handle(int type, std::string data) {
     case MESSAGE_TYPE_COLLECTED: {
         // Communicate up that an item is collected.
         if (isConnected()) {
-            // Ignore if this is not a valid check!
-            int value = atoi(data.c_str());
-            if (value != ELIXIR_ID && !(value >= 840 && value <= 919) && !(value >= 1 && value <= 800) && !(value >= 1201 && value <= 1400)) {
-                return;
-            }
-
             // Send back down that we received the data
-            send(MESSAGE_TYPE_MESSAGE, "[child] Managed to parse " + std::to_string(value));
+            int value = atoi(data.c_str());
             AP_SendItem(1651615 + value);
         }
         break;
@@ -144,7 +138,7 @@ void Connector::handle(int type, std::string data) {
         break;
     }
     default: {
-        send(MESSAGE_TYPE_MESSAGE, "[child] Received type " + std::to_string(type) + ": " + data);
+        send(MESSAGE_TYPE_MESSAGE, "[child] Received unknown " + std::to_string(type) + ": " + data);
         break;
     }
     }
@@ -188,8 +182,6 @@ void handleItem(int64_t id, bool notify) {
     // Archipelago increments all ids by 1651615, so we subtract that to get the ID used
     // by Rayman 2.
     int64_t r2Id = id - 1651615;
-
-    instance->send(MESSAGE_TYPE_MESSAGE, "[child] Handling incoming item check " + std::to_string(r2Id));
 
     // Determine what type of item was collected
     const char* type;
@@ -365,7 +357,6 @@ void Connector::waitForInput() {
         while (true) {
             // Start reading from the child process's stdout
             char buffer[1];
-            BOOL ready = FALSE;
             DWORD bytesRead;
             while (ReadFile(hStdIn, buffer, 1, &bytesRead, NULL) && bytesRead > 0) {
                 // Ignore all input until we find our special character!
@@ -377,7 +368,7 @@ void Connector::waitForInput() {
                 if (bytesRead == 0) continue;
                 lengthChar[6] = '\0';
                 int messageLength = atoi(lengthChar);
-                if (messageLength <= 0) continue;
+                if (messageLength < 0) continue;
 
                 // Determine the type of the message
                 char typeChar;
@@ -389,12 +380,14 @@ void Connector::waitForInput() {
                 char* messageBuffer = static_cast<char*>(std::malloc(messageLength + 1));
                 if (!messageBuffer) {
                     throw std::runtime_error("Failed to allocate memory for incoming message");
-                    return;
-                }
-                ReadFile(hStdIn, messageBuffer, messageLength, &bytesRead, NULL);
-                if (bytesRead == 0) {
-                    free(messageBuffer);
                     continue;
+                }
+                if (messageLength > 0) {
+                    ReadFile(hStdIn, messageBuffer, messageLength, &bytesRead, NULL);
+                    if (bytesRead == 0) {
+                        free(messageBuffer);
+                        continue;
+                    }
                 }
                 messageBuffer[messageLength] = '\0';
                 handle(type, std::string(messageBuffer));
@@ -427,7 +420,9 @@ void Connector::send(int type, std::string data) {
     message.push_back(26);
     message += paddedString(length);
     message.push_back(type + '0');
-    message += data;
+    if (length > 0) {
+        message += data;
+    }
 
     // Get the std::out handle
     HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);

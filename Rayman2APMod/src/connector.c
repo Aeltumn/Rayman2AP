@@ -109,7 +109,7 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
         if (bytesRead == 0) continue;
         lengthChar[6] = '\0';
         int messageLength = atoi(lengthChar);
-        if (messageLength <= 0) continue;
+        if (messageLength < 0) continue;
 
         // Determine the type of the message
         char typeChar[1];
@@ -123,10 +123,12 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
             MOD_Print("Failed to allocate memory for incoming message");
             return;
         }
-        ReadFile(hChildStdOutRead, messageBuffer, messageLength, &bytesRead, NULL);
-        if (bytesRead == 0) {
-            free(messageBuffer);
-            continue;
+        if (messageLength > 0) {
+            ReadFile(hChildStdOutRead, messageBuffer, messageLength, &bytesRead, NULL);
+            if (bytesRead == 0) {
+                free(messageBuffer);
+                continue;
+            }
         }
         messageBuffer[messageLength] = '\0';
 

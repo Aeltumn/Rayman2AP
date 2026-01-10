@@ -352,10 +352,10 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 	time_t currentTime = time(NULL);
 
 	// Draw the screen text to the screen
-	pInfo->xSize = 6;
+	pInfo->xSize = 11;
+	pInfo->bFrame = TRUE;
 	pInfo->X = 10;
 	pInfo->Y = 990;
-	pInfo->bFrame = TRUE;
 
 	long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
 	for (int i = 9; i >= 0; i--) {
@@ -376,7 +376,8 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 
 	// Draw the current Archipelago progression to the bottom in the hall of doors or on the pause screen
 	const char* szLevelName = GAM_fn_p_szGetLevelName();
-	if (MOD_Connected && (_stricmp(szLevelName, "mapmonde") == 0 || GAM_g_stEngineStructure->bEngineIsInPaused)) {
+	if (MOD_Connected && (_stricmp(szLevelName, "mapmonde") == 0 || *AI_g_bInGameMenu)) {
+		pInfo->xSize = 6;
 		pInfo->bRightAlign = TRUE;
 		pInfo->X = 995;
 		pInfo->Y = 990 - 3 * lineHeight;

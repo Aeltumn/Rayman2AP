@@ -2,7 +2,6 @@
 
 #define SCREEN_TEXT_FADE_TIME 8
 #define TEXT_MARGIN 2
-#define LEVEL_COUNT 56
 #define MAX_LENGTH 32
 
 int* BASE_GAME_LUMS[6] = { 100, 300, 450, 550, 60, 475 };
@@ -24,6 +23,8 @@ BOOL MOD_TreasureComplete = FALSE;
 BitSet MOD_LastCollected;
 BOOL MOD_InLumGate = FALSE;
 BitSet MOD_RealCollected;
+char* MOD_LevelSwapSource[LEVEL_COUNT];
+char* MOD_LevelSwapTarget[LEVEL_COUNT];
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
@@ -282,7 +283,7 @@ void MOD_Init() {
 }
 
 /** Updates the current progression state. */
-void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, int upgrades, BOOL deathLink, int endGoal, BOOL elixir, int* lumGates) {
+void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, int upgrades, BOOL deathLink, int endGoal, BOOL elixir, int* lumGates, char** levelSwapKeys, char** levelSwapTargets) {
 	if (MOD_Connected != connected) {
 		// Clear the collection cache whenever we reconnect so we resend all the information!
 		clearBitSet(&MOD_LastCollected);
@@ -297,6 +298,12 @@ void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, int upgrade
 	MOD_Elixir = elixir;
 	for (int i = 0; i < 6; i++) {
 		MOD_LumGates[i] = lumGates[i];
+	}
+	for (int i = 0; i < LEVEL_COUNT; i++) {
+		MOD_LevelSwapSource[i] = levelSwapKeys[i];
+	}
+	for (int i = 0; i < LEVEL_COUNT; i++) {
+		MOD_LevelSwapTarget[i] = levelSwapTargets[i];
 	}
 }
 

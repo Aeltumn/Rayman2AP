@@ -42,6 +42,8 @@ void MOD_HandleMessage(int type, const char* data) {
         int endGoal = 1;
         BOOL elixir = FALSE;
         int* lumGates[6];
+        char* levelSwapSources[LEVEL_COUNT] = { NULL };
+        char* levelSwapTargets[LEVEL_COUNT] = { NULL };
 
         token = strtok(copy, ",");
         while (token) {
@@ -54,17 +56,43 @@ void MOD_HandleMessage(int type, const char* data) {
             case 5: deathLink = atoi(token); break;
             case 6: endGoal = atoi(token); break;
             case 7: elixir = atoi(token); break;
-            default:
+            case 8:
+            case 9:
+            case 10:
+            case 11:
+            case 12:
+            case 13:
                 lumGates[gateIndex++] = atoi(token);
                 break;
             }
+
+            // When we reach the final index we switch processing!
+            if (index == 14) {
+                int idx = 0;
+                char* context1 = NULL;
+                char* pair = strtok_s(token, ";", &context1);
+
+                while (pair) {
+                    char* context2 = NULL;
+                    char* key = strtok_s(pair, "|", &context2);
+                    char* value = strtok_s(NULL, "|", &context2);
+
+                    levelSwapSources[idx] = key;
+                    levelSwapTargets[idx] = value;
+                    idx++;
+
+                    pair = strtok_s(NULL, ";", &context1);
+                }
+                break;
+            }
+
             index++;
             token = strtok(NULL, ",");
         }
         free(copy);
 
         // Send this data across to the main mod file
-        MOD_UpdateState(connected, lums, cages, masks, upgrades, deathLink, endGoal, elixir, lumGates);
+        MOD_UpdateState(connected, lums, cages, masks, upgrades, deathLink, endGoal, elixir, lumGates, levelSwapSources, levelSwapTargets);
         break;
     }
     case MESSAGE_TYPE_DEATH: {

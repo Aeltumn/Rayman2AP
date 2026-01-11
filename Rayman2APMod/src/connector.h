@@ -11,6 +11,8 @@
 #define MESSAGE_TYPE_COMPLETE 8
 #define MESSAGE_TYPE_STATE 9
 
+#define LEVEL_COUNT 56
+
 int MOD_StartConnector();
 void MOD_StopConnector();
 

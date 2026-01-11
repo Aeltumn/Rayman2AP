@@ -146,20 +146,25 @@ void Connector::handle(int type, std::string data) {
 
 /** Sends a state update to the game client. */
 void sendStateUpdate() {
-    instance->send(MESSAGE_TYPE_STATE, std::to_string(AP_IsInit()) + "," + 
-        std::to_string(lums) + "," +
-        std::to_string(cages) + "," +
-        std::to_string(masks) + "," +
-        std::to_string(upgrades) + "," +
-        std::to_string(deathLink) + "," +
-        std::to_string(endGoal) + "," +
-        std::to_string(elixir) + "," +
-        std::to_string(lumGates[0]) + "," +
-        std::to_string(lumGates[1]) + "," +
-        std::to_string(lumGates[2]) + "," +
-        std::to_string(lumGates[3]) + "," +
-        std::to_string(lumGates[4]) + "," +
-        std::to_string(lumGates[5]));
+    std::ostringstream oss;
+    oss << AP_IsInit() << ",";
+    oss << lums << ",";
+    oss << cages << ",";
+    oss << masks << ",";
+    oss << upgrades << ",";
+    oss << deathLink << ",";
+    oss << endGoal << ",";
+    oss << elixir << ",";
+
+    for (int i = 0; i < 6; i++) {
+        oss << lumGates[i] << ",";
+    }
+
+    for (const auto& pair : levelSwaps) {
+        oss << pair.first << "|" << pair.second << ";";
+    }
+
+    instance->send(MESSAGE_TYPE_STATE, oss.str());
 }
 
 /** Handles clearing cached item checks. */

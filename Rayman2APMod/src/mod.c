@@ -23,8 +23,9 @@ BOOL MOD_TreasureComplete = FALSE;
 BitSet MOD_LastCollected;
 BOOL MOD_InLumGate = FALSE;
 BitSet MOD_RealCollected;
-char* MOD_LevelSwapSource[LEVEL_COUNT];
-char* MOD_LevelSwapTarget[LEVEL_COUNT];
+char MOD_LevelSwapSource[LEVEL_COUNT][MAX_LENGTH];
+char MOD_LevelSwapTarget[LEVEL_COUNT][MAX_LENGTH];
+char* MOD_LastEntered;
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
@@ -46,23 +47,101 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 }
 
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
-	MOD_Print("GAM_fn_vAskToChangeLevel: %s", szLevelName);
-	GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
-}
+	if ((!MOD_Connected && false) || strcmp(szLevelName, "menu") == 0 || strcmp(szLevelName, "mapmonde") == 0) {
+		// If we have a level we previously marked as having entered, set the exit portal id!
+		if (MOD_LastEntered) {
+			GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+			if (strcmp(MOD_LastEntered, "Learn_10") == 0) {
+				structure->ucPreviousLevel = 3;
+			} else if (strcmp(MOD_LastEntered, "Learn_30") == 0) {
+				structure->ucPreviousLevel = 10;
+			} else if (strcmp(MOD_LastEntered, "Ski_10") == 0) {
+				structure->ucPreviousLevel = 25;
+			} else if (strcmp(MOD_LastEntered, "Vulca_10") == 0) {
+				structure->ucPreviousLevel = 135;
+			} else if (strcmp(MOD_LastEntered, "chase_10") == 0) {
+				structure->ucPreviousLevel = 15;
+			} else if (strcmp(MOD_LastEntered, "Ly_10") == 0) {
+				structure->ucPreviousLevel = 20;
+			} else if (strcmp(MOD_LastEntered, "Rodeo_10") == 0) {
+				structure->ucPreviousLevel = 55;
+			} else if (strcmp(MOD_LastEntered, "water_10") == 0) {
+				structure->ucPreviousLevel = 160;
+			} else if (strcmp(MOD_LastEntered, "Glob_30") == 0) {
+				structure->ucPreviousLevel = 210;
+			} else if (strcmp(MOD_LastEntered, "Whale_00") == 0) {
+				structure->ucPreviousLevel = 45;
+			} else if (strcmp(MOD_LastEntered, "Plum_00") == 0) {
+				structure->ucPreviousLevel = 195;
+			} else if (strcmp(MOD_LastEntered, "Bast_10") == 0) {
+				structure->ucPreviousLevel = 130;
+			} else if (strcmp(MOD_LastEntered, "Nave_10") == 0) {
+				structure->ucPreviousLevel = 80;
+			} else if (strcmp(MOD_LastEntered, "Seat_10") == 0) {
+				structure->ucPreviousLevel = 40;
+			} else if (strcmp(MOD_LastEntered, "Earth_10") == 0) {
+				structure->ucPreviousLevel = 95;
+			} else if (strcmp(MOD_LastEntered, "Ly_20") == 0) {
+				structure->ucPreviousLevel = 115;
+			} else if (strcmp(MOD_LastEntered, "Helic_10") == 0) {
+				structure->ucPreviousLevel = 105;
+			} else if (strcmp(MOD_LastEntered, "Morb_00") == 0) {
+				structure->ucPreviousLevel = 118;
+			} else if (strcmp(MOD_LastEntered, "Learn_40") == 0) {
+				structure->ucPreviousLevel = 12;
+			} else if (strcmp(MOD_LastEntered, "Boat_10") == 0) {
+				structure->ucPreviousLevel = 140;
+			} else if (strcmp(MOD_LastEntered, "Rhop_10") == 0) {
+				structure->ucPreviousLevel = 145;
+			} else {
+				// Fallback is woods of light!
+				structure->ucPreviousLevel = 3;
+			}
+			MOD_Print("Restored last entry level from %s which is id %d", MOD_LastEntered, structure->ucPreviousLevel);
+			MOD_LastEntered = NULL;
+		}
 
-void MOD_SetLevel(const char* szName) {
-	MOD_Print("GAM_fn_vSetLevelName: %s", szName);
-	GAM_fn_vSetLevelName(szName);
-}
+		MOD_Print("GAM_fn_vAskToChangeLevel (ignore): %s", szLevelName);
+		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+		return;
+	}
+	
+	// If it's the final level, check if you have enough masks to enter!
+	if (strcmp(szLevelName, "Rhop_10") == 0) {
+		if (MOD_Masks < 4) {
+			MOD_Print("GAM_fn_vAskToChangeLevel (not enough masks, redirecting to Pirate Ship)");
+			szLevelName = "Boat_10";
+			MOD_ShowScreenText("Not enough masks collected, you have %d out of 4!", MOD_Masks);
+		} else {
+			MOD_Print("GAM_fn_vAskToChangeLevel (enough masks): %s", szLevelName);
+			GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+			return;
+		}
+	}
 
-void MOD_SetNextLevel(const char* szName) {
-	MOD_Print("GAM_fn_vSetNextLevelName: %s", szName);
-	GAM_fn_vSetNextLevelName(szName);
-}
+	// When we enter a level, store which one we wanted to enter!
+	if (!MOD_LastEntered) {
+		MOD_LastEntered = szLevelName;
+	}
 
-void MOD_SetFirstLevel(const char* szName) {
-	MOD_Print("GAM_fn_vSetFirstLevelName: %s", szName);
-	GAM_fn_vSetFirstLevelName(szName);
+	// Find which map to send the player to instead of the basic one
+	int oldId = -1;
+	for (int i = 0; i < LEVEL_COUNT; i++) {
+		MOD_Print("Comparing %s with %s got %d", szLevelName, MOD_LevelSwapSource[i], strcmp(szLevelName, MOD_LevelSwapSource[i]) == 0);
+		if (strcmp(szLevelName, MOD_LevelSwapSource[i]) == 0) {
+			oldId = i;
+		}
+	}
+	if (oldId == -1) {
+		MOD_Print("GAM_fn_vAskToChangeLevel (old id -1): %s", szLevelName);
+		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+		return;
+	}
+
+	// Get the new target and send them there
+	char* targetLevelName = MOD_LevelSwapTarget[oldId];
+	MOD_Print("GAM_fn_vAskToChangeLevel (modified): %s -> %s", szLevelName, targetLevelName);
+	GAM_fn_vAskToChangeLevel(targetLevelName, bSaveGame);
 }
 
 /** Sets the value of a DSG variable. */
@@ -300,10 +379,10 @@ void MOD_UpdateState(BOOL connected, int lums, int cages, int masks, int upgrade
 		MOD_LumGates[i] = lumGates[i];
 	}
 	for (int i = 0; i < LEVEL_COUNT; i++) {
-		MOD_LevelSwapSource[i] = levelSwapKeys[i];
+		strncpy(MOD_LevelSwapSource[i], levelSwapKeys[i], MAX_LENGTH - 1);
 	}
 	for (int i = 0; i < LEVEL_COUNT; i++) {
-		MOD_LevelSwapTarget[i] = levelSwapTargets[i];
+		strncpy(MOD_LevelSwapTarget[i], levelSwapTargets[i], MAX_LENGTH - 1);
 	}
 }
 
@@ -425,7 +504,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 	pInfo->X = 10;
 	pInfo->Y = 990;
 
-	long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
+	long bigLineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
 	for (int i = 9; i >= 0; i--) {
 		// Ignore any lines that have finished fading out
 		int j = MOD_ScreenTextLatest - i;
@@ -438,7 +517,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 
 		// Write the line and then move the Y up
 		char* screen = MOD_ScreenText[j];
-		pInfo->Y = pInfo->Y - lineHeight;
+		pInfo->Y = pInfo->Y - bigLineHeight;
 		SPTXT_vPrint(screen);
 	}
 
@@ -447,6 +526,8 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 	if (MOD_Connected && (_stricmp(szLevelName, "mapmonde") == 0 || *AI_g_bInGameMenu)) {
 		pInfo->xSize = 6;
 		pInfo->bRightAlign = TRUE;
+		long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
+
 		pInfo->X = 995;
 		pInfo->Y = 990 - 3 * lineHeight;
 		SPTXT_vPrintFmtLine("/o200:Archipelago Received");
@@ -459,9 +540,6 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 }
 
 void MOD_Main(void) {
-	// Seed the random number generator
-	srand(time(NULL));
-
 	// Clear the collection bitset
 	clearBitSet(&MOD_LastCollected);
 

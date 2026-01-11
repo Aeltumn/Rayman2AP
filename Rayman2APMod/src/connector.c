@@ -42,8 +42,14 @@ void MOD_HandleMessage(int type, const char* data) {
         int endGoal = 1;
         BOOL elixir = FALSE;
         int* lumGates[6];
-        char* levelSwapSources[LEVEL_COUNT] = { NULL };
-        char* levelSwapTargets[LEVEL_COUNT] = { NULL };
+        char* levelSwapSources[LEVEL_COUNT];
+        char* levelSwapTargets[LEVEL_COUNT];
+
+        // Ensure values are properly empty!
+        for (int i = 0; i < LEVEL_COUNT; i++) {
+            levelSwapSources[i] = "";
+            levelSwapTargets[i] = "";
+        }
 
         token = strtok(copy, ",");
         while (token) {

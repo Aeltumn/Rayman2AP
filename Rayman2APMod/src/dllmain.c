@@ -53,9 +53,6 @@ void fn_vAttachHooks( void ) {
 	FHK_M_lCreateHook(&GAM_fn_vEngine, MOD_EngineTick);
 	FHK_M_lCreateHook(&GAM_fn_vChooseTheGoodInit, MOD_Init);
 	FHK_M_lCreateHook(&GAM_fn_vAskToChangeLevel, MOD_ChangeLevel);
-	FHK_M_lCreateHook(&GAM_fn_vSetLevelName, MOD_SetLevel);
-	FHK_M_lCreateHook(&GAM_fn_vSetNextLevelName, MOD_SetNextLevel);
-	FHK_M_lCreateHook(&GAM_fn_vSetFirstLevelName, MOD_SetFirstLevel);
 }
 
 /** Remove detours hooks from game events. */
@@ -63,9 +60,6 @@ void fn_vDetachHooks( void ) {
 	FHK_M_lDestroyHook(&GAM_fn_vEngine, MOD_EngineTick);
 	FHK_M_lDestroyHook(&GAM_fn_vChooseTheGoodInit, MOD_Init);
 	FHK_M_lDestroyHook(&GAM_fn_vAskToChangeLevel, MOD_ChangeLevel);
-	FHK_M_lDestroyHook(&GAM_fn_vSetLevelName, MOD_SetLevel);
-	FHK_M_lDestroyHook(&GAM_fn_vSetNextLevelName, MOD_SetNextLevel);
-	FHK_M_lDestroyHook(&GAM_fn_vSetFirstLevelName, MOD_SetFirstLevel);
 }
 
 __declspec(dllexport)

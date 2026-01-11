@@ -18,7 +18,7 @@ int upgrades = 0;
 bool deathLink = false;
 int endGoal = 1;
 bool elixir = false;
-int lumGates[6] = {100, 300, 450, 550, 60, 475};
+int lumGates[6] = {100, 300, 475, 550, 60, 450};
 std::unordered_map<std::string, std::string> levelSwaps;
 std::unordered_map<int64_t, std::string> idMap;
 std::string lastIp;
@@ -181,10 +181,10 @@ void handleItemClear() {
     elixir = false;
     lumGates[0] = 100;
     lumGates[1] = 300;
-    lumGates[2] = 450;
+    lumGates[2] = 475;
     lumGates[3] = 550;
     lumGates[4] = 60;
-    lumGates[5] = 475;
+    lumGates[5] = 450;
     sendStateUpdate();
 }
 

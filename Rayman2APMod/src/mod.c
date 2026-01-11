@@ -4,7 +4,13 @@
 #define TEXT_MARGIN 2
 #define MAX_LENGTH 32
 
-int* BASE_GAME_LUMS[6] = { 100, 300, 450, 550, 60, 475 };
+#define MOD_PrintConsolePlusScreen(txt, ...)              \
+    do {                                 \
+        MOD_Print((txt), __VA_ARGS__); \
+        MOD_ShowScreenText((txt), __VA_ARGS__); \
+    } while (0)
+
+int* BASE_GAME_LUMS[6] = { 100, 300, 475, 550, 60, 450 };
 BOOL MOD_Connected = FALSE;
 int MOD_Lums = 0;
 int MOD_Cages = 0;
@@ -21,11 +27,14 @@ time_t MOD_ScreenTextStart[10];
 int MOD_ScreenTextLatest = -1;
 BOOL MOD_TreasureComplete = FALSE;
 BitSet MOD_LastCollected;
+BitSet MOD_DevCollected;
 BOOL MOD_InLumGate = FALSE;
 BitSet MOD_RealCollected;
 char MOD_LevelSwapSource[LEVEL_COUNT][MAX_LENGTH];
 char MOD_LevelSwapTarget[LEVEL_COUNT][MAX_LENGTH];
 char* MOD_LastEntered;
+
+BOOL MOD_DevMode = TRUE;
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
@@ -47,7 +56,12 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 }
 
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
-	if ((!MOD_Connected && false) || strcmp(szLevelName, "menu") == 0 || strcmp(szLevelName, "mapmonde") == 0) {
+	// In dev mode print which locations we switch to
+	if (MOD_DevMode) {
+		MOD_PrintConsolePlusScreen("Changing level to %s", szLevelName);
+	}
+
+	if (!MOD_Connected || strcmp(szLevelName, "menu") == 0 || strcmp(szLevelName, "mapmonde") == 0) {
 		// If we have a level we previously marked as having entered, set the exit portal id!
 		if (MOD_LastEntered) {
 			GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
@@ -256,11 +270,7 @@ void MOD_CheckVariables() {
 				setBitSet(&MOD_LastCollected, i, dsg);
 
 				// Only if the item is now collected, send a check!
-				if (dsg) {
-					// While testing we show collected items on screen
-					MOD_vShowScreenText("Collected %d", i);
-					MOD_Print("Collected %d", i);
-					
+				if (dsg) {					
 					// Send up the id of the item directly
 					char str[6];
 					sprintf(str, "%d", i);
@@ -270,18 +280,18 @@ void MOD_CheckVariables() {
 					if (i == 1146) {
 						if (MOD_EndGoal == 1) {
 							// If the goal is the crow's nest, you got it!
-							MOD_Print("Game completed!");
+							MOD_PrintConsolePlusScreen("Game completed!");
 							MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
 						} else if (MOD_EndGoal == 3) {
 							// If the goal is 100% we also require having everything!
 							int hasEnoughLums = MOD_Lums >= 1000;
 							int hasEnoughCages = MOD_Cages >= 80;
 							if (!hasEnoughLums) {
-								MOD_Print("Game is not complete, not enough lums!");
+								MOD_PrintConsolePlusScreen("Game is not complete, not enough lums!");
 							} else if (!hasEnoughCages) {
-								MOD_Print("Game is not complete, not enough cages!");
+								MOD_PrintConsolePlusScreen("Game is not complete, not enough cages!");
 							} else {
-								MOD_Print("Game completed 100%!");
+								MOD_PrintConsolePlusScreen("Game completed 100%!");
 								MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
 							}
 						}
@@ -306,7 +316,7 @@ void MOD_CheckVariables() {
 
 					if (dx <= 10 && dy <= 10 && dz <= 10) {
 						MOD_TreasureComplete = TRUE;
-						MOD_Print("Treasure ending complete!");
+						MOD_PrintConsolePlusScreen("Treasure ending complete!");
 						MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
 					}
 				}
@@ -342,7 +352,31 @@ void MOD_CheckVariables() {
 /** Ticked by the engine every frame, runs all messages received since last tick. */
 void MOD_EngineTick() {
 	MOD_RunPendingMessages();
-	if (true || MOD_Connected) {
+
+	// In dev mode we send out messages whenever checks happen!
+	if (MOD_DevMode) {
+		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+		if (pGlobal) {
+			for (int i = 1; i <= 1400; i++) {
+				unsigned char last = getBitSet(&MOD_DevCollected, i);
+				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+
+				// If there's a desync between the local storage and the DSG variables
+				// we collected an item, send it across!
+				if (last != dsg) {
+					setBitSet(&MOD_DevCollected, i, dsg);
+
+					// Only if the item is now collected, send a check!
+					if (dsg) {
+						// While testing we show collected items on screen
+						MOD_PrintConsolePlusScreen("Collected %d", i);
+					}
+				}
+			}
+		}
+	}
+
+	if (MOD_Connected) {
 		MOD_CheckVariables();
 	}
 	GAM_fn_vEngine();
@@ -442,21 +476,8 @@ void MOD_Print(char* text, ...) {
 	va_end(args);
 }
 
-/** Prints a message to the console. */
-void MOD_vShowScreenText(char* text, ...) {
-	va_list args;
-	va_start(args, text);
-	long lSize = SPTXT_fn_lGetFmtStringLength(text, args);
-	char* szBuffer = _alloca(lSize);
-	if (szBuffer) {
-		vsprintf(szBuffer, text, args);
-		MOD_ShowScreenText(szBuffer);
-	}
-	va_end(args);
-}
-
 /** Shows the given text on the screen for the next 8 seconds. */
-void MOD_ShowScreenText(char* text) {
+void MOD_ShowScreenTextInternal(char* text) {
 	// Determine where to put this text
 	MOD_ScreenTextLatest++;
 	if (MOD_ScreenTextLatest >= 10) {
@@ -476,6 +497,19 @@ void MOD_ShowScreenText(char* text) {
 		}
 	}
 	screen[size] = 0;
+}
+
+/** Prints a message to the console. */
+void MOD_ShowScreenText(char* text, ...) {
+	va_list args;
+	va_start(args, text);
+	long lSize = SPTXT_fn_lGetFmtStringLength(text, args);
+	char* szBuffer = _alloca(lSize);
+	if (szBuffer) {
+		vsprintf(szBuffer, text, args);
+		MOD_ShowScreenTextInternal(szBuffer);
+	}
+	va_end(args);
 }
 
 /** Returns whether death link is currently enabled. */

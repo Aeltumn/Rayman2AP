@@ -71,39 +71,39 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				structure->ucPreviousLevel = 10;
 			} else if (strcmp(MOD_LastEntered, "Ski_10") == 0) {
 				structure->ucPreviousLevel = 25;
-			} else if (strcmp(MOD_LastEntered, "Vulca_10") == 0) {
+			} else if (strcmp(MOD_LastEntered, "vulca_10") == 0) {
 				structure->ucPreviousLevel = 135;
 			} else if (strcmp(MOD_LastEntered, "chase_10") == 0) {
 				structure->ucPreviousLevel = 15;
 			} else if (strcmp(MOD_LastEntered, "Ly_10") == 0) {
 				structure->ucPreviousLevel = 20;
-			} else if (strcmp(MOD_LastEntered, "Rodeo_10") == 0) {
+			} else if (strcmp(MOD_LastEntered, "rodeo_10") == 0) {
 				structure->ucPreviousLevel = 55;
 			} else if (strcmp(MOD_LastEntered, "water_10") == 0) {
 				structure->ucPreviousLevel = 160;
-			} else if (strcmp(MOD_LastEntered, "Glob_30") == 0) {
+			} else if (strcmp(MOD_LastEntered, "glob_30") == 0) {
 				structure->ucPreviousLevel = 210;
-			} else if (strcmp(MOD_LastEntered, "Whale_00") == 0) {
+			} else if (strcmp(MOD_LastEntered, "whale_00") == 0) {
 				structure->ucPreviousLevel = 45;
-			} else if (strcmp(MOD_LastEntered, "Plum_00") == 0) {
+			} else if (strcmp(MOD_LastEntered, "plum_00") == 0) {
 				structure->ucPreviousLevel = 195;
-			} else if (strcmp(MOD_LastEntered, "Bast_10") == 0) {
+			} else if (strcmp(MOD_LastEntered, "bast_10") == 0) {
 				structure->ucPreviousLevel = 130;
-			} else if (strcmp(MOD_LastEntered, "Nave_10") == 0) {
+			} else if (strcmp(MOD_LastEntered, "nave_10") == 0) {
 				structure->ucPreviousLevel = 80;
-			} else if (strcmp(MOD_LastEntered, "Seat_10") == 0) {
+			} else if (strcmp(MOD_LastEntered, "seat_10") == 0) {
 				structure->ucPreviousLevel = 40;
-			} else if (strcmp(MOD_LastEntered, "Earth_10") == 0) {
+			} else if (strcmp(MOD_LastEntered, "earth_10") == 0) {
 				structure->ucPreviousLevel = 95;
 			} else if (strcmp(MOD_LastEntered, "Ly_20") == 0) {
 				structure->ucPreviousLevel = 115;
-			} else if (strcmp(MOD_LastEntered, "Helic_10") == 0) {
+			} else if (strcmp(MOD_LastEntered, "helic_10") == 0) {
 				structure->ucPreviousLevel = 105;
-			} else if (strcmp(MOD_LastEntered, "Morb_00") == 0) {
+			} else if (strcmp(MOD_LastEntered, "morb_00") == 0) {
 				structure->ucPreviousLevel = 118;
-			} else if (strcmp(MOD_LastEntered, "Learn_40") == 0) {
+			} else if (strcmp(MOD_LastEntered, "learn_40") == 0) {
 				structure->ucPreviousLevel = 12;
-			} else if (strcmp(MOD_LastEntered, "Boat_10") == 0) {
+			} else if (strcmp(MOD_LastEntered, "boat_10") == 0) {
 				structure->ucPreviousLevel = 140;
 			} else if (strcmp(MOD_LastEntered, "Rhop_10") == 0) {
 				structure->ucPreviousLevel = 145;

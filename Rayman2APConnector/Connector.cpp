@@ -6,9 +6,9 @@
 
 // Stores the ids of all super lums.
 const int ELIXIR_ID = -1;
-const int MASK_IDS[] = { 1112 };
+const int MASK_IDS[] = { 1112, 1113 };
 const int SILVER_LUM_IDS[] = { 1095, 1143 };
-const int SUPER_LUM_IDS[] = { 1, 13, 19, 66, 81, 86, 91, 71, 61, 51, 96 };
+const int SUPER_LUM_IDS[] = { 1, 13, 19, 66, 81, 86, 91, 71, 61, 51, 96, 172, 161, 206, 201, 211, 762, 776, 781, 786, 791, 796, 364, 359, 369, 380, 375, 406, 401, 416, 411, 491, 496 };
 
 Connector *instance;
 int lums = 0;

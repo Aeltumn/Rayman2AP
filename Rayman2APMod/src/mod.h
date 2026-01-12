@@ -16,4 +16,6 @@ void MOD_TriggerDeath();
 BOOL MOD_GetDeathLink();
 void MOD_ToggleDeathLink();
 
+void AI_fn_bSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value);
+
 extern void MOD_InitCommands();

@@ -270,21 +270,21 @@ void MOD_CheckVariables() {
 				setBitSet(&MOD_LastCollected, i, dsg);
 
 				// Only if the item is now collected, send a check!
-				if (dsg) {					
+				if (dsg) {
 					// Send up the id of the item directly
 					char str[6];
 					sprintf(str, "%d", i);
 					MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
 
-					// If this is 1146 the game was completed!
-					if (i == 1146) {
+					// If this is 1145 the game was completed!
+					if (i == 1145) {
 						if (MOD_EndGoal == 1) {
 							// If the goal is the crow's nest, you got it!
 							MOD_PrintConsolePlusScreen("Game completed!");
 							MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
 						} else if (MOD_EndGoal == 3) {
 							// If the goal is 100% we also require having everything!
-							int hasEnoughLums = MOD_Lums >= 1000;
+							int hasEnoughLums = MOD_Lums >= 999;
 							int hasEnoughCages = MOD_Cages >= 80;
 							if (!hasEnoughLums) {
 								MOD_PrintConsolePlusScreen("Game is not complete, not enough lums!");
@@ -566,7 +566,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 		pInfo->Y = 990 - 3 * lineHeight;
 		SPTXT_vPrintFmtLine("/o200:Archipelago Received");
 		pInfo->Y = 990 - 2 * lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_Lums, MOD_Cages);
+		SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 999/o400:, Cages /o0:%d of 80", MOD_Lums, MOD_Cages);
 		pInfo->Y = 990 - lineHeight;
 		SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, /o400:Power /o0:%d of 2/o400:, Elixir %s", MOD_Masks, MOD_Upgrades, MOD_Elixir ? "/o0:Yes" : "/o200:No");
 	}

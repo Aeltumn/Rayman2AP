@@ -11,6 +11,12 @@
     } while (0)
 
 int* BASE_GAME_LUMS[6] = { 100, 300, 475, 550, 60, 450 };
+int* NO_LUM_GATE_LEVELS[5] = { 960, 961, 964, 966, 967 };
+int* LUM_GATE_ONE_LEVELS[4] = { 970, 972, 976, 979};
+int* LUM_GATE_TWO_LEVELS[5] = { 981, 975, 985, 988, 990 };
+int* LUM_GATE_THREE_LEVELS[2] = { 993, 1007 };
+int* LUM_GATE_FOUR_LEVELS[2] = { 1000, 1002 };
+int FINAL_LEVEL = 1005;
 BOOL MOD_Connected = FALSE;
 int MOD_Lums = 0;
 int MOD_Cages = 0;
@@ -25,7 +31,7 @@ BOOL MOD_IgnoreDeath = FALSE;
 char MOD_ScreenText[10][128];
 time_t MOD_ScreenTextStart[10];
 int MOD_ScreenTextLatest = -1;
-BOOL MOD_TreasureComplete = FALSE;
+BOOL MOD_EndingComplete = FALSE;
 BitSet MOD_LastCollected;
 BitSet MOD_DevCollected;
 BOOL MOD_InLumGate = FALSE;
@@ -34,7 +40,11 @@ char MOD_LevelSwapSource[LEVEL_COUNT][MAX_LENGTH];
 char MOD_LevelSwapTarget[LEVEL_COUNT][MAX_LENGTH];
 char* MOD_LastEntered;
 
-BOOL MOD_DevMode = TRUE;
+#define MOD_CustomLevelCount 3
+char* MOD_CustomLevelIdsStart[MOD_CustomLevelCount] = {"morb_10$01$00", "rodeo_40$01", "plum_00$01$00"};
+char* MOD_CustomLevelIdsTarget[MOD_CustomLevelCount] = {"morb_10", "rodeo_40", "plum_00"};
+
+BOOL MOD_DevMode = FALSE;
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
@@ -103,7 +113,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				structure->ucPreviousLevel = 118;
 			} else if (strcmp(MOD_LastEntered, "learn_40") == 0) {
 				structure->ucPreviousLevel = 12;
-			} else if (strcmp(MOD_LastEntered, "boat_10") == 0) {
+			} else if (strcmp(MOD_LastEntered, "Boat01") == 0) {
 				structure->ucPreviousLevel = 140;
 			} else if (strcmp(MOD_LastEntered, "Rhop_10") == 0) {
 				structure->ucPreviousLevel = 145;
@@ -133,16 +143,47 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		}
 	}
 
+	// When entering the ending credits we check off winning!
+	if (strcmp(szLevelName, "end_10") == 0) {
+		// Send a custom check for winning
+		MOD_SendMessage(MESSAGE_TYPE_COLLECTED, "1500");
+
+		if (MOD_EndGoal == 1) {
+			// If the goal is the crow's nest, you got it!
+			MOD_PrintConsolePlusScreen("Game completed!");
+			MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+		} else if (MOD_EndGoal == 3) {
+			// If the goal is 100% we also require having everything!
+			int hasEnoughLums = MOD_Lums >= 999;
+			int hasEnoughCages = MOD_Cages >= 80;
+			if (!hasEnoughLums) {
+				MOD_PrintConsolePlusScreen("Game is not complete, not enough lums!");
+			} else if (!hasEnoughCages) {
+				MOD_PrintConsolePlusScreen("Game is not complete, not enough cages!");
+			} else {
+				MOD_PrintConsolePlusScreen("Game completed 100%!");
+				MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+			}
+		}
+	}
+
 	// When we enter a level, store which one we wanted to enter!
 	if (!MOD_LastEntered) {
 		MOD_LastEntered = szLevelName;
 	}
 
+	// First try to map this level id if it's a broken one
+	char* compareLevel = szLevelName;
+	for (int i = 0; i < MOD_CustomLevelCount; i++) {
+		if (strcmp(compareLevel, MOD_CustomLevelIdsStart[i]) == 0) {
+			compareLevel = MOD_CustomLevelIdsTarget[i];
+		}
+	}
+
 	// Find which map to send the player to instead of the basic one
 	int oldId = -1;
 	for (int i = 0; i < LEVEL_COUNT; i++) {
-		MOD_Print("Comparing %s with %s got %d", szLevelName, MOD_LevelSwapSource[i], strcmp(szLevelName, MOD_LevelSwapSource[i]) == 0);
-		if (strcmp(szLevelName, MOD_LevelSwapSource[i]) == 0) {
+		if (strcmp(compareLevel, MOD_LevelSwapSource[i]) == 0) {
 			oldId = i;
 		}
 	}
@@ -263,7 +304,7 @@ void MOD_CheckVariables() {
 		for (int i = 1; i <= 1400; i++) {
 			unsigned char last = getBitSet(&MOD_LastCollected, i);
 			ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
-			
+
 			// If there's a desync between the local storage and the DSG variables
 			// we collected an item, send it across!
 			if (last != dsg) {
@@ -275,34 +316,13 @@ void MOD_CheckVariables() {
 					char str[6];
 					sprintf(str, "%d", i);
 					MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
-
-					// If this is 1145 the game was completed!
-					if (i == 1145) {
-						if (MOD_EndGoal == 1) {
-							// If the goal is the crow's nest, you got it!
-							MOD_PrintConsolePlusScreen("Game completed!");
-							MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
-						} else if (MOD_EndGoal == 3) {
-							// If the goal is 100% we also require having everything!
-							int hasEnoughLums = MOD_Lums >= 999;
-							int hasEnoughCages = MOD_Cages >= 80;
-							if (!hasEnoughLums) {
-								MOD_PrintConsolePlusScreen("Game is not complete, not enough lums!");
-							} else if (!hasEnoughCages) {
-								MOD_PrintConsolePlusScreen("Game is not complete, not enough cages!");
-							} else {
-								MOD_PrintConsolePlusScreen("Game completed 100%!");
-								MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
-							}
-						}
-					}
 				}
 			}
 		}
 
 		// If the end goal is treasure% we have to detect if you are in the treasure area
 		// as there is no check for it.
-		if (MOD_EndGoal == 2 && !MOD_TreasureComplete) {
+		if (MOD_EndGoal == 2 && !MOD_EndingComplete) {
 			if (_stricmp(szLevelName, "vulca_20") == 0) {
 				HIE_tdstSuperObject* pMain = HIE_fn_p_stFindObjectByName("StdCamer");
 				if (pMain) {
@@ -315,7 +335,7 @@ void MOD_CheckVariables() {
 					if (dz < 0) dz = -dz;
 
 					if (dx <= 10 && dy <= 10 && dz <= 10) {
-						MOD_TreasureComplete = TRUE;
+						MOD_EndingComplete = TRUE;
 						MOD_PrintConsolePlusScreen("Treasure ending complete!");
 						MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
 					}
@@ -340,12 +360,42 @@ void MOD_CheckVariables() {
 		}
 
 		// Set whether you have the elixir
-		// AI_fn_bSetBooleanInArray(pGlobal, 42, ELIXIR_ID, MOD_Elixir);
+		AI_fn_bSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
+
+		// You can always enter the COBD as you can learn the name
+		// from the Archipelago descriptions
+		AI_fn_bSetBooleanInArray(pGlobal, 42, 1101, TRUE);
 
 		// Ensure you can always complete the game
 		if (MOD_EndGoal != 2) {
 			AI_fn_bSetBooleanInArray(pGlobal, 42, 1146, FALSE);
 		}
+
+		// Update which portals are available based on the current checks
+		for (int i = 0; i < 5; i++) {
+			AI_fn_bSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
+		}
+		if (MOD_Lums >= MOD_LumGates[0]) {
+			for (int i = 0; i < 4; i++) {
+				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i], TRUE);
+			}
+		}
+		if (MOD_Lums >= MOD_LumGates[1]) {
+			for (int i = 0; i < 5; i++) {
+				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i], TRUE);
+			}
+		}
+		if (MOD_Lums >= MOD_LumGates[2]) {
+			for (int i = 0; i < 2; i++) {
+				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i], TRUE);
+			}
+		}
+		if (MOD_Lums >= MOD_LumGates[3]) {
+			for (int i = 0; i < 2; i++) {
+				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
+			}
+		}
+		AI_fn_bSetBooleanInArray(pGlobal, 42, 1005, MOD_Masks >= 4);
 	}
 }
 

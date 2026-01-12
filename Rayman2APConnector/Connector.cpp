@@ -30,16 +30,16 @@ void handleGiftAPISetReply(const AP_SetReply& reply) {}
 void printConnectionStatus() {
     switch (AP_GetConnectionStatus()) {
     case AP_ConnectionStatus::Disconnected:
-        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP Status: Disconnected");
+        instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Disconnected");
         break;
     case AP_ConnectionStatus::Connected:
-        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP Status: Connected");
+        instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Connected");
         break;
     case AP_ConnectionStatus::Authenticated:
-        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP Status: Authenticated");
+        instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Authenticated");
         break;
     case AP_ConnectionStatus::ConnectionRefused:
-        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP Status: Connection Refused");
+        instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Connection Refused");
         break;
     }
 }
@@ -131,14 +131,13 @@ void Connector::handle(int type, std::string data) {
     }
     case MESSAGE_TYPE_COMPLETE: {
         // The game is done; pass it on!
-        send(MESSAGE_TYPE_MESSAGE, "[child] Informing AP that story is done");
         if (isConnected()) {
             AP_StoryComplete();
         }
         break;
     }
     default: {
-        send(MESSAGE_TYPE_MESSAGE, "[child] Received unknown " + std::to_string(type) + ": " + data);
+        send(MESSAGE_TYPE_MESSAGE, "Received unknown " + std::to_string(type) + ": " + data);
         break;
     }
     }
@@ -218,7 +217,7 @@ void handleItem(int64_t id, bool notify) {
         }
     } else {
         // The item type is invalid, send a debug log!
-        instance->send(MESSAGE_TYPE_MESSAGE, "[child] Received invalid item: " + std::to_string(r2Id));
+        instance->send(MESSAGE_TYPE_MESSAGE, "Received invalid item: " + std::to_string(r2Id));
         return;
     }
 
@@ -262,7 +261,6 @@ void handleLevelSwaps(std::string data) {
                 ss << ", ";
             }
         }
-        instance->send(MESSAGE_TYPE_MESSAGE, "[child] AP level_swaps: " + ss.str());
     } catch (const std::exception& e) {
         instance->send(MESSAGE_TYPE_MESSAGE, "[handleLevelSwaps] Caught exception: " + std::string(e.what()));
     } catch (...) {
@@ -309,7 +307,7 @@ void handleDeathLink() {
 bool Connector::connect(std::string ip, std::string slot, std::string password) {
     if (AP_IsInit()) return false;
     lastIp = ip;
-    instance->send(MESSAGE_TYPE_MESSAGE, "[child] Connecting to ip: " + ip + ", game: Rayman 2, slot: " + slot + ", password: " + password);
+    instance->send(MESSAGE_TYPE_MESSAGE, "Connecting to ip: " + ip + ", game: Rayman 2, slot: " + slot + ", password: " + password);
     AP_Init(ip.c_str(), "Rayman 2", slot.c_str(), password.c_str());
     AP_SetDeathLinkSupported(true);
     AP_SetItemClearCallback(handleItemClear);

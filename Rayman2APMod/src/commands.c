@@ -6,12 +6,14 @@ tdfnCommand fn_vApCmd;
 tdfnCommand fn_vDeathlinkCommand;
 tdfnCommand fn_vSayCommand;
 tdfnCommand fn_vDsgCommand;
+tdfnCommand fn_vHallOfDoors;
 
 void MOD_InitCommands(void) {
 	fn_vRegisterCommand("ap", fn_vApCmd);
 	fn_vRegisterCommand("deathlink", fn_vDeathlinkCommand);
 	fn_vRegisterCommand("say", fn_vSayCommand);
 	fn_vRegisterCommand("dsg", fn_vDsgCommand);
+	fn_vRegisterCommand("hallofdoors", fn_vHallOfDoors);
 }
 
 /** Adds /ap which lets you connect to the AP server. */
@@ -114,4 +116,9 @@ void fn_vDsgCommand(int lNbArgs, char** d_szArgs) {
 	} else {
 		MOD_Print("The value of DSG variable %d is: %s", var, AI_fn_bGetBooleanInArray(pGlobal, 42, var) ? "TRUE" : "FALSE");
 	}
+}
+
+/** Sends you to the hall of doors. */
+void fn_vHallOfDoors(int lNbArgs, char** d_szArgs) {
+	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 }

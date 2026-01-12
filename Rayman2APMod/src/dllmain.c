@@ -13,7 +13,7 @@
 		1188 is nomovies
 		1101 is the knowledge of the name of the Cave of Bad Dreams
 		1123 is the Elixir of Life
-		1144 and 1145 are given on game completion
+		1146 are given on game completion
 
 		962-963 is golden fists, 962 & 963 means 3, 962 means 2, 963 means 1
 		1095 and 1143 appear to be projectile upgrades (silver lums)

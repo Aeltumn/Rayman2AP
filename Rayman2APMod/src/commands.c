@@ -37,7 +37,7 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 			password = d_szArgs[3];
 		}
 
-		char result[C_MaxLine];
+		char result[72];
 		sprintf(result, "%s %s %s", ip, slot, password);
 		MOD_SendMessage(MESSAGE_TYPE_CONNECT, result);
 	} else if (_stricmp(command, "disconnect") == 0) {

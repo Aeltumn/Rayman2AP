@@ -46,6 +46,15 @@ char* MOD_CustomLevelIdsTarget[MOD_CustomLevelCount] = {"morb_10", "rodeo_40", "
 
 BOOL MOD_DevMode = FALSE;
 
+// https://stackoverflow.com/questions/5820810/case-insensitive-string-comparison-in-c
+int compareStringCaseInsensitive(char const* a, char const* b) {
+	for (;; a++, b++) {
+		int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
+		if (d != 0 || !*a)
+			return d;
+	}
+}
+
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
 long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
 	long lSize = vsnprintf(NULL, 0, szFmt, args);
@@ -71,51 +80,51 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		MOD_PrintConsolePlusScreen("Changing level to %s", szLevelName);
 	}
 
-	if (!MOD_Connected || strcmp(szLevelName, "menu") == 0 || strcmp(szLevelName, "mapmonde") == 0) {
+	if (!MOD_Connected || compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
 		// If we have a level we previously marked as having entered, set the exit portal id!
 		if (MOD_LastEntered) {
 			GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
-			if (strcmp(MOD_LastEntered, "Learn_10") == 0) {
+			if (compareStringCaseInsensitive(MOD_LastEntered, "Learn_10") == 0) {
 				structure->ucPreviousLevel = 3;
-			} else if (strcmp(MOD_LastEntered, "Learn_30") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Learn_30") == 0) {
 				structure->ucPreviousLevel = 10;
-			} else if (strcmp(MOD_LastEntered, "Ski_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Ski_10") == 0) {
 				structure->ucPreviousLevel = 25;
-			} else if (strcmp(MOD_LastEntered, "vulca_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "vulca_10") == 0) {
 				structure->ucPreviousLevel = 135;
-			} else if (strcmp(MOD_LastEntered, "chase_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "chase_10") == 0) {
 				structure->ucPreviousLevel = 15;
-			} else if (strcmp(MOD_LastEntered, "Ly_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Ly_10") == 0) {
 				structure->ucPreviousLevel = 20;
-			} else if (strcmp(MOD_LastEntered, "rodeo_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "rodeo_10") == 0) {
 				structure->ucPreviousLevel = 55;
-			} else if (strcmp(MOD_LastEntered, "water_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "water_10") == 0) {
 				structure->ucPreviousLevel = 160;
-			} else if (strcmp(MOD_LastEntered, "glob_30") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "glob_30") == 0) {
 				structure->ucPreviousLevel = 210;
-			} else if (strcmp(MOD_LastEntered, "whale_00") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "whale_00") == 0) {
 				structure->ucPreviousLevel = 45;
-			} else if (strcmp(MOD_LastEntered, "plum_00") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "plum_00") == 0) {
 				structure->ucPreviousLevel = 195;
-			} else if (strcmp(MOD_LastEntered, "bast_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "bast_10") == 0) {
 				structure->ucPreviousLevel = 130;
-			} else if (strcmp(MOD_LastEntered, "nave_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "nave_10") == 0) {
 				structure->ucPreviousLevel = 80;
-			} else if (strcmp(MOD_LastEntered, "seat_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "seat_10") == 0) {
 				structure->ucPreviousLevel = 40;
-			} else if (strcmp(MOD_LastEntered, "earth_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "earth_10") == 0) {
 				structure->ucPreviousLevel = 95;
-			} else if (strcmp(MOD_LastEntered, "Ly_20") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Ly_20") == 0) {
 				structure->ucPreviousLevel = 115;
-			} else if (strcmp(MOD_LastEntered, "helic_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "helic_10") == 0) {
 				structure->ucPreviousLevel = 105;
-			} else if (strcmp(MOD_LastEntered, "morb_00") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "morb_00") == 0) {
 				structure->ucPreviousLevel = 118;
-			} else if (strcmp(MOD_LastEntered, "learn_40") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "learn_40") == 0) {
 				structure->ucPreviousLevel = 12;
-			} else if (strcmp(MOD_LastEntered, "Boat01") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Boat01") == 0) {
 				structure->ucPreviousLevel = 140;
-			} else if (strcmp(MOD_LastEntered, "Rhop_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Rhop_10") == 0) {
 				structure->ucPreviousLevel = 145;
 			} else {
 				// Fallback is woods of light!
@@ -131,7 +140,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	}
 	
 	// If it's the final level, check if you have enough masks to enter!
-	if (strcmp(szLevelName, "Rhop_10") == 0) {
+	if (compareStringCaseInsensitive(szLevelName, "Rhop_10") == 0) {
 		if (MOD_Masks < 4) {
 			MOD_Print("GAM_fn_vAskToChangeLevel (not enough masks, redirecting to Pirate Ship)");
 			szLevelName = "Boat_10";
@@ -144,7 +153,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	}
 
 	// When entering the ending credits we check off winning!
-	if (strcmp(szLevelName, "end_10") == 0) {
+	if (compareStringCaseInsensitive(szLevelName, "end_10") == 0) {
 		// Send a custom check for winning
 		MOD_SendMessage(MESSAGE_TYPE_COLLECTED, "1500");
 
@@ -175,7 +184,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// First try to map this level id if it's a broken one
 	char* compareLevel = szLevelName;
 	for (int i = 0; i < MOD_CustomLevelCount; i++) {
-		if (strcmp(compareLevel, MOD_CustomLevelIdsStart[i]) == 0) {
+		if (compareStringCaseInsensitive(compareLevel, MOD_CustomLevelIdsStart[i]) == 0) {
 			compareLevel = MOD_CustomLevelIdsTarget[i];
 		}
 	}
@@ -183,7 +192,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// Find which map to send the player to instead of the basic one
 	int oldId = -1;
 	for (int i = 0; i < LEVEL_COUNT; i++) {
-		if (strcmp(compareLevel, MOD_LevelSwapSource[i]) == 0) {
+		if (compareStringCaseInsensitive(compareLevel, MOD_LevelSwapSource[i]) == 0) {
 			oldId = i;
 		}
 	}
@@ -254,7 +263,7 @@ void MOD_CheckVariables() {
 	if (pGlobal) {
 		// If we're in the lum gate level we customise everything!
 		const char* szLevelName = GAM_fn_p_szGetLevelName();
-		if (_stricmp(szLevelName, "Nego_10") == 0) {
+		if (compareStringCaseInsensitive(szLevelName, "Nego_10") == 0) {
 			// If we're not in lum gate mode, save everything!
 			if (!MOD_InLumGate) {
 				MOD_InLumGate = true;
@@ -323,7 +332,7 @@ void MOD_CheckVariables() {
 		// If the end goal is treasure% we have to detect if you are in the treasure area
 		// as there is no check for it.
 		if (MOD_EndGoal == 2 && !MOD_EndingComplete) {
-			if (_stricmp(szLevelName, "vulca_20") == 0) {
+			if (compareStringCaseInsensitive(szLevelName, "vulca_20") == 0) {
 				HIE_tdstSuperObject* pMain = HIE_fn_p_stFindObjectByName("StdCamer");
 				if (pMain) {
 					MTH3D_tdstVector* pCoords = &pMain->p_stGlobalMatrix->stPos;
@@ -607,7 +616,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 
 	// Draw the current Archipelago progression to the bottom in the hall of doors or on the pause screen
 	const char* szLevelName = GAM_fn_p_szGetLevelName();
-	if (MOD_Connected && (_stricmp(szLevelName, "mapmonde") == 0 || *AI_g_bInGameMenu)) {
+	if (MOD_Connected && (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 || *AI_g_bInGameMenu)) {
 		pInfo->xSize = 6;
 		pInfo->bRightAlign = TRUE;
 		long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);

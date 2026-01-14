@@ -3,6 +3,8 @@
 #include "connector.h"
 #include "bitset.h"
 
+int compareStringCaseInsensitive(char const* a, char const* b);
+
 void MOD_EngineTick();
 void MOD_Init();
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame);

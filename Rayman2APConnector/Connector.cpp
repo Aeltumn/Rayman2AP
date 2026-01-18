@@ -5,22 +5,30 @@
 #include <windows.h>
 
 // Stores the ids of all super lums.
+const int COBD_KNOWLEDGE_ID = 1101;
 const int ELIXIR_ID = 1123;
 const int MASK_IDS[] = { 1112, 1113, 1114, 1115 };
 const int SILVER_LUM_IDS[] = { 1095, 1143 };
 const int SUPER_LUM_IDS[] = { 762, 776, 781, 786, 791, 796, 1, 13, 19, 66, 81, 86, 91, 71, 61, 51, 96, 172, 161, 206, 201, 211, 292, 315, 333, 328, 310, 364, 359, 369, 380, 375, 406, 401, 416, 411, 491, 496, 556, 646, 518, 613, 631, 636, 686, 681, 661, 666, 671, 676, 721, 736, 731, 746, 741, 1354, 1389, 1311 };
+const int THOUSANDTH_LUM_ID = 1014;
 
 Connector *instance;
+
+// Current archipelago item state
 int lums = 0;
 int cages = 0;
 int masks = 0;
 int upgrades = 0;
+bool elixir = false;
+bool knowledge = false;
+
+// Current archipelago settings
 bool deathLink = false;
 int endGoal = 1;
-bool elixir = false;
+bool lumsanity = false;
+bool roomRandomisation = false;
 int lumGates[6] = {100, 300, 475, 550, 60, 450};
 std::unordered_map<std::string, std::string> levelSwaps;
-std::unordered_map<int64_t, std::string> idMap;
 std::string lastIp;
 
 // Dummy method so we don't have to add the gifting module which requires C++17
@@ -146,14 +154,23 @@ void Connector::handle(int type, std::string data) {
 /** Sends a state update to the game client. */
 void sendStateUpdate() {
     std::ostringstream oss;
-    oss << AP_IsInit() << ",";
     oss << lums << ",";
     oss << cages << ",";
     oss << masks << ",";
     oss << upgrades << ",";
+    oss << elixir << ",";
+    oss << knowledge << ",";
+    instance->send(MESSAGE_TYPE_STATE, oss.str());
+}
+
+/** Sends the current settings to game client. */
+void sendSettings() {
+    std::ostringstream oss;
+    oss << AP_IsInit() << ",";
     oss << deathLink << ",";
     oss << endGoal << ",";
-    oss << elixir << ",";
+    oss << lumsanity << ",";
+    oss << roomRandomisation << ",";
 
     for (int i = 0; i < 6; i++) {
         oss << lumGates[i] << ",";
@@ -163,28 +180,35 @@ void sendStateUpdate() {
         oss << pair.first << "|" << pair.second << ";";
     }
 
-    instance->send(MESSAGE_TYPE_STATE, oss.str());
+    instance->send(MESSAGE_TYPE_SETTINGS, oss.str());
 }
+
 
 /** Handles clearing cached item checks. */
 void handleItemClear() {
-    // We don't propagate item state clears because we store within the save file what the client has.
-    // Instead we clear the local state of the connector which is what it communicates to the client whenever
-    // a new save file is loaded and we need to update the collected objects.
     lums = 0;
     cages = 0;
     upgrades = 0;
     masks = 0;
+    elixir = false;
+    knowledge = false;
+    sendStateUpdate();
+}
+
+/** Resets received settings. */
+void handleReset() {
     deathLink = false;
     endGoal = 1;
-    elixir = false;
+    lumsanity = false;
+    roomRandomisation = false;
     lumGates[0] = 100;
     lumGates[1] = 300;
     lumGates[2] = 475;
     lumGates[3] = 550;
     lumGates[4] = 60;
     lumGates[5] = 450;
-    sendStateUpdate();
+    levelSwaps.clear();
+    sendSettings();
 }
 
 /** Handles an item being checked. */
@@ -215,6 +239,12 @@ void handleItem(int64_t id, bool notify) {
             type = "Lum";
             lums++;
         }
+    } else if (r2Id == COBD_KNOWLEDGE_ID) {
+        type = "Knowledge of the Cave of Bad Dreams";
+        knowledge = true;
+    } else if (r2Id == THOUSANDTH_LUM_ID) {
+        type = "1000th Lum";
+        lums++;
     } else {
         // The item type is invalid, send a debug log!
         instance->send(MESSAGE_TYPE_MESSAGE, "Received invalid item: " + std::to_string(r2Id));
@@ -290,13 +320,25 @@ void handleLumGates(std::string data) {
 /** Handles information on whether death link is enabled. */
 void handleDeathLinkEnabled(std::string data) {
     deathLink = std::stoi(data) == 1;
-    sendStateUpdate();
+    sendSettings();
 }
 
 /** Handles information on the selected end goal. */
 void handleEndGoal(std::string data) {
     endGoal = std::stoi(data);
-    sendStateUpdate();
+    sendSettings();
+}
+
+/** Handles information on whether lumsanity is being used. */
+void handleLumsanity(std::string data) {
+    lumsanity = std::stoi(data);
+    sendSettings();
+}
+
+/** Handles information on whether room randomisation is on. */
+void handleRoomRandomisation(std::string data) {
+    roomRandomisation = std::stoi(data);
+    sendSettings();
 }
 
 /** Handles an incoming death link from other games. */
@@ -318,7 +360,10 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_RegisterSlotDataRawCallback("lum_gates", handleLumGates);
     AP_RegisterSlotDataRawCallback("death_link", handleDeathLinkEnabled);
     AP_RegisterSlotDataRawCallback("end_goal", handleEndGoal);
+    AP_RegisterSlotDataRawCallback("lumsanity", handleLumsanity);
+    AP_RegisterSlotDataRawCallback("room_randomisation", handleRoomRandomisation);
     AP_Start();
+    sendSettings();
     sendStateUpdate();
     return true;
 }
@@ -326,8 +371,8 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
 bool Connector::disconnect() {
     if (!AP_IsInit()) return false;
     AP_Shutdown();
-    levelSwaps.clear();
     handleItemClear();
+    handleReset();
     return true;
 }
 
@@ -343,6 +388,7 @@ void Connector::init() {
     instance->send(MESSAGE_TYPE_MESSAGE, "Rayman2APConnector has started and is ready to use");
 
     // Immediately send a state update so lum gates are set on boot
+    sendSettings();
     sendStateUpdate();
 }
 

@@ -24,23 +24,19 @@ int incomingMessagesSize = 0;
 /** Handles a connector message. */
 void MOD_HandleMessage(int type, const char* data) {
     switch (type) {
-    case MESSAGE_TYPE_STATE: {
+    case MESSAGE_TYPE_SETTINGS: {
         // Parse all data from the input message in order
         char* copy = strdup(data);
         if (!copy) break;
 
         char* token;
         int index = 0;
-        int gateIndex = 0;
 
         BOOL connected = FALSE;
-        int lums = 0;
-        int cages = 0;
-        int masks = 0;
-        int upgrades = 0;
         BOOL deathLink = FALSE;
         int endGoal = 1;
-        BOOL elixir = FALSE;
+        BOOL lumsanity = FALSE;
+        BOOL roomRandomisation = FALSE;
         int* lumGates[6];
         char* levelSwapSources[LEVEL_COUNT];
         char* levelSwapTargets[LEVEL_COUNT];
@@ -55,25 +51,22 @@ void MOD_HandleMessage(int type, const char* data) {
         while (token) {
             switch (index) {
             case 0: connected = atoi(token); break;
-            case 1: lums = atoi(token); break;
-            case 2: cages = atoi(token); break;
-            case 3: masks = atoi(token); break;
-            case 4: upgrades = atoi(token); break;
-            case 5: deathLink = atoi(token); break;
-            case 6: endGoal = atoi(token); break;
-            case 7: elixir = atoi(token); break;
+            case 1: deathLink = atoi(token); break;
+            case 2: endGoal = atoi(token); break;
+            case 3:;lumsanity = atoi(token); break;
+            case 4: roomRandomisation = atoi(token); break;
+            case 5:
+            case 6:
+            case 7:
             case 8:
             case 9:
             case 10:
-            case 11:
-            case 12:
-            case 13:
-                lumGates[gateIndex++] = atoi(token);
+                lumGates[index - 5] = atoi(token);
                 break;
             }
 
             // When we reach the final index we switch processing!
-            if (index == 14) {
+            if (index == 11) {
                 int idx = 0;
                 char* context1 = NULL;
                 char* pair = strtok_s(token, ";", &context1);
@@ -98,7 +91,44 @@ void MOD_HandleMessage(int type, const char* data) {
         free(copy);
 
         // Send this data across to the main mod file
-        MOD_UpdateState(connected, lums, cages, masks, upgrades, deathLink, endGoal, elixir, lumGates, levelSwapSources, levelSwapTargets);
+        MOD_UpdateSettings(connected, deathLink, endGoal, lumsanity, roomRandomisation, lumGates, levelSwapSources, levelSwapTargets);
+        break;
+    }
+    case MESSAGE_TYPE_STATE: {
+        // Parse all data from the input message in order
+        char* copy = strdup(data);
+        if (!copy) break;
+
+        char* token;
+        int index = 0;
+        int gateIndex = 0;
+
+        int lums = 0;
+        int cages = 0;
+        int masks = 0;
+        int upgrades = 0;
+        BOOL deathLink = FALSE;
+        BOOL elixir = FALSE;
+        BOOL knowledge = FALSE;
+
+        token = strtok(copy, ",");
+        while (token) {
+            switch (index) {
+            case 0: lums = atoi(token); break;
+            case 1: cages = atoi(token); break;
+            case 2: masks = atoi(token); break;
+            case 3: upgrades = atoi(token); break;
+            case 4: deathLink = atoi(token); break;
+            case 5: elixir = atoi(token); break;
+            case 6: knowledge = atoi(token); break;
+
+            index++;
+            token = strtok(NULL, ",");
+        }
+        free(copy);
+
+        // Send this data across to the main mod file
+        MOD_UpdateState(lums, cages, masks, upgrades, deathLink, elixir, knowledge);
         break;
     }
     case MESSAGE_TYPE_DEATH: {

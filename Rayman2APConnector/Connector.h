@@ -15,6 +15,7 @@
 #define MESSAGE_TYPE_MESSAGE 7
 #define MESSAGE_TYPE_COMPLETE 8
 #define MESSAGE_TYPE_STATE 9
+#define MESSAGE_TYPE_SETTINGS 10
 
 class Connector {
 public:

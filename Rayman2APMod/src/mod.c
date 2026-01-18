@@ -47,6 +47,7 @@ BOOL MOD_DeathLinkOverride = FALSE;
 BOOL MOD_IgnoreDeath = FALSE;
 BOOL MOD_TreasureComplete = FALSE;
 BOOL MOD_InLumGate = FALSE;
+int MOD_CurrentLumGate = -1;
 BOOL MOD_KnowledgeSent = FALSE;
 
 // Store variables for the screen text system
@@ -65,7 +66,7 @@ char* MOD_CustomLevelIdsStart[MOD_CustomLevelCount] = {"morb_10$01$00", "rodeo_4
 char* MOD_CustomLevelIdsTarget[MOD_CustomLevelCount] = {"morb_10", "rodeo_40", "plum_00"};
 
 // Store whether dev mode is enabled
-BOOL MOD_DevMode = TRUE;
+BOOL MOD_DevMode = FALSE;
 
 /** Compares to integers in an array. */
 static int cmpInt(const void* a, const void* b) {
@@ -281,8 +282,49 @@ void clearLumGateOverrides() {
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal && MOD_InLumGate) {
 		MOD_InLumGate = false;
+		MOD_CurrentLumGate = -1;
 		for (int i = 1; i <= 1400; i++) {
 			AI_fn_bSetBooleanInArray(pGlobal, 42, i, getBitSet(&MOD_RealCollected, i));
+		}
+	}
+}
+
+/** Sets lum values to the lum gates of the given id. */
+void setLumGateOverride(int lumGateId) {
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+
+	if (pGlobal && MOD_CurrentLumGate != lumGateId) {
+		if (MOD_InLumGate) {
+			// If we were already in a gate, clear overrides first before we re-apply!
+			clearLumGateOverrides();
+		}
+
+		MOD_InLumGate = true;
+		MOD_CurrentLumGate = lumGateId;
+
+		// Determine how many lums we should have and what the base game will
+		// expect, then change lums to be at exactly the right value to jank it all together.
+		int baseGameLums = BASE_GAME_LUMS[lumGateId];
+		int lumGateLums = MOD_LumGates[lumGateId];
+		int missingLums = lumGateLums - MOD_Lums;
+		if (missingLums < 0) {
+			missingLums = 0;
+		}
+		int finalLums = baseGameLums - missingLums;
+		int givenLums = 0;
+		MOD_Print("Set lums to %d when base game is %d and custom is %d", finalLums, baseGameLums, lumGateLums);
+
+		// Clear data in case it's leftover from a previous load
+		clearBitSet(&MOD_RealCollected);
+
+		for (int i = 1; i <= 1400; i++) {
+			// Copy out the data into the real collection
+			setBitSet(&MOD_RealCollected, i, AI_fn_bGetBooleanInArray(pGlobal, 42, i));
+
+			// Update the data to set the correct lum count we want
+			if ((i >= 1 && i <= 800) || (i >= 1201 && i <= 1400)) {
+				AI_fn_bSetBooleanInArray(pGlobal, 42, i, givenLums++ < finalLums);
+			}
 		}
 	}
 }
@@ -296,10 +338,6 @@ void MOD_CheckVariables() {
 		if (compareStringCaseInsensitive(szLevelName, "Nego_10") == 0) {
 			// If we're not in lum gate mode, save everything!
 			if (!MOD_InLumGate) {
-				MOD_InLumGate = true;
-
-				// Determine how many lums we should have and what the base game will
-				// expect, then change lums to be at exactly the right value to jank it all together!
 				HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("NIK_DS1_ZyvaEnvoieTesLums");
 				int* levelId;
 				AI_fn_bGetDsgVar(pLums, 27, NULL, &levelId);
@@ -311,29 +349,30 @@ void MOD_CheckVariables() {
 				} else if (*levelId == 40) {
 					lumGateId = 3;
 				}
-				int baseGameLums = BASE_GAME_LUMS[lumGateId];
-				int lumGateLums = MOD_LumGates[lumGateId];
-				int missingLums = lumGateLums - MOD_Lums;
-				if (missingLums < 0) {
-					missingLums = 0;
-				}
-				int finalLums = baseGameLums - missingLums;
-				int givenLums = 0;
-
-				// Clear data in case it's leftover from a previous load
-				clearBitSet(&MOD_RealCollected); 
-
-				for (int i = 1; i <= 1400; i++) {
-					// Copy out the data into the real collection
-					setBitSet(&MOD_RealCollected, i, AI_fn_bGetBooleanInArray(pGlobal, 42, i));
-
-					// Update the data to set the correct lum count we want
-					if ((i >= 1 && i <= 800) || (i >= 1201 && i <= 1400)) {
-						AI_fn_bSetBooleanInArray(pGlobal, 42, i, givenLums++ < finalLums);
-					}
-				}
+				setLumGateOverride(lumGateId);
 			}
 			return;
+		}
+
+		// If you get close to the walk of life or power pedestal we update the lum values!
+		if (compareStringCaseInsensitive(szLevelName, "chase_10") == 0) {
+			HIE_tdstSuperObject* pMain = HIE_fn_p_stFindObjectByName("StdCamer");
+			if (pMain) {
+				MTH3D_tdstVector* pCoords = &pMain->p_stGlobalMatrix->stPos;
+				MTH_tdxReal dx = pCoords->x + 185.04;
+				if (dx < 0) dx = -dx;
+				MTH_tdxReal dy = pCoords->y - 120.24;
+				if (dy < 0) dy = -dy;
+				MTH_tdxReal dz = pCoords->z + 298.92;
+				if (dz < 0) dz = -dz;
+
+				MOD_Print("Position is (%d, %d, %d), distance is (%d, %d, %d)", pCoords->x, pCoords->y, pCoords->z, dx, dy, dz);
+
+				if (dx <= 10 && dy <= 10 && dz <= 10) {
+					setLumGateOverride(4);
+					return;
+				}
+			}
 		}
 
 		// When we exit the lum gate, restore the data again!

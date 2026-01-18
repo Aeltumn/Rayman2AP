@@ -206,9 +206,9 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 	// When we enter a level, store which one we wanted to enter!
 	if (!MOD_LastEntered) {
-		if (compareStringCaseInsensitive(MOD_LastEntered, "nego_10") != 0 &&
-			compareStringCaseInsensitive(MOD_LastEntered, "batam_10") != 0 &&
-			compareStringCaseInsensitive(MOD_LastEntered, "batam_20") != 0) {
+		if (compareStringCaseInsensitive(szLevelName, "nego_10") != 0 &&
+			compareStringCaseInsensitive(szLevelName, "batam_10") != 0 &&
+			compareStringCaseInsensitive(szLevelName, "batam_20") != 0) {
 			MOD_LastEntered = szLevelName;
 		}
 	}

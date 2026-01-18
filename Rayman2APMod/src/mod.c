@@ -161,11 +161,11 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				// Fallback is woods of light!
 				structure->ucPreviousLevel = 3;
 			}
-			MOD_Print("Restored last entry level from %s which is id %d", MOD_LastEntered, structure->ucPreviousLevel);
+			if (MOD_DevMode) MOD_Print("Restored last entry level from %s which is id %d", MOD_LastEntered, structure->ucPreviousLevel);
 			MOD_LastEntered = NULL;
 		}
 
-		MOD_Print("GAM_fn_vAskToChangeLevel (ignore): %s", szLevelName);
+		if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (ignore): %s", szLevelName);
 		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 		return;
 	}
@@ -173,11 +173,11 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// If it's the final level, check if you have enough masks to enter!
 	if (compareStringCaseInsensitive(szLevelName, "Rhop_10") == 0) {
 		if (MOD_Masks < 4) {
-			MOD_Print("GAM_fn_vAskToChangeLevel (not enough masks, redirecting to Pirate Ship)");
+			if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (not enough masks, redirecting to Pirate Ship)");
 			szLevelName = "Boat_10";
 			MOD_ShowScreenText("Not enough masks collected, you have %d out of 4!", MOD_Masks);
 		} else {
-			MOD_Print("GAM_fn_vAskToChangeLevel (enough masks): %s", szLevelName);
+			if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (enough masks): %s", szLevelName);
 			GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 			return;
 		}
@@ -229,14 +229,14 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		}
 	}
 	if (oldId == -1) {
-		MOD_Print("GAM_fn_vAskToChangeLevel (old id -1): %s", szLevelName);
+		if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (old id -1): %s", szLevelName);
 		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 		return;
 	}
 
 	// Get the new target and send them there
 	char* targetLevelName = MOD_LevelSwapTarget[oldId];
-	MOD_Print("GAM_fn_vAskToChangeLevel (modified): %s -> %s", szLevelName, targetLevelName);
+	if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (modified): %s -> %s", szLevelName, targetLevelName);
 	GAM_fn_vAskToChangeLevel(targetLevelName, bSaveGame);
 }
 

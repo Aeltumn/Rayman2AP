@@ -179,7 +179,6 @@ void sendSettings() {
     for (const auto& pair : levelSwaps) {
         oss << pair.first << "|" << pair.second << ";";
     }
-
     instance->send(MESSAGE_TYPE_SETTINGS, oss.str());
 }
 

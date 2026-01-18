@@ -15,7 +15,7 @@ int* BASE_GAME_LUMS[6] = { 100, 300, 475, 550, 60, 450 };
 int* SUPER_LUM_IDS[290] = { 1, 2, 3, 4, 5, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 51, 52, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 161, 162, 163, 164, 165, 172, 173, 174, 175, 176, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 292, 293, 294, 295, 296, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 491, 492, 493, 494, 495, 496, 497, 498, 499, 500, 518, 519, 520, 521, 522, 556, 557, 558, 559, 560, 613, 614, 615, 616, 617, 631, 632, 633, 634, 635, 636, 637, 638, 639, 640, 646, 647, 648, 649, 650, 661, 662, 663, 664, 665, 666, 667, 668, 669, 670, 671, 672, 673, 674, 675, 676, 677, 678, 679, 680, 681, 682, 683, 684, 685, 686, 687, 688, 689, 690, 721, 722, 723, 724, 725, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741, 742, 743, 744, 745, 746, 747, 748, 749, 750, 762, 763, 764, 765, 766, 776, 777, 778, 779, 780, 781, 782, 783, 784, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 1311, 1312, 1313, 1314, 1315, 1354, 1355, 1356, 1357, 1358, 1389, 1390, 1391, 1392, 1393 };
 
 // Store hardcoded level gate identifiers
-int* NO_LUM_GATE_LEVELS[5] = { 960, 961, 964, 967 };
+int* NO_LUM_GATE_LEVELS[4] = { 960, 961, 964, 967 };
 int* LUM_GATE_ONE_LEVELS[4] = { 970, 972, 976, 979};
 int* LUM_GATE_TWO_LEVELS[5] = { 981, 975, 985, 988, 990 };
 int* LUM_GATE_THREE_LEVELS[2] = { 993, 1007 };
@@ -82,11 +82,7 @@ bool isSuperLum(int x) {
 
 // https://stackoverflow.com/questions/5820810/case-insensitive-string-comparison-in-c
 int compareStringCaseInsensitive(char const* a, char const* b) {
-	for (;; a++, b++) {
-		int d = tolower((unsigned char)*a) - tolower((unsigned char)*b);
-		if (d != 0 || !*a)
-			return d;
-	}
+	return _stricmp(a, b);
 }
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
@@ -140,7 +136,8 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				structure->ucPreviousLevel = 45;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "plum_00") == 0) {
 				structure->ucPreviousLevel = 195;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "bast_10") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "bast_09") == 0 ||
+				compareStringCaseInsensitive(MOD_LastEntered, "bast_10") == 0) {
 				structure->ucPreviousLevel = 130;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "nave_10") == 0) {
 				structure->ucPreviousLevel = 80;
@@ -209,7 +206,11 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 	// When we enter a level, store which one we wanted to enter!
 	if (!MOD_LastEntered) {
-		MOD_LastEntered = szLevelName;
+		if (compareStringCaseInsensitive(MOD_LastEntered, "nego_10") != 0 &&
+			compareStringCaseInsensitive(MOD_LastEntered, "batam_10") != 0 &&
+			compareStringCaseInsensitive(MOD_LastEntered, "batam_20") != 0) {
+			MOD_LastEntered = szLevelName;
+		}
 	}
 
 	// First try to map this level id if it's a broken one
@@ -312,7 +313,6 @@ void setLumGateOverride(int lumGateId) {
 		}
 		int finalLums = baseGameLums - missingLums;
 		int givenLums = 0;
-		MOD_Print("Set lums to %d when base game is %d and custom is %d", finalLums, baseGameLums, lumGateLums);
 
 		// Clear data in case it's leftover from a previous load
 		clearBitSet(&MOD_RealCollected);
@@ -335,21 +335,24 @@ void MOD_CheckVariables() {
 	if (pGlobal) {
 		// If we're in the lum gate level we customise everything!
 		const char* szLevelName = GAM_fn_p_szGetLevelName();
+
+		// If we're in a lum gate, override the lum gate values.
 		if (compareStringCaseInsensitive(szLevelName, "Nego_10") == 0) {
-			// If we're not in lum gate mode, save everything!
 			if (!MOD_InLumGate) {
 				HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("NIK_DS1_ZyvaEnvoieTesLums");
-				int* levelId;
-				AI_fn_bGetDsgVar(pLums, 27, NULL, &levelId);
-				int lumGateId = 0;
-				if (*levelId == 21) {
-					lumGateId = 1;
-				} else if (*levelId == 33) {
-					lumGateId = 2;
-				} else if (*levelId == 40) {
-					lumGateId = 3;
+				if (pLums) {
+					int* levelId;
+					AI_fn_bGetDsgVar(pLums, 27, NULL, &levelId);
+					int lumGateId = 0;
+					if (*levelId == 21) {
+						lumGateId = 1;
+					} else if (*levelId == 33) {
+						lumGateId = 2;
+					} else if (*levelId == 40) {
+						lumGateId = 3;
+					}
+					setLumGateOverride(lumGateId);
 				}
-				setLumGateOverride(lumGateId);
 			}
 			return;
 		}
@@ -359,17 +362,32 @@ void MOD_CheckVariables() {
 			HIE_tdstSuperObject* pMain = HIE_fn_p_stFindObjectByName("StdCamer");
 			if (pMain) {
 				MTH3D_tdstVector* pCoords = &pMain->p_stGlobalMatrix->stPos;
-				MTH_tdxReal dx = pCoords->x + 185.04;
+				MTH_tdxReal dx = pCoords->x + 85.0;
 				if (dx < 0) dx = -dx;
-				MTH_tdxReal dy = pCoords->y - 120.24;
+				MTH_tdxReal dy = pCoords->y + 118.0;
 				if (dy < 0) dy = -dy;
-				MTH_tdxReal dz = pCoords->z + 298.92;
+				MTH_tdxReal dz = pCoords->z - 31.0;
 				if (dz < 0) dz = -dz;
 
-				MOD_Print("Position is (%d, %d, %d), distance is (%d, %d, %d)", pCoords->x, pCoords->y, pCoords->z, dx, dy, dz);
-
-				if (dx <= 10 && dy <= 10 && dz <= 10) {
+				if (dx <= 20 && dy <= 10 && dz <= 10) {
 					setLumGateOverride(4);
+					return;
+				}
+			}
+		}
+		if (compareStringCaseInsensitive(szLevelName, "earth_10") == 0) {
+			HIE_tdstSuperObject* pMain = HIE_fn_p_stFindObjectByName("StdCamer");
+			if (pMain) {
+				MTH3D_tdstVector* pCoords = &pMain->p_stGlobalMatrix->stPos;
+				MTH_tdxReal dx = pCoords->x + 15927.23;
+				if (dx < 0) dx = -dx;
+				MTH_tdxReal dy = pCoords->y - 3537.60;
+				if (dy < 0) dy = -dy;
+				MTH_tdxReal dz = pCoords->z + 7279.12;
+				if (dz < 0) dz = -dz;
+
+				if (dx <= 20 && dy <= 20 && dz <= 20) {
+					setLumGateOverride(5);
 					return;
 				}
 			}
@@ -460,7 +478,7 @@ void MOD_CheckVariables() {
 		AI_fn_bSetBooleanInArray(pGlobal, 42, 1133, TRUE);
 
 		// Update which portals are available based on the current checks
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 4; i++) {
 			AI_fn_bSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
 		}
 		if (MOD_Lums >= MOD_LumGates[0]) {
@@ -483,7 +501,7 @@ void MOD_CheckVariables() {
 				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
 			}
 		}
-		AI_fn_bSetBooleanInArray(pGlobal, 42, 1005, MOD_Masks >= 4);
+		AI_fn_bSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, MOD_Masks >= 4);
 	}
 }
 
@@ -736,9 +754,9 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 		pInfo->Y = 990 - 3 * lineHeight;
 		SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_Lums, MOD_Cages);
 		pInfo->Y = 990 - 2 * lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, /o400:Power /o0:%d of 2", MOD_Masks, MOD_Upgrades);
+		SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Power /o0:%d of 2", MOD_Masks, MOD_Upgrades);
 		pInfo->Y = 990 - lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Elixir %s/o400, Knowledge %s", MOD_Elixir ? "/o0:Yes" : "/o200:No", MOD_Knowledge ? "/o0:Yes" : "/o200:No");
+		SPTXT_vPrintFmtLine("/o400:Elixir %s/o400:, Knowledge %s", MOD_Elixir ? "/o0:Yes" : "/o200:No", MOD_Knowledge ? "/o0:Yes" : "/o200:No");
 	}
 	SPTXT_vResetTextInfo(pInfo);
 }

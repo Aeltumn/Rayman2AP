@@ -19,6 +19,10 @@
 		1095 and 1143 appear to be projectile upgrades (silver lums)
 		1095 determines if you can grab purple lums.
 
+		1089 is for completing the intro cutscene.
+		1091 for completing the jail map.
+		1133 is for completing the first level.
+
 		Whether portals are present on the main menu uses 960+DsgVar2 on the portal
 		object in the hall of doors.
 

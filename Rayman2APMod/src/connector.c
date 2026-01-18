@@ -107,7 +107,6 @@ void MOD_HandleMessage(int type, const char* data) {
         int cages = 0;
         int masks = 0;
         int upgrades = 0;
-        BOOL deathLink = FALSE;
         BOOL elixir = FALSE;
         BOOL knowledge = FALSE;
 
@@ -118,9 +117,9 @@ void MOD_HandleMessage(int type, const char* data) {
             case 1: cages = atoi(token); break;
             case 2: masks = atoi(token); break;
             case 3: upgrades = atoi(token); break;
-            case 4: deathLink = atoi(token); break;
-            case 5: elixir = atoi(token); break;
-            case 6: knowledge = atoi(token); break;
+            case 4: elixir = atoi(token); break;
+            case 5: knowledge = atoi(token); break;
+            }
 
             index++;
             token = strtok(NULL, ",");
@@ -128,7 +127,7 @@ void MOD_HandleMessage(int type, const char* data) {
         free(copy);
 
         // Send this data across to the main mod file
-        MOD_UpdateState(lums, cages, masks, upgrades, deathLink, elixir, knowledge);
+        MOD_UpdateState(lums, cages, masks, upgrades, elixir, knowledge);
         break;
     }
     case MESSAGE_TYPE_DEATH: {

@@ -542,7 +542,7 @@ void MOD_EngineTick() {
 void MOD_Init() {
 	// Test if the player has died, this gets triggered once on death
 	if (GAM_fn_ucGetEngineMode() == 7) {
-		if (MOD_DeathLink && !MOD_DeathLinkOverride && !MOD_IgnoreDeath) {
+		if (MOD_GetDeathLink(FALSE) && !MOD_IgnoreDeath) {
 			MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
 		}
 		MOD_IgnoreDeath = FALSE;
@@ -699,8 +699,12 @@ void MOD_ShowScreenText(char* text, ...) {
 }
 
 /** Returns whether death link is currently enabled. */
-BOOL MOD_GetDeathLink() {
-	return MOD_DeathLink;
+BOOL MOD_GetDeathLink(BOOL ignoreOverride) {
+	if (ignoreOverride) {
+		return MOD_DeathLink;
+	} else {
+		return MOD_DeathLink && !MOD_DeathLinkOverride;
+	}
 }
 
 /** Updates the current state of the death link setting. */

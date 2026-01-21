@@ -51,7 +51,7 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 
 /** Toggles whether death link is currently enabled. */
 void fn_vDeathlinkCommand(int lNbArgs, char** d_szArgs) {
-	if (!MOD_GetDeathLink()) {
+	if (!MOD_GetDeathLink(TRUE)) {
 		MOD_Print("Death linking is not enabled currently");
 		return;
 	}

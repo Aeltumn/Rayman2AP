@@ -16,7 +16,7 @@ void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsan
 void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, BOOL knowledge);
 void MOD_TriggerDeath();
 
-BOOL MOD_GetDeathLink();
+BOOL MOD_GetDeathLink(BOOL ignoreOverride);
 void MOD_ToggleDeathLink();
 
 void AI_fn_bSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value);

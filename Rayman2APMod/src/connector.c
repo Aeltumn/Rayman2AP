@@ -132,7 +132,7 @@ void MOD_HandleMessage(int type, const char* data) {
     }
     case MESSAGE_TYPE_DEATH: {
         // Ignore a death if death link is currently not enabled
-        if (!MOD_GetDeathLink()) return;
+        if (!MOD_GetDeathLink(FALSE)) return;
 
         // Trigger a death for th player
         MOD_TriggerDeath();

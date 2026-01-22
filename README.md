@@ -29,4 +29,5 @@ This guide only covers how to install and run the Rayman 2 mod, customizing the 
 7. Install [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version) which is required to run the Archipelago integration.
 8. Run the game through `Ray2x.exe` to launch the modded version. `Rayman2.exe` will launch the unmodded version of the game.
 9. In-game you can press `~` to open up the console. Use the `ap connect <ip> <slot> [password]` command to connect to an Archipelago room.
+    - If you use a non-US keyboard the key may not be the same. It will use whatever `VK_OEM_3` is on your keyboard.
 10. Starting a new game after connecting to a room will use the configured random settings.

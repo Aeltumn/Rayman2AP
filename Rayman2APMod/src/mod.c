@@ -104,12 +104,40 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 }
 
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
+	// When entering the ending credits we check off winning!
+	if (compareStringCaseInsensitive(szLevelName, "end_10") == 0) {
+		if (MOD_EndGoal == 1) {
+			// If the goal is the crow's nest, you got it!
+			MOD_PrintConsolePlusScreen("Game completed!");
+			MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+		} else if (MOD_EndGoal == 3) {
+			// If the goal is 100% we also require having everything!
+			int hasEnoughLums = MOD_Lums >= 1000;
+			int hasEnoughCages = MOD_Cages >= 80;
+			if (!hasEnoughLums) {
+				MOD_PrintConsolePlusScreen("Game is not complete, not enough lums!");
+			} else if (!hasEnoughCages) {
+				MOD_PrintConsolePlusScreen("Game is not complete, not enough cages!");
+			} else {
+				MOD_PrintConsolePlusScreen("Game completed 100%!");
+				MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+			}
+		}
+	}
+
+	// If room randomization is off, don't shuffle any rooms!
+	if (!MOD_RoomRandomisation) {
+		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+		return;
+	}
+
 	// In dev mode print which locations we switch to
 	if (MOD_DevMode) {
 		MOD_PrintConsolePlusScreen("Changing level to %s", szLevelName);
 	}
 
-	if (!MOD_Connected || compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+	// When going to the menu, update the exit portal id!
+	if (compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
 		// If we have a level we previously marked as having entered, set the exit portal id!
 		if (MOD_LastEntered) {
 			GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
@@ -167,40 +195,6 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (ignore): %s", szLevelName);
 		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 		return;
-	}
-	
-	// If it's the final level, check if you have enough masks to enter!
-	if (compareStringCaseInsensitive(szLevelName, "Rhop_10") == 0) {
-		if (MOD_Masks < 4) {
-			if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (not enough masks, redirecting to Pirate Ship)");
-			szLevelName = "Boat_10";
-			MOD_ShowScreenText("Not enough masks collected, you have %d out of 4!", MOD_Masks);
-		} else {
-			if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (enough masks): %s", szLevelName);
-			GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
-			return;
-		}
-	}
-
-	// When entering the ending credits we check off winning!
-	if (compareStringCaseInsensitive(szLevelName, "end_10") == 0) {
-		if (MOD_EndGoal == 1) {
-			// If the goal is the crow's nest, you got it!
-			MOD_PrintConsolePlusScreen("Game completed!");
-			MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
-		} else if (MOD_EndGoal == 3) {
-			// If the goal is 100% we also require having everything!
-			int hasEnoughLums = MOD_Lums >= 1000;
-			int hasEnoughCages = MOD_Cages >= 80;
-			if (!hasEnoughLums) {
-				MOD_PrintConsolePlusScreen("Game is not complete, not enough lums!");
-			} else if (!hasEnoughCages) {
-				MOD_PrintConsolePlusScreen("Game is not complete, not enough cages!");
-			} else {
-				MOD_PrintConsolePlusScreen("Game completed 100%!");
-				MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
-			}
-		}
 	}
 
 	// When we enter a level, store which one we wanted to enter!
@@ -470,9 +464,11 @@ void MOD_CheckVariables() {
 		AI_fn_bSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
 		AI_fn_bSetBooleanInArray(pGlobal, 42, 1101, MOD_Knowledge);
 
-		// This ensures the safe file loads into the hall of doors always.
-		// TODO Currently bugged as the fade in the cutscene doesn't get skipped.
-		// AI_fn_bSetBooleanInArray(pGlobal, 42, 1133, TRUE);
+		// Show the final portal if and only if you have enough masks!
+		AI_fn_bSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, MOD_Masks >= 4);
+
+		// If room randomisation is off, don't mess with the other portals!
+		if (!MOD_RoomRandomisation) return;
 
 		// Update which portals are available based on the current checks
 		for (int i = 0; i < 4; i++) {
@@ -498,7 +494,6 @@ void MOD_CheckVariables() {
 				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
 			}
 		}
-		AI_fn_bSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, MOD_Masks >= 4);
 	}
 }
 
@@ -506,7 +501,7 @@ void MOD_CheckVariables() {
 void MOD_EngineTick() {
 	MOD_RunPendingMessages();
 
-	// In dev mode we send out messages whenever checks happen!
+	// In dev mode we send console messages whenever checks happen!
 	if (MOD_DevMode) {
 		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 		if (pGlobal) {
@@ -554,6 +549,7 @@ void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsan
 		// Clear the collection cache whenever we reconnect so we resend all the information!
 		clearBitSet(&MOD_LastCollected);
 	}
+
 	MOD_Connected = connected;
 	MOD_DeathLink = deathLink;
 	MOD_EndGoal = endGoal;

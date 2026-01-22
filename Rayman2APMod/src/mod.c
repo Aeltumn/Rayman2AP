@@ -133,7 +133,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				structure->ucPreviousLevel = 210;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "whale_00") == 0) {
 				structure->ucPreviousLevel = 45;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "plum_00") == 0) {
+			} else if (compareStringCaseInsensitive(MOD_LastEntered, "plum_00$01$00") == 0) {
 				structure->ucPreviousLevel = 195;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "bast_09") == 0 ||
 				compareStringCaseInsensitive(MOD_LastEntered, "bast_10") == 0) {

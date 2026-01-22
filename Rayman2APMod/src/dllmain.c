@@ -13,15 +13,26 @@
 		1188 is nomovies
 		1101 is the knowledge of the name of the Cave of Bad Dreams
 		1123 is the Elixir of Life
-		1146 are given on game completion
 
 		962-963 is golden fists, 962 & 963 means 3, 962 means 2, 963 means 1
 		1095 and 1143 appear to be projectile upgrades (silver lums)
-		1095 determines if you can grab purple lums.
+		1095 determines if you can grab purple lums (blue)
+		1143 determines if you can charge shots (gold)
 
 		1089 is for completing the intro cutscene.
-		1091 for completing the jail map.
-		1133 is for completing the first level.
+		1091 for watching woods of light intro.
+		1102 for completing Menhir Hills #2 cutscene.
+		1133 for watching woods of light teensie cutscene.
+		1159 for deating Foutch
+
+		1171 for Clark destroying the first wall in Menhir Hills #2
+		1172 for Clark destroying the second wall in Menhir Hills #2
+
+		953 for saving Ly
+		954 for saving Carmen
+		957 for opening gate in Canopy #2
+		958 for saving Globox
+		959 for opening gate in Canopy #3
 
 		Whether portals are present on the main menu uses 960+DsgVar2 on the portal
 		object in the hall of doors.
@@ -36,7 +47,7 @@
 	We should swap it out for a custom one when doing Lum Gate lookup s which happens in Ray_Nego only,
 	so we can check if the current level is nego_10 and have it set to the fake values.
 
-	Var 5 on Ray is the level id in this case:
+	Game state stores level id which are for lum gates:
 	40 -> Iron Mountains
 	33 -> Beneath the Sanctuary
 	21 -> Lava Sanctuary
@@ -53,7 +64,7 @@
 
 	The actual entrance opens up whenever 992 is set to 1 on the global array.
 
-	Woods of Light lets you through the cutscene if 43 is 0.
+	Woods of Light lets you through the cutscene if 43 is 0, aka all lums collected that are available.
 */
 
 /** Attach detours hooks to game events. */

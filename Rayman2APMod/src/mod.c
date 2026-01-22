@@ -407,6 +407,13 @@ void MOD_CheckVariables() {
 						i = 1101;
 					}
 
+					// This is the ID for being kicked out of the Cave of Bad Dreams after winning, which we treat as
+					// obtaining the elixir which gets skipped if there's room randomisation as you get the elixir
+					// in a cutscene in the Marshes, which gets ignored here.
+					if (i == 1120) {
+						i = 1123;
+					}
+
 					// Send up the id of the item directly
 					char str[6];
 					sprintf(str, "%d", i);

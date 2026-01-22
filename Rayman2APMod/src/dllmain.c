@@ -12,7 +12,10 @@
 		840-919 are cages
 		1188 is nomovies
 		1101 is the knowledge of the name of the Cave of Bad Dreams
-		1123 is the Elixir of Life
+
+		1123 is the Elixir of Life, you only get this within the cutscene
+		in Marshes, so we also send the check when 1120 is sent which is
+		set when you are kicked out of the Cave of Bad Dreams after the ending cutscene.
 
 		962-963 is golden fists, 962 & 963 means 3, 962 means 2, 963 means 1
 		1095 and 1143 appear to be projectile upgrades (silver lums)

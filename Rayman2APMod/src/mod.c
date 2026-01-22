@@ -414,6 +414,18 @@ void MOD_CheckVariables() {
 						i = 1123;
 					}
 
+					// If you rescue Ly we change it into the first silver lum check so it fires even if you already have
+					// the silver lum!
+					if (i == 953) {
+						i = 1095;
+					}
+
+					// If you finish Canopy #2 while rescuing Globox you get 957 at the same time you would otherwise get
+					// the second silver lum, so we can use it as a backup in case you already have a silver lum.
+					if (i == 957) {
+						i = 1143;
+					}
+
 					// Send up the id of the item directly
 					char str[6];
 					sprintf(str, "%d", i);

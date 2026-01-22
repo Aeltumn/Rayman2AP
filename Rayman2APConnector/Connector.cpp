@@ -270,8 +270,8 @@ void handleLevelSwaps(std::string data) {
     try {
         // Parses the level swaps from the archipelago input
         levelSwaps.clear();
-        if (data.length() < 3) return;
-        std::string inner = data.substr(1, data.length() - 2);
+        if (data.length() < 4) return;
+        std::string inner = data.substr(1, data.length() - 3);
         std::stringstream stream(inner);
         std::string token;
         while (std::getline(stream, token, ',')) {
@@ -280,15 +280,6 @@ void handleLevelSwaps(std::string data) {
             std::string key = token.substr(0, colonPos);
             std::string value = token.substr(colonPos + 1);
             levelSwaps[key.substr(1, key.length() - 2)] = value.substr(1, value.length() - 2);
-        }
-
-        // Debug print to the log
-        std::stringstream ss;
-        for (auto it = levelSwaps.begin(); it != levelSwaps.end(); ++it) {
-            ss << it->first << " = " << it->second;
-            if (std::next(it) != levelSwaps.end()) {
-                ss << ", ";
-            }
         }
     } catch (const std::exception& e) {
         instance->send(MESSAGE_TYPE_MESSAGE, "[handleLevelSwaps] Caught exception: " + std::string(e.what()));

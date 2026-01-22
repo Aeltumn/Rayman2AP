@@ -340,14 +340,14 @@ void MOD_CheckVariables() {
 			if (!MOD_InLumGate) {
 				HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("NIK_DS1_ZyvaEnvoieTesLums");
 				if (pLums) {
-					int* levelId;
-					AI_fn_bGetDsgVar(pLums, 27, NULL, &levelId);
+					GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+					int levelId = structure->ucExitIdToQuitPrevLevel;
 					int lumGateId = 0;
-					if (*levelId == 21) {
+					if (levelId == 21) {
 						lumGateId = 1;
-					} else if (*levelId == 33) {
+					} else if (levelId == 33) {
 						lumGateId = 2;
-					} else if (*levelId == 40) {
+					} else if (levelId == 40) {
 						lumGateId = 3;
 					}
 					setLumGateOverride(lumGateId);

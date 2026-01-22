@@ -48,7 +48,6 @@ BOOL MOD_IgnoreDeath = FALSE;
 BOOL MOD_TreasureComplete = FALSE;
 BOOL MOD_InLumGate = FALSE;
 int MOD_CurrentLumGate = -1;
-BOOL MOD_KnowledgeSent = FALSE;
 
 // Store variables for the screen text system
 char MOD_ScreenText[10][128];
@@ -408,6 +407,12 @@ void MOD_CheckVariables() {
 
 				// Only if the item is now collected, send a check!
 				if (dsg) {
+					// If this is the ID for Clark smashing the wall, instead send COBD knowledge! This way you always
+					// leave this custcene with the knowledge.
+					if (i == 1171) {
+						i = 1101;
+					}
+
 					// Send up the id of the item directly
 					char str[6];
 					sprintf(str, "%d", i);
@@ -439,15 +444,6 @@ void MOD_CheckVariables() {
 			}
 		}
 
-		// Check if we are in the second part of Menhir Hills and send out info on the Cave of Bad Dreams's location
-		if (!MOD_KnowledgeSent) {
-			if (compareStringCaseInsensitive(szLevelName, "rodeo_40$02") == 0) {
-				MOD_KnowledgeSent = TRUE;
-				MOD_PrintConsolePlusScreen("Learned about the Cave of Bad Dreams's name");
-				MOD_SendMessage(MESSAGE_TYPE_COLLECTED, "1101");
-			}
-		}
-
 		// Set the collected cages for health to the custom value so health is overridden,
 		// if the value would be 9 always make it 8 so it doesn't incorrectly give a health
 		// increase when a new cage is collected for one frame.
@@ -475,7 +471,8 @@ void MOD_CheckVariables() {
 		AI_fn_bSetBooleanInArray(pGlobal, 42, 1101, MOD_Knowledge);
 
 		// This ensures the safe file loads into the hall of doors always.
-		AI_fn_bSetBooleanInArray(pGlobal, 42, 1133, TRUE);
+		// TODO Currently bugged as the fade in the cutscene doesn't get skipped.
+		// AI_fn_bSetBooleanInArray(pGlobal, 42, 1133, TRUE);
 
 		// Update which portals are available based on the current checks
 		for (int i = 0; i < 4; i++) {

@@ -53,7 +53,7 @@ void MOD_HandleMessage(int type, const char* data) {
             case 0: connected = atoi(token); break;
             case 1: deathLink = atoi(token); break;
             case 2: endGoal = atoi(token); break;
-            case 3:;lumsanity = atoi(token); break;
+            case 3: lumsanity = atoi(token); break;
             case 4: roomRandomisation = atoi(token); break;
             case 5:
             case 6:

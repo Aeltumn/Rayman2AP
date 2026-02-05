@@ -323,6 +323,9 @@ void handleEndGoal(std::string data) {
 void handleLumsanity(std::string data) {
     lumsanity = std::stoi(data);
     sendSettings();
+
+    // Lumsanity affects the lum total!
+    sendStateUpdate();
 }
 
 /** Handles information on whether room randomisation is on. */

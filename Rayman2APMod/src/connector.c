@@ -20,7 +20,6 @@ incomingMessage* incomingMessages;
 int incomingMessageCount = 0;
 int incomingMessagesSize = 0;
 
-
 /** Handles a connector message. */
 void MOD_HandleMessage(int type, const char* data) {
     switch (type) {
@@ -139,7 +138,10 @@ void MOD_HandleMessage(int type, const char* data) {
         const char* szLevelName = GAM_fn_p_szGetLevelName();
         if (compareStringCaseInsensitive(szLevelName, "Morb_20") == 0) return;
 
-        // Trigger a death for th player
+        // Don't deathlink while in the menu!
+        if (compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) return;
+
+        // Trigger a death for the player
         MOD_TriggerDeath();
         MOD_ShowScreenText(data);
         break;
@@ -152,6 +154,22 @@ void MOD_HandleMessage(int type, const char* data) {
     }
     case MESSAGE_TYPE_MESSAGE: {
         MOD_Print(data);
+        break;
+    }
+    case MESSAGE_TYPE_MASK_CHECK: {
+        // If we receive the final mask while in the hall of doors and you have
+        // unlocked the portal to the pirate ship we immediately warp you to
+        // the final level.
+        const char* szLevelName = GAM_fn_p_szGetLevelName();
+        if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && MOD_HasUnlockedPirateShip()) {
+            GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+            structure->ucPreviousLevel = 240;
+            structure->ucExitIdToQuitPrevLevel = 1;
+            GAM_fn_vAskToChangeLevel("mapmonde", false);
+        }
+
+        // Inform the player that they can now access the final portal!
+        MOD_ShowScreenText("Final portal unlocked!");
         break;
     }
     default: {

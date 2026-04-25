@@ -21,6 +21,7 @@ int* LUM_GATE_TWO_LEVELS[5] = { 981, 975, 985, 988, 990 };
 int* LUM_GATE_THREE_LEVELS[2] = { 993, 1007 };
 int* LUM_GATE_FOUR_LEVELS[2] = { 1000, 1002 };
 int COBD_LEVEL = 966;
+int PIRATE_SHIP_PORTAL = 1002;
 int FINAL_LEVEL = 1005;
 
 // Store archipelago progression
@@ -137,7 +138,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	}
 
 	// When you exit the Pirate Ship from the ending exit we put you back at the default exit unless you have enough masks.
-	if (compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+	if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
 		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 		if (MOD_Masks < 4 && structure->ucPreviousLevel == 240) {
 			structure->ucPreviousLevel = 140;
@@ -152,7 +153,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	}
 
 	// When going to the menu, update the exit portal id!
-	if (compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+	if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
 		// If we have a level we previously marked as having entered, set the exit portal id!
 		if (MOD_LastEntered) {
 			GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
@@ -728,6 +729,15 @@ void MOD_ShowScreenText(char* text, ...) {
 		MOD_ShowScreenTextInternal(szBuffer);
 	}
 	va_end(args);
+}
+
+/** Returns whether the pirate ship is unlocked. */
+BOOL MOD_HasUnlockedPirateShip() {
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+	if (pGlobal) {
+		return AI_fn_bGetBooleanInArray(pGlobal, 42, PIRATE_SHIP_PORTAL);
+	}
+	return false;
 }
 
 /** Returns whether death link is currently enabled. */

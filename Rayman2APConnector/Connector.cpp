@@ -264,12 +264,14 @@ void handleItem(int64_t id, bool notify) {
 
     // Determine what type of item was collected
     const char* type;
+    bool isFinalMask = false;
     if (r2Id == ELIXIR_ID) {
         type = "Elixir of Life";
         elixir = true;
     } else if (std::find(std::begin(MASK_IDS), std::end(MASK_IDS), r2Id) != std::end(MASK_IDS)) {
         type = "Mask";
         masks++;
+        isFinalMask = masks >= 4;
     } else if (std::find(std::begin(SILVER_LUM_IDS), std::end(SILVER_LUM_IDS), r2Id) != std::end(SILVER_LUM_IDS)) {
         type = "Silver Lum";
         upgrades++;
@@ -303,6 +305,9 @@ void handleItem(int64_t id, bool notify) {
     // they received the item externally!
     if (notify) {
         instance->send(MESSAGE_TYPE_COLLECTED, std::string("Received ") + type);
+        if (isFinalMask) {
+            instance->send(MESSAGE_TYPE_MASK_CHECK, "");
+        }
     }
 }
 

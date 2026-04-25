@@ -15,6 +15,7 @@ void MOD_Main();
 void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, int* lumGates, char** levelSwapKeys, char** levelSwapTargets);
 void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, BOOL knowledge);
 void MOD_TriggerDeath();
+BOOL MOD_HasUnlockedPirateShip();
 
 BOOL MOD_GetDeathLink(BOOL ignoreOverride);
 void MOD_ToggleDeathLink();

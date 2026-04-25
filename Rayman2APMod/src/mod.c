@@ -74,6 +74,11 @@ static int cmpInt(const void* a, const void* b) {
 	return (x > y) - (x < y);
 }
 
+/** Returns whether x is a lum or super lum. */
+bool isLumLike(int x) {
+	return (x >= 1 && x <= 800) || (x >= 1201 && x <= 1400);
+}
+
 /** Returns whether the given integer is a super lum's id. */
 bool isSuperLum(int x) {
 	return bsearch(&x, SUPER_LUM_IDS, 290, sizeof(int), cmpInt) || bsearch(&(int) { x - 1 }, SUPER_LUM_IDS, 290, sizeof(int), cmpInt);
@@ -315,7 +320,7 @@ void setLumGateOverride(int lumGateId) {
 			setBitSet(&MOD_RealCollected, i, AI_fn_bGetBooleanInArray(pGlobal, 42, i));
 
 			// Update the data to set the correct lum count we want
-			if ((i >= 1 && i <= 800) || (i >= 1201 && i <= 1400)) {
+			if (isLumLike(i)) {
 				AI_fn_bSetBooleanInArray(pGlobal, 42, i, givenLums++ < finalLums);
 			}
 		}
@@ -401,6 +406,11 @@ void MOD_CheckVariables() {
 
 				// Only if the item is now collected, send a check!
 				if (dsg) {
+					// When connected in non-lumsanity update the lum counter immediately for any non-super lums gathered!
+					if (MOD_Connected && !MOD_Lumsanity && isLumLike(i) && !isSuperLum(i)) {
+						MOD_Lums++;
+					}
+
 					// If this is the ID for Clark smashing the wall, instead send COBD knowledge! This way you always
 					// leave this custcene with the knowledge.
 					if (i == 1171) {

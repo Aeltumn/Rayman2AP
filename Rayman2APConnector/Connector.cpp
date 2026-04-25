@@ -203,7 +203,6 @@ void sendStateUpdate(bool force) {
     oss << elixir << ",";
     oss << knowledge << ",";
     instance->send(MESSAGE_TYPE_STATE, oss.str());
-    instance->send(MESSAGE_TYPE_MESSAGE, "Sent: `state`");
 }
 
 /** Sends the current settings to game client. */
@@ -225,7 +224,6 @@ void sendSettings(bool force) {
         oss << pair.first << "|" << pair.second << ";";
     }
     instance->send(MESSAGE_TYPE_SETTINGS, oss.str());
-    instance->send(MESSAGE_TYPE_MESSAGE, "Sent: `settings`");
 }
 
 
@@ -315,7 +313,6 @@ void handleLocation(int64_t id) {
 
 /** Handles level swap data being delivered. */
 void handleLevelSwaps(std::string data) {
-    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `level_swaps`");
     try {
         // Parses the level swaps from the archipelago input
         levelSwaps.clear();
@@ -339,7 +336,6 @@ void handleLevelSwaps(std::string data) {
 
 /** Handles lum gate thresholds being delivered. */
 void handleLumGates(std::string data) {
-    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `lum_gates`");
     try {
         // Parse the lum gates from the archipelago input
         if (data.length() < 3) return;
@@ -359,29 +355,18 @@ void handleLumGates(std::string data) {
 
 /** Handles information on whether death link is enabled. */
 void handleDeathLinkEnabled(std::string data) {
-    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `death_link`");
     deathLink = std::stoi(data) == 1;
     sendSettings(false);
 }
 
 /** Handles information on the selected end goal. */
 void handleEndGoal(std::string data) {
-    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `end_goal`");
     endGoal = std::stoi(data);
-
-    // Only now do we call it connected!
-    if (!connected) {
-        connected = true;
-        instance->send(MESSAGE_TYPE_MESSAGE, "Succesfully connected to Archipelago server!");
-    }
-
-    // Send settings after everything is updated
     sendSettings(false);
 }
 
 /** Handles information on whether lumsanity is being used. */
 void handleLumsanity(std::string data) {
-    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `lumsanity`");
     lumsanity = std::stoi(data);
     sendSettings(false);
     sendStateUpdate(false);
@@ -389,8 +374,13 @@ void handleLumsanity(std::string data) {
 
 /** Handles information on whether room randomisation is on. */
 void handleRoomRandomisation(std::string data) {
-    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `room_randomisation`");
     roomRandomisation = std::stoi(data);
+
+    // Only now do we call it connected!
+    if (!connected) {
+        connected = true;
+        instance->send(MESSAGE_TYPE_MESSAGE, "Succesfully connected to Archipelago server!");
+    }
     sendSettings(false);
 }
 

@@ -30,25 +30,36 @@ bool roomRandomisation = false;
 int lumGates[6] = {100, 300, 475, 550, 60, 450};
 std::unordered_map<std::string, std::string> levelSwaps;
 std::string lastIp;
+bool connected = false;
+std::chrono::steady_clock::time_point connectStart;
+std::chrono::seconds timeout = std::chrono::seconds(5);
 
 // Dummy method so we don't have to add the gifting module which requires C++17
 void handleGiftAPISetReply(const AP_SetReply& reply) {}
 
 /** Prints the current connection status. */
 void printConnectionStatus() {
-    switch (AP_GetConnectionStatus()) {
-    case AP_ConnectionStatus::Disconnected:
-        instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Disconnected");
-        break;
-    case AP_ConnectionStatus::Connected:
-        instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Connected");
-        break;
-    case AP_ConnectionStatus::Authenticated:
-        instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Authenticated");
-        break;
-    case AP_ConnectionStatus::ConnectionRefused:
-        instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Connection Refused");
-        break;
+    if (!AP_IsInit()) {
+        instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Not Connected");
+    } else {
+        if (!connected) {
+            instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Connecting");
+        } else {
+            switch (AP_GetConnectionStatus()) {
+            case AP_ConnectionStatus::Disconnected:
+                instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Disconnected");
+                break;
+            case AP_ConnectionStatus::Connected:
+                instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Connected");
+                break;
+            case AP_ConnectionStatus::Authenticated:
+                instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Authenticated");
+                break;
+            case AP_ConnectionStatus::ConnectionRefused:
+                instance->send(MESSAGE_TYPE_MESSAGE, "AP Status: Connection Refused");
+                break;
+            }
+        }
     }
 }
 
@@ -60,6 +71,16 @@ void Connector::waitForAP() {
                 AP_Message* message = AP_GetLatestMessage();
                 instance->send(MESSAGE_TYPE_MESSAGE, message->text);
                 AP_ClearLatestMessage();
+            }
+            if (AP_IsInit() && !connected) {
+                // Wait for at most 5 seconds for the connection to establish, otherwise
+                // we deem it failed and force a disconnect!
+                auto now = std::chrono::steady_clock::now();
+                auto elapsed = now - connectStart;
+                if (elapsed >= timeout) {
+                    instance->send(MESSAGE_TYPE_MESSAGE, "Connection failed: host timed out");
+                    disconnect();
+                }
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
@@ -85,16 +106,35 @@ void Connector::handle(int type, std::string data) {
         break;
     }
     case MESSAGE_TYPE_CONNECT: {
-        // Read out the information from the input
-        std::istringstream f(data);
-        std::string ip;
-        std::string slot;
-        std::string password;
-        std::getline(f, ip, ' ');
-        std::getline(f, slot, ' ');
-        std::getline(f, password, ' ');
+        // Parse out the input to find the separate arguments
+        std::vector<std::string> result;
+        std::string current;
+        bool inQuotes = false;
+        for (size_t i = 0; i < data.size(); ++i) {
+            char c = data[i];
 
-        if (!connect(ip, slot, password)) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (!inQuotes && std::isspace(static_cast<unsigned char>(c))) {
+                if (!current.empty()) {
+                    result.push_back(current);
+                    current.clear();
+                }
+            } else {
+                current += c;
+            }
+        }
+        if (!current.empty()) {
+            result.push_back(current);
+        }
+
+        // Process the input and start connecting
+        if (result.size() < 2) {
+            send(MESSAGE_TYPE_MESSAGE, "Usage: ap connect <ip> <slot> [password]");
+        } else if (!connect(result[0], result[1], result.size() >= 2 ? "" : result[2])) {
             send(MESSAGE_TYPE_MESSAGE, "You are already connected to an Archipelago server");
         }
         break;
@@ -152,7 +192,9 @@ void Connector::handle(int type, std::string data) {
 }
 
 /** Sends a state update to the game client. */
-void sendStateUpdate() {
+void sendStateUpdate(bool force) {
+    if (!force && !instance->isConnected()) return;
+
     std::ostringstream oss;
     oss << lums << ",";
     oss << cages << ",";
@@ -161,12 +203,15 @@ void sendStateUpdate() {
     oss << elixir << ",";
     oss << knowledge << ",";
     instance->send(MESSAGE_TYPE_STATE, oss.str());
+    instance->send(MESSAGE_TYPE_MESSAGE, "Sent: `state`");
 }
 
 /** Sends the current settings to game client. */
-void sendSettings() {
+void sendSettings(bool force) {
+    if (!force && !instance->isConnected()) return;
+
     std::ostringstream oss;
-    oss << AP_IsInit() << ",";
+    oss << instance->isConnected() << ",";
     oss << deathLink << ",";
     oss << endGoal << ",";
     oss << lumsanity << ",";
@@ -180,6 +225,7 @@ void sendSettings() {
         oss << pair.first << "|" << pair.second << ";";
     }
     instance->send(MESSAGE_TYPE_SETTINGS, oss.str());
+    instance->send(MESSAGE_TYPE_MESSAGE, "Sent: `settings`");
 }
 
 
@@ -191,11 +237,13 @@ void handleItemClear() {
     masks = 0;
     elixir = false;
     knowledge = false;
-    sendStateUpdate();
+    sendStateUpdate(connected);
 }
 
 /** Resets received settings. */
 void handleReset() {
+    bool wasConnected = connected;
+    connected = false;
     deathLink = false;
     endGoal = 1;
     lumsanity = false;
@@ -207,7 +255,7 @@ void handleReset() {
     lumGates[4] = 60;
     lumGates[5] = 450;
     levelSwaps.clear();
-    sendSettings();
+    sendSettings(wasConnected);
 }
 
 /** Handles an item being checked. */
@@ -251,7 +299,7 @@ void handleItem(int64_t id, bool notify) {
     }
 
     // Send an update to the client with the new information
-    sendStateUpdate();
+    sendStateUpdate(false);
 
     // If we have to notify the player we send a second message with the information that
     // they received the item externally!
@@ -267,6 +315,7 @@ void handleLocation(int64_t id) {
 
 /** Handles level swap data being delivered. */
 void handleLevelSwaps(std::string data) {
+    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `level_swaps`");
     try {
         // Parses the level swaps from the archipelago input
         levelSwaps.clear();
@@ -290,6 +339,7 @@ void handleLevelSwaps(std::string data) {
 
 /** Handles lum gate thresholds being delivered. */
 void handleLumGates(std::string data) {
+    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `lum_gates`");
     try {
         // Parse the lum gates from the archipelago input
         if (data.length() < 3) return;
@@ -309,29 +359,39 @@ void handleLumGates(std::string data) {
 
 /** Handles information on whether death link is enabled. */
 void handleDeathLinkEnabled(std::string data) {
+    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `death_link`");
     deathLink = std::stoi(data) == 1;
-    sendSettings();
+    sendSettings(false);
 }
 
 /** Handles information on the selected end goal. */
 void handleEndGoal(std::string data) {
+    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `end_goal`");
     endGoal = std::stoi(data);
-    sendSettings();
+
+    // Only now do we call it connected!
+    if (!connected) {
+        connected = true;
+        instance->send(MESSAGE_TYPE_MESSAGE, "Succesfully connected to Archipelago server!");
+    }
+
+    // Send settings after everything is updated
+    sendSettings(false);
 }
 
 /** Handles information on whether lumsanity is being used. */
 void handleLumsanity(std::string data) {
+    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `lumsanity`");
     lumsanity = std::stoi(data);
-    sendSettings();
-
-    // Lumsanity affects the lum total!
-    sendStateUpdate();
+    sendSettings(false);
+    sendStateUpdate(false);
 }
 
 /** Handles information on whether room randomisation is on. */
 void handleRoomRandomisation(std::string data) {
+    instance->send(MESSAGE_TYPE_MESSAGE, "Receive: `room_randomisation`");
     roomRandomisation = std::stoi(data);
-    sendSettings();
+    sendSettings(false);
 }
 
 /** Handles an incoming death link from other games. */
@@ -340,9 +400,16 @@ void handleDeathLink() {
 }
 
 bool Connector::connect(std::string ip, std::string slot, std::string password) {
-    if (AP_IsInit()) return false;
+    if (AP_IsInit()) {
+        // If we are properly connected require a formal disconnect, otherwise
+        // we internally disconnect and let you switch IPs.
+        if (connected) return false;
+        disconnect();
+    }
+
+    connectStart = std::chrono::steady_clock::now();
     lastIp = ip;
-    instance->send(MESSAGE_TYPE_MESSAGE, "Connecting to ip: " + ip + ", game: Rayman 2, slot: " + slot + ", password: " + password);
+    instance->send(MESSAGE_TYPE_MESSAGE, "Attempting to connect to `" + ip + "` on slot `" + slot + "`...");
     AP_Init(ip.c_str(), "Rayman 2", slot.c_str(), password.c_str());
     AP_SetDeathLinkSupported(true);
     AP_SetItemClearCallback(handleItemClear);
@@ -356,8 +423,6 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_RegisterSlotDataRawCallback("lumsanity", handleLumsanity);
     AP_RegisterSlotDataRawCallback("room_randomisation", handleRoomRandomisation);
     AP_Start();
-    sendSettings();
-    sendStateUpdate();
     return true;
 }
 
@@ -381,8 +446,8 @@ void Connector::init() {
     instance->send(MESSAGE_TYPE_MESSAGE, "Rayman2APConnector has started and is ready to use");
 
     // Immediately send a state update so lum gates are set on boot
-    sendSettings();
-    sendStateUpdate();
+    sendSettings(true);
+    sendStateUpdate(true);
 }
 
 void Connector::waitForInput() {

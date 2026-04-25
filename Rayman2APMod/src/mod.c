@@ -109,6 +109,12 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 }
 
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
+	// In dev mode print which locations we switch to
+	if (MOD_DevMode) {
+		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+		MOD_PrintConsolePlusScreen("Changing level to %s while previous level is %d with exit %d", szLevelName, structure->ucPreviousLevel, structure->ucExitIdToQuitPrevLevel);
+	}
+
 	// When entering the ending credits we check off winning!
 	if (compareStringCaseInsensitive(szLevelName, "end_10") == 0) {
 		if (MOD_EndGoal == 1) {
@@ -130,15 +136,19 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		}
 	}
 
+	// When you exit the Pirate Ship from the ending exit we put you back at the default exit unless you have enough masks.
+	if (compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+		if (MOD_Masks < 4 && structure->ucPreviousLevel == 240) {
+			structure->ucPreviousLevel = 140;
+			structure->ucExitIdToQuitPrevLevel = 0;
+		}
+	}
+
 	// If room randomization is off, don't shuffle any rooms!
 	if (!MOD_RoomRandomisation) {
 		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 		return;
-	}
-
-	// In dev mode print which locations we switch to
-	if (MOD_DevMode) {
-		MOD_PrintConsolePlusScreen("Changing level to %s", szLevelName);
 	}
 
 	// When going to the menu, update the exit portal id!
@@ -163,14 +173,14 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "water_10") == 0) {
 				structure->ucPreviousLevel = 160;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "glob_30") == 0) {
-				structure->ucPreviousLevel = 210;
+				structure->ucPreviousLevel = 205;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "whale_00") == 0) {
 				structure->ucPreviousLevel = 45;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "plum_00$01$00") == 0) {
 				structure->ucPreviousLevel = 195;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "bast_09") == 0 ||
 				compareStringCaseInsensitive(MOD_LastEntered, "bast_10") == 0) {
-				structure->ucPreviousLevel = 130;
+				structure->ucPreviousLevel = 75;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "nave_10") == 0) {
 				structure->ucPreviousLevel = 80;
 			} else if (compareStringCaseInsensitive(MOD_LastEntered, "seat_10") == 0) {

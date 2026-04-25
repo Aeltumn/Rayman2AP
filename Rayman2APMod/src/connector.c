@@ -134,6 +134,11 @@ void MOD_HandleMessage(int type, const char* data) {
         // Ignore a death if death link is currently not enabled
         if (!MOD_GetDeathLink(FALSE)) return;
 
+        // If we are in Morb_20 (Clark boss fight) we disable death
+        // link as it causes a soft lock
+        const char* szLevelName = GAM_fn_p_szGetLevelName();
+        if (compareStringCaseInsensitive(szLevelName, "Morb_20") == 0) return;
+
         // Trigger a death for th player
         MOD_TriggerDeath();
         MOD_ShowScreenText(data);

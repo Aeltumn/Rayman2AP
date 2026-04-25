@@ -60,6 +60,11 @@ BitSet MOD_LastCollected;
 BitSet MOD_DevCollected;
 BitSet MOD_RealCollected;
 
+// While in the Menhir Hills store if you had the elixir beforehand
+BOOL MOD_InMenhirHills = FALSE;
+BOOL MOD_HadElixirPreviously = FALSE;
+BOOL MOD_SentKnowledgeOfCOBD = FALSE;
+
 // Add mappings for custom level ids that differ from remote ids
 #define MOD_CustomLevelCount 3
 char* MOD_CustomLevelIdsStart[MOD_CustomLevelCount] = {"morb_10$01$00", "rodeo_40$01", "plum_00$01$00"};
@@ -110,6 +115,10 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 }
 
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
+	// Re-check for the COBD knowledge & treasure ending check on level switch
+	MOD_SentKnowledgeOfCOBD = FALSE;
+	MOD_TreasureComplete = FALSE;
+
 	// In dev mode print which locations we switch to
 	if (MOD_DevMode) {
 		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
@@ -402,6 +411,41 @@ void MOD_CheckVariables() {
 			}
 		}
 
+		// If you are in the Menhir Hills 2 we have to fake you having the Elixir, otherwise
+		// we leave it default so we don't despawn Jano incorrectly.
+		if (compareStringCaseInsensitive(szLevelName, "Rodeo_40") == 0 || compareStringCaseInsensitive(szLevelName, "rodeo_40$01") == 0) {
+			if (!MOD_InMenhirHills) {
+				MOD_HadElixirPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1123);
+				AI_fn_bSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
+				MOD_InMenhirHills = TRUE;
+			}
+
+			// Walking over the cutscene trigger of the Clark cutscene we send out the check
+			// for knowing about the cave of bad dreams as there's no good checks available.
+			if (!MOD_SentKnowledgeOfCOBD) {
+				HIE_tdstSuperObject* pMain = HIE_fn_p_stFindObjectByName("StdCamer");
+				if (pMain) {
+					MTH3D_tdstVector* pCoords = &pMain->p_stGlobalMatrix->stPos;
+					MTH_tdxReal dx = pCoords->x + 1646.558;
+					if (dx < 0) dx = -dx;
+					MTH_tdxReal dy = pCoords->y + 18306.199;
+					if (dy < 0) dy = -dy;
+					MTH_tdxReal dz = pCoords->z + 8052.74;
+					if (dz < 0) dz = -dz;
+
+					if (dx <= 30 && dy <= 30 && dz <= 30) {
+						MOD_SentKnowledgeOfCOBD = TRUE;
+						MOD_SendMessage(MESSAGE_TYPE_COLLECTED, "1101");
+					}
+				}
+			}
+		} else {
+			if (MOD_InMenhirHills) {
+				AI_fn_bSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
+				MOD_InMenhirHills = FALSE;
+			}
+		}
+
 		// When we exit the lum gate, restore the data again!
 		clearLumGateOverrides();
 
@@ -420,12 +464,6 @@ void MOD_CheckVariables() {
 					// When connected in non-lumsanity update the lum counter immediately for any non-super lums gathered!
 					if (MOD_Connected && !MOD_Lumsanity && isLumLike(i) && !isSuperLum(i)) {
 						MOD_Lums++;
-					}
-
-					// If this is the ID for Clark smashing the wall, instead send COBD knowledge! This way you always
-					// leave this custcene with the knowledge.
-					if (i == 1171) {
-						i = 1101;
 					}
 
 					// This is the ID for being kicked out of the Cave of Bad Dreams after winning, which we treat as
@@ -500,8 +538,7 @@ void MOD_CheckVariables() {
 			AI_fn_bSetBooleanInArray(pGlobal, 42, 1143, TRUE);
 		}
 
-		// Set whether you have the elixir and knowledge of the cave of bad dreams
-		AI_fn_bSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
+		// Set whether you have knowledge of the cave of bad dreams always
 		AI_fn_bSetBooleanInArray(pGlobal, 42, 1101, MOD_Knowledge);
 
 		// Show the final portal if and only if you have enough masks!

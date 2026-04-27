@@ -14,6 +14,8 @@
 #define MESSAGE_TYPE_MASK_CHECK 11
 
 #define LEVEL_COUNT 56
+#define MAX_LENGTH 32
+#define CHAIN_COUNT 21
 
 int MOD_StartConnector();
 void MOD_StopConnector();

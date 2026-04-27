@@ -37,13 +37,18 @@ void MOD_HandleMessage(int type, const char* data) {
         BOOL lumsanity = FALSE;
         BOOL roomRandomisation = FALSE;
         int* lumGates[6];
-        char* levelSwapSources[LEVEL_COUNT];
-        char* levelSwapTargets[LEVEL_COUNT];
+
+        char* levelIds[LEVEL_COUNT];
+        int chainLengths[CHAIN_COUNT];
+        int* chainContents[CHAIN_COUNT];
 
         // Ensure values are properly empty!
         for (int i = 0; i < LEVEL_COUNT; i++) {
-            levelSwapSources[i] = "";
-            levelSwapTargets[i] = "";
+            levelIds[i] = "";
+        }
+        for (int i = 0; i < CHAIN_COUNT; i++) {
+            chainLengths[i] = 0;
+            chainContents[i] = NULL;
         }
 
         token = strtok(copy, ",");
@@ -67,19 +72,35 @@ void MOD_HandleMessage(int type, const char* data) {
             // When we reach the final index we switch processing!
             if (index == 11) {
                 int idx = 0;
+                int levelId = 0;
                 char* context1 = NULL;
-                char* pair = strtok_s(token, ";", &context1);
+                char* chain = strtok_s(token, ";", &context1);
 
-                while (pair) {
+                while (chain) {
+                    int* chainArray = chainContents[idx];
+                    int chainLength = 0;
+
                     char* context2 = NULL;
-                    char* key = strtok_s(pair, "|", &context2);
-                    char* value = strtok_s(NULL, "|", &context2);
+                    char* zone = strtok_s(chain, "|", &context2);
 
-                    levelSwapSources[idx] = key;
-                    levelSwapTargets[idx] = value;
+                    while (zone) {
+                        chainLength++;
+                        chainArray = realloc(chainArray, chainLength * sizeof(int));
+
+                        // Store this zone name under an id, then store only the
+                        // id in this chain so there's less memory to re-allocate.
+                        levelIds[levelId] = zone;
+                        chainArray[chainLength - 1] = levelId;
+                        levelId++;
+
+                        zone = strtok_s(NULL, "|", &context2);
+                    }
+
+                    chainLengths[idx] = chainLength;
+                    chainContents[idx] = chainArray;
+
                     idx++;
-
-                    pair = strtok_s(NULL, ";", &context1);
+                    chain = strtok_s(NULL, ";", &context1);
                 }
                 break;
             }
@@ -90,7 +111,7 @@ void MOD_HandleMessage(int type, const char* data) {
         free(copy);
 
         // Send this data across to the main mod file
-        MOD_UpdateSettings(connected, deathLink, endGoal, lumsanity, roomRandomisation, lumGates, levelSwapSources, levelSwapTargets);
+        MOD_UpdateSettings(connected, deathLink, endGoal, lumsanity, roomRandomisation, lumGates, levelIds, chainLengths, chainContents);
         break;
     }
     case MESSAGE_TYPE_STATE: {
@@ -245,7 +266,7 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
             message.text = messageBuffer;
 
             // Print all incoming messages to the output log
-            FILE* pFile = fopen("child_log.txt", "a");
+            FILE* pFile = fopen("ap_log_connector.txt", "a");
             if (pFile != NULL) {
                 fprintf(pFile, messageBuffer);
                 fprintf(pFile, "\n");

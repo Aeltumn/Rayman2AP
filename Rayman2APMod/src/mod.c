@@ -2,7 +2,6 @@
 
 #define SCREEN_TEXT_FADE_TIME 8
 #define TEXT_MARGIN 2
-#define MAX_LENGTH 32
 
 #define MOD_PrintConsolePlusScreen(txt, ...)              \
     do {                                 \
@@ -10,19 +9,36 @@
         MOD_ShowScreenText((txt), __VA_ARGS__); \
     } while (0)
 
+// Define the indices of every level chain
+int CHAIN_BAYOU = 0;
+int CHAIN_BENEATH = 1;
+int CHAIN_CANOPY = 2;
+int CHAIN_COBD = 3;
+int CHAIN_ECHOING = 4;
+int CHAIN_FAIRY_GLADE = 5;
+int CHAIN_FAIRY_REVISIT = 6;
+int CHAIN_IRON_MOUNT = 7;
+int CHAIN_MARSHES = 8;
+int CHAIN_MENHIR = 9;
+int CHAIN_PRECIPICE = 10;
+int CHAIN_PRISON = 11;
+int CHAIN_SANC_ROCK = 12;
+int CHAIN_SANC_STONE = 13;
+int CHAIN_SANC_WATER = 14;
+int CHAIN_SIDE_TEMPLE = 15;
+int CHAIN_TOMB = 16;
+int CHAIN_TOP = 17;
+int CHAIN_WALK_LIFE = 18;
+int CHAIN_WALK_POWER = 19;
+int CHAIN_WHALE = 20;
+
+// Track important portal ids
+int PIRATE_SHIP_PORTAL = 1002;
+int FINAL_LEVEL = 1005;
+
 // Store the base game lum amounts and super lum ids
 int* BASE_GAME_LUMS[6] = { 100, 300, 475, 550, 60, 450 };
 int* SUPER_LUM_IDS[290] = { 1, 2, 3, 4, 5, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 51, 52, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 161, 162, 163, 164, 165, 172, 173, 174, 175, 176, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 292, 293, 294, 295, 296, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 491, 492, 493, 494, 495, 496, 497, 498, 499, 500, 556, 557, 558, 559, 560, 613, 614, 615, 616, 617, 618, 619, 620, 621, 622, 631, 632, 633, 634, 635, 636, 637, 638, 639, 640, 646, 647, 648, 649, 650, 661, 662, 663, 664, 665, 666, 667, 668, 669, 670, 671, 672, 673, 674, 675, 676, 677, 678, 679, 680, 681, 682, 683, 684, 685, 686, 687, 688, 689, 690, 721, 722, 723, 724, 725, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741, 742, 743, 744, 745, 746, 747, 748, 749, 750, 762, 763, 764, 765, 766, 776, 777, 778, 779, 780, 781, 782, 783, 784, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 1311, 1312, 1313, 1314, 1315, 1354, 1355, 1356, 1357, 1358, 1389, 1390, 1391, 1392, 1393 };
-
-// Store hardcoded level gate identifiers
-int* NO_LUM_GATE_LEVELS[4] = { 960, 961, 964, 967 };
-int* LUM_GATE_ONE_LEVELS[4] = { 970, 972, 976, 979};
-int* LUM_GATE_TWO_LEVELS[5] = { 981, 975, 985, 988, 990 };
-int* LUM_GATE_THREE_LEVELS[2] = { 993, 1007 };
-int* LUM_GATE_FOUR_LEVELS[2] = { 1000, 1002 };
-int COBD_LEVEL = 966;
-int PIRATE_SHIP_PORTAL = 1002;
-int FINAL_LEVEL = 1005;
 
 // Store archipelago progression
 int MOD_Lums = 0;
@@ -39,11 +55,8 @@ BOOL MOD_DeathLink = FALSE;
 BOOL MOD_Lumsanity = FALSE;
 BOOL MOD_RoomRandomisation = FALSE;
 int* MOD_LumGates[6];
-char MOD_LevelSwapSource[LEVEL_COUNT][MAX_LENGTH];
-char MOD_LevelSwapTarget[LEVEL_COUNT][MAX_LENGTH];
 
 // Store tracking variables used at runtime
-char* MOD_LastEntered;
 BOOL MOD_DeathLinkOverride = FALSE;
 BOOL MOD_IgnoreDeath = FALSE;
 BOOL MOD_TreasureComplete = FALSE;
@@ -65,13 +78,20 @@ BOOL MOD_InMenhirHills = FALSE;
 BOOL MOD_HadElixirPreviously = FALSE;
 BOOL MOD_SentKnowledgeOfCOBD = FALSE;
 
-// Add mappings for custom level ids that differ from remote ids
-#define MOD_CustomLevelCount 3
-char* MOD_CustomLevelIdsStart[MOD_CustomLevelCount] = {"morb_10$01$00", "rodeo_40$01", "plum_00$01$00"};
-char* MOD_CustomLevelIdsTarget[MOD_CustomLevelCount] = {"morb_10", "rodeo_40", "plum_00"};
+// Level chain info
+char MOD_LevelIds[LEVEL_COUNT][MAX_LENGTH];
+int MOD_LevelChainsLengths[CHAIN_COUNT];
+BOOL MOD_InitLevelChains = FALSE;
+int* MOD_LevelChainContents[CHAIN_COUNT];
+
+BOOL MOD_IgnoreRedirect = FALSE;
+BOOL MOD_InLevelChain = FALSE;
+int MOD_LevelChainActive[CHAIN_COUNT];
+int MOD_LevelChainLast[CHAIN_COUNT];
+int MOD_LevelChainCurrent = -1;
 
 // Store whether dev mode is enabled
-BOOL MOD_DevMode = FALSE;
+BOOL MOD_DevMode = TRUE;
 
 /** Compares to integers in an array. */
 static int cmpInt(const void* a, const void* b) {
@@ -101,8 +121,7 @@ long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
 	return lSize + 1;
 }
 
-long SPTXT_fn_lGetCharWidth(MTH_tdxReal xSize)
-{
+long SPTXT_fn_lGetCharWidth(MTH_tdxReal xSize) {
 	MTH_tdxReal size = 15.0f - xSize;
 	MTH_tdxReal width = 46.0f - size * 4.0f;
 	return (long)width;
@@ -114,7 +133,194 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 	return (long)height + TEXT_MARGIN + TEXT_MARGIN;
 }
 
+BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
+	// If we're in a level chain, continue it!
+	if (MOD_InLevelChain) {
+		// Determine the current level chain
+		int chainId = MOD_LevelChainCurrent;
+
+		// Get the level we are meant to be in and load into it
+		int currentLevel = MOD_LevelChainActive[chainId] + increment;
+		int chainLength = MOD_LevelChainsLengths[chainId];
+
+		// Save the new index on this chain
+		MOD_LevelChainActive[chainId] = currentLevel;
+
+		if (currentLevel < 0 || currentLevel >= chainLength) {
+			// This should not normally happen, it's more of a fallback if 
+			// we somehow get stuck!
+			MOD_ExitChain(FALSE);
+		} else {
+			// Find which level ID this is
+			int levelId = MOD_LevelChainContents[chainId][currentLevel];
+			char* levelName = MOD_LevelIds[levelId];
+
+			// Learn_32 is the internal ID for the fairy glade revisit!
+			if (compareStringCaseInsensitive(levelName, "Learn_32") == 0) {
+				levelName = "Learn_31";
+				GAM_g_stEngineStructure->ucExitIdToQuitPrevLevel = 1;
+			}
+			GAM_fn_vAskToChangeLevel(levelName, FALSE);
+		}
+	}
+	return false;
+}
+
+BOOL MOD_ProgressLevelChain() {
+	MOD_ProgressLevelChainAndIncrement(1);
+}
+
+void MOD_EnterLevelChain(int chainId) {
+	if (MOD_InLevelChain) {
+		// Store on the new chain that we were previously in the previous one.
+		MOD_LevelChainLast[chainId] = MOD_LevelChainCurrent;
+	}
+
+	// Mark down that we've entered a level chain, then determine what the first level is in this chain!
+	MOD_InLevelChain = TRUE;
+	MOD_LevelChainCurrent = chainId;
+	MOD_ProgressLevelChainAndIncrement(0);
+}
+
+void MOD_ExitChain(ACP_tdxBool bSaveGame) {
+	// Ignore if we are not in a chain!
+	if (!MOD_InLevelChain) {
+		GAM_fn_vAskToChangeLevel("mapmonde", bSaveGame);
+		return;
+	}
+
+	// Read data and then immediately void it as we exit
+	int chainId = MOD_LevelChainCurrent;
+	int lastChain = MOD_LevelChainLast[chainId];
+	int currentLevel = MOD_LevelChainActive[chainId];
+	int chainLength = MOD_LevelChainsLengths[chainId];
+
+	MOD_LevelChainCurrent = -1;
+	MOD_InLevelChain = FALSE;
+	MOD_LevelChainLast[chainId] = -1;
+	MOD_LevelChainActive[chainId] = 0;
+
+	// Determine if this chain was completed and we should unlock the next level!
+	auto completedChain = currentLevel >= chainLength - 1;
+
+	// Prevent completing the prison ship chain without all masks!
+	if (chainId == CHAIN_PRISON && MOD_Masks < 4) {
+		completedChain = FALSE;
+	}
+
+	// If you didn't complete the chain, didn't have a last chain, or it's the walks you return to the hall of doors instead of
+	// your previous level you were in.
+	if (!completedChain || lastChain == -1 || lastChain == CHAIN_WALK_LIFE || lastChain == CHAIN_WALK_POWER) {
+		// If there isn't a last change or the chain wasn't completed, let you go to the hall of doors with a specific exit!
+		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+		if (completedChain) {
+			structure->ucExitIdToQuitPrevLevel = 1;
+
+			// The ids of exit level are different if you completed a level!
+			// (These ids are in STH_teleport_GEN_STH.
+			if (chainId == CHAIN_FAIRY_GLADE) {
+				structure->ucPreviousLevel = 220;
+			} else if (chainId == CHAIN_MARSHES) {
+				structure->ucPreviousLevel = 30;
+			} else if (chainId == CHAIN_COBD) {
+				structure->ucPreviousLevel = 137;
+			} else if (chainId == CHAIN_BAYOU) {
+				structure->ucPreviousLevel = 18;
+			} else if (chainId == CHAIN_WALK_LIFE) {
+				structure->ucPreviousLevel = 20;
+			} else if (chainId == CHAIN_MENHIR) {
+				structure->ucPreviousLevel = 65;
+			} else if (chainId == CHAIN_SANC_WATER) {
+				structure->ucPreviousLevel = 165;
+			} else if (chainId == CHAIN_CANOPY) {
+				structure->ucPreviousLevel = 205;
+			} else if (chainId == CHAIN_WHALE) {
+				structure->ucPreviousLevel = 50;
+			} else if (chainId == CHAIN_SANC_STONE) {
+				structure->ucPreviousLevel = 190;
+			} else if (chainId == CHAIN_ECHOING) {
+				structure->ucPreviousLevel = 75;
+			} else if (chainId == CHAIN_PRECIPICE) {
+				structure->ucPreviousLevel = 85;
+			} else if (chainId == CHAIN_TOP) {
+				structure->ucPreviousLevel = 41;
+			} else if (chainId == CHAIN_SANC_ROCK) {
+				structure->ucPreviousLevel = 103;
+			} else if (chainId == CHAIN_WALK_POWER) {
+				structure->ucPreviousLevel = 115;
+			} else if (chainId == CHAIN_BENEATH) {
+				structure->ucPreviousLevel = 230;
+			} else if (chainId == CHAIN_TOMB) {
+				structure->ucPreviousLevel = 118;
+			} else if (chainId == CHAIN_IRON_MOUNT) {
+				structure->ucPreviousLevel = 125;
+			} else if (chainId == CHAIN_PRISON) {
+				structure->ucPreviousLevel = 240;
+			}
+		} else {
+			if (chainId == CHAIN_FAIRY_GLADE) {
+				structure->ucPreviousLevel = 10;
+			} else if (chainId == CHAIN_MARSHES) {
+				structure->ucPreviousLevel = 25;
+			} else if (chainId == CHAIN_COBD) {
+				structure->ucPreviousLevel = 135;
+			} else if (chainId == CHAIN_BAYOU) {
+				structure->ucPreviousLevel = 15;
+			} else if (chainId == CHAIN_WALK_LIFE) {
+				structure->ucPreviousLevel = 20;
+			} else if (chainId == CHAIN_MENHIR) {
+				structure->ucPreviousLevel = 55;
+			} else if (chainId == CHAIN_SANC_WATER) {
+				structure->ucPreviousLevel = 160;
+			} else if (chainId == CHAIN_CANOPY) {
+				structure->ucPreviousLevel = 210;
+			} else if (chainId == CHAIN_WHALE) {
+				structure->ucPreviousLevel = 45;
+			} else if (chainId == CHAIN_SANC_STONE) {
+				structure->ucPreviousLevel = 195;
+			} else if (chainId == CHAIN_ECHOING) {
+				structure->ucPreviousLevel = 130;
+			} else if (chainId == CHAIN_PRECIPICE) {
+				structure->ucPreviousLevel = 80;
+			} else if (chainId == CHAIN_TOP) {
+				structure->ucPreviousLevel = 40;
+			} else if (chainId == CHAIN_SANC_ROCK) {
+				structure->ucPreviousLevel = 95;
+			} else if (chainId == CHAIN_WALK_POWER) {
+				structure->ucPreviousLevel = 115;
+			} else if (chainId == CHAIN_BENEATH) {
+				structure->ucPreviousLevel = 105;
+			} else if (chainId == CHAIN_TOMB) {
+				structure->ucPreviousLevel = 118;
+			} else if (chainId == CHAIN_IRON_MOUNT) {
+				structure->ucPreviousLevel = 12;
+			} else if (chainId == CHAIN_PRISON) {
+				structure->ucPreviousLevel = 140;
+			}
+		}
+
+		GAM_fn_vAskToChangeLevel("mapmonde", bSaveGame);
+	} else {
+		// If there was a specifc chain you have to return there from the secondary exit!
+		GAM_g_stEngineStructure->ucExitIdToQuitPrevLevel = 1;
+		MOD_EnterLevelChain(lastChain);
+	}
+}
+
+BOOL MOD_ReturnToPreviousChain(int ifChain, int thenChain) {
+	// If we're in a chain and it's the if chain then move into the then chain
+	// instead of progressing! This is used to cap off revisits.
+	if (MOD_InLevelChain && MOD_LevelChainCurrent == ifChain) {
+		MOD_ExitChain(FALSE);
+		return true;
+	}
+	return false;
+}
+
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
+	// Fetch the base game strucure as we'll have to modify it
+	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+
 	// Re-check for the COBD knowledge & treasure ending check on level switch
 	MOD_SentKnowledgeOfCOBD = FALSE;
 	MOD_TreasureComplete = FALSE;
@@ -136,9 +342,9 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			int hasEnoughLums = MOD_Lums >= 1000;
 			int hasEnoughCages = MOD_Cages >= 80;
 			if (!hasEnoughLums) {
-				MOD_PrintConsolePlusScreen("Game is not complete, not enough lums!");
+				MOD_PrintConsolePlusScreen("Game not complete, not enough lums!");
 			} else if (!hasEnoughCages) {
-				MOD_PrintConsolePlusScreen("Game is not complete, not enough cages!");
+				MOD_PrintConsolePlusScreen("Game not complete, not enough cages!");
 			} else {
 				MOD_PrintConsolePlusScreen("Game completed 100%!");
 				MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
@@ -148,114 +354,218 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 	// When you exit the Pirate Ship from the ending exit we put you back at the default exit unless you have enough masks.
 	if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
-		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 		if (MOD_Masks < 4 && structure->ucPreviousLevel == 240) {
 			structure->ucPreviousLevel = 140;
 			structure->ucExitIdToQuitPrevLevel = 0;
 		}
 	}
 
-	// If room randomization is off, don't shuffle any rooms!
-	if (!MOD_RoomRandomisation) {
-		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
-		return;
-	}
+	// If we're using room randomisation, change the layout!
+	if (MOD_RoomRandomisation) {
+		// We ignore exit 99 as that's what is used when moving to the menu and back.
+		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && structure->ucExitIdToQuitPrevLevel != 99) {
+			// When entering the menu, update the previous level and exit to put you at the right spot!
+			MOD_ExitChain(bSaveGame);
+			return;
+		} else {
+			// When entering a level we have to determine which chain to move you towards!
 
-	// When going to the menu, update the exit portal id!
-	if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
-		// If we have a level we previously marked as having entered, set the exit portal id!
-		if (MOD_LastEntered) {
-			GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
-			if (compareStringCaseInsensitive(MOD_LastEntered, "Learn_10") == 0) {
-				structure->ucPreviousLevel = 3;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Learn_30") == 0) {
-				structure->ucPreviousLevel = 10;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Ski_10") == 0) {
-				structure->ucPreviousLevel = 25;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "vulca_10") == 0) {
-				structure->ucPreviousLevel = 135;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "chase_10") == 0) {
-				structure->ucPreviousLevel = 15;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Ly_10") == 0) {
-				structure->ucPreviousLevel = 20;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "rodeo_10") == 0) {
-				structure->ucPreviousLevel = 55;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "water_10") == 0) {
-				structure->ucPreviousLevel = 160;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "glob_30") == 0) {
-				structure->ucPreviousLevel = 205;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "whale_00") == 0) {
-				structure->ucPreviousLevel = 45;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "plum_00$01$00") == 0) {
-				structure->ucPreviousLevel = 195;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "bast_09") == 0 ||
-				compareStringCaseInsensitive(MOD_LastEntered, "bast_10") == 0) {
-				structure->ucPreviousLevel = 75;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "nave_10") == 0) {
-				structure->ucPreviousLevel = 80;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "seat_10") == 0) {
-				structure->ucPreviousLevel = 40;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "earth_10") == 0) {
-				structure->ucPreviousLevel = 95;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Ly_20") == 0) {
-				structure->ucPreviousLevel = 115;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "helic_10") == 0) {
-				structure->ucPreviousLevel = 105;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "morb_00") == 0) {
-				structure->ucPreviousLevel = 118;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "learn_40") == 0) {
-				structure->ucPreviousLevel = 12;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Boat01") == 0) {
-				structure->ucPreviousLevel = 140;
-			} else if (compareStringCaseInsensitive(MOD_LastEntered, "Rhop_10") == 0) {
-				structure->ucPreviousLevel = 145;
-			} else {
-				// Fallback is woods of light!
-				structure->ucPreviousLevel = 3;
+			// Fairy Glade
+			if (compareStringCaseInsensitive(szLevelName, "Learn_30") == 0) {
+				MOD_EnterLevelChain(CHAIN_FAIRY_GLADE);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "learn_31") == 0) {
+				if (structure->ucExitIdToQuitPrevLevel == 1) {
+					// If the exit id is 1 this is the revisit from Echoing Caves!
+					MOD_EnterLevelChain(CHAIN_FAIRY_REVISIT);
+					return;
+				} else {
+					if (MOD_ProgressLevelChain()) return;
+				}
+			} else if (compareStringCaseInsensitive(szLevelName, "bast_20") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "bast_22") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "learn_60") == 0) {
+				if (MOD_ProgressLevelChain()) return;
 			}
-			if (MOD_DevMode) MOD_Print("Restored last entry level from %s which is id %d", MOD_LastEntered, structure->ucPreviousLevel);
-			MOD_LastEntered = NULL;
+			
+			// Marhes of Awakening
+			if (compareStringCaseInsensitive(szLevelName, "Ski_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_MARSHES);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "ski_60") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Bayou
+			if (compareStringCaseInsensitive(szLevelName, "chase_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_BAYOU);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "chase_22") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Sanctuary of Water and Ice
+			if (compareStringCaseInsensitive(szLevelName, "water_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_SANC_WATER);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "water_20") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Menhir Hills
+			if (compareStringCaseInsensitive(szLevelName, "rodeo_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_MENHIR);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "rodeo_40") == 0 ||
+					   compareStringCaseInsensitive(szLevelName, "rodeo_40$01") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "rodeo_60") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Canopy
+			if (compareStringCaseInsensitive(szLevelName, "glob_30") == 0) {
+				MOD_EnterLevelChain(CHAIN_CANOPY);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "glob_10") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "glob_20") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Whale Bay
+			if (compareStringCaseInsensitive(szLevelName, "whale_00") == 0) {
+				MOD_EnterLevelChain(CHAIN_WHALE);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "whale_05") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "whale_10") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Sanctuary of Stone and Fire
+			if (compareStringCaseInsensitive(szLevelName, "plum_00") == 0 ||
+				compareStringCaseInsensitive(szLevelName, "plum_00$01$00") == 0) {
+				if (MOD_ReturnToPreviousChain(CHAIN_SIDE_TEMPLE, CHAIN_SANC_STONE)) return;
+				MOD_EnterLevelChain(CHAIN_SANC_STONE);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "plum_20") == 0) {
+				// The second level of the Sanctuary is the side temple which is it's
+				// own chain, not progress through the chain!
+				MOD_EnterLevelChain(CHAIN_SIDE_TEMPLE);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "plum_10") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Echoing Caves
+			if (compareStringCaseInsensitive(szLevelName, "bast_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_ECHOING);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "cask_10") == 0) {
+				if (MOD_ReturnToPreviousChain(CHAIN_FAIRY_REVISIT, CHAIN_ECHOING)) return;
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "cask_30") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Precipice
+			if (compareStringCaseInsensitive(szLevelName, "nave_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_PRECIPICE);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "nave_15") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "nave_20") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Top of the World
+			if (compareStringCaseInsensitive(szLevelName, "Seat_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_TOP);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "seat_11") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Sanctuary of Rock and Lava
+			if (compareStringCaseInsensitive(szLevelName, "earth_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_SANC_ROCK);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "earth_20") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "earth_30") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Beneath the Sanctuary of Rock and Lava
+			if (compareStringCaseInsensitive(szLevelName, "helic_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_BENEATH);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "helic_20") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "helic_30") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Tomb of the Ancients
+			if (compareStringCaseInsensitive(szLevelName, "morb_00") == 0) {
+				MOD_EnterLevelChain(CHAIN_TOMB);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "morb_10") == 0 ||
+					   compareStringCaseInsensitive(szLevelName, "morb_10$01$00") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "morb_20") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Iron Mountains
+			if (compareStringCaseInsensitive(szLevelName, "learn_40") == 0) {
+				MOD_EnterLevelChain(CHAIN_IRON_MOUNT);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "ile_10") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "mine_10") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Prison Ship
+			if (compareStringCaseInsensitive(szLevelName, "boat01") == 0) {
+				MOD_EnterLevelChain(CHAIN_PRISON);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "boat02") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "astro_00") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			} else if (compareStringCaseInsensitive(szLevelName, "astro_10") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Walk of Life
+			if (compareStringCaseInsensitive(szLevelName, "Ly_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_WALK_LIFE);
+				return;
+			}
+
+			// Cave of Bad Dreams
+			if (compareStringCaseInsensitive(szLevelName, "vulca_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_COBD);
+				return;
+			} else if (compareStringCaseInsensitive(szLevelName, "vulca_20") == 0) {
+				if (MOD_ProgressLevelChain()) return;
+			}
+
+			// Walk of Power
+			if (compareStringCaseInsensitive(szLevelName, "Ly_20") == 0) {
+				MOD_EnterLevelChain(CHAIN_WALK_POWER);
+				return;
+			}
 		}
-
-		if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (ignore): %s", szLevelName);
-		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
-		return;
 	}
 
-	// When we enter a level, store which one we wanted to enter!
-	if (!MOD_LastEntered) {
-		if (compareStringCaseInsensitive(szLevelName, "nego_10") != 0 &&
-			compareStringCaseInsensitive(szLevelName, "batam_10") != 0 &&
-			compareStringCaseInsensitive(szLevelName, "batam_20") != 0) {
-			MOD_LastEntered = szLevelName;
-		}
-	}
-
-	// First try to map this level id if it's a broken one
-	char* compareLevel = szLevelName;
-	for (int i = 0; i < MOD_CustomLevelCount; i++) {
-		if (compareStringCaseInsensitive(compareLevel, MOD_CustomLevelIdsStart[i]) == 0) {
-			compareLevel = MOD_CustomLevelIdsTarget[i];
-		}
-	}
-
-	// Find which map to send the player to instead of the basic one
-	int oldId = -1;
-	for (int i = 0; i < LEVEL_COUNT; i++) {
-		if (compareStringCaseInsensitive(compareLevel, MOD_LevelSwapSource[i]) == 0) {
-			oldId = i;
-		}
-	}
-	if (oldId == -1) {
-		if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (old id -1): %s", szLevelName);
-		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
-		return;
-	}
-
-	// Get the new target and send them there
-	char* targetLevelName = MOD_LevelSwapTarget[oldId];
-	if (MOD_DevMode) MOD_Print("GAM_fn_vAskToChangeLevel (modified): %s -> %s", szLevelName, targetLevelName);
-	GAM_fn_vAskToChangeLevel(targetLevelName, bSaveGame);
+	// Fall back to just the base game level change
+	GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 }
 
 /** Sets the value of a DSG variable. */
@@ -543,34 +853,6 @@ void MOD_CheckVariables() {
 
 		// Show the final portal if and only if you have enough masks!
 		AI_fn_bSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, MOD_Masks >= 4);
-
-		// If room randomisation is off, don't mess with the other portals!
-		if (!MOD_RoomRandomisation) return;
-
-		// Update which portals are available based on the current checks
-		for (int i = 0; i < 4; i++) {
-			AI_fn_bSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
-		}
-		if (MOD_Lums >= MOD_LumGates[0]) {
-			for (int i = 0; i < 4; i++) {
-				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i], TRUE);
-			}
-		}
-		if (MOD_Lums >= MOD_LumGates[1]) {
-			for (int i = 0; i < 5; i++) {
-				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i], TRUE);
-			}
-		}
-		if (MOD_Lums >= MOD_LumGates[2]) {
-			for (int i = 0; i < 2; i++) {
-				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i], TRUE);
-			}
-		}
-		if (MOD_Lums >= MOD_LumGates[3]) {
-			for (int i = 0; i < 2; i++) {
-				AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
-			}
-		}
 	}
 }
 
@@ -621,7 +903,7 @@ void MOD_Init() {
 }
 
 /** Updates the current archipelago settings. */
-void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, int* lumGates, char** levelSwapKeys, char** levelSwapTargets) {
+void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, int* lumGates, char** levelIds, int* chainLengths, int** chainContents) {
 	if (MOD_Connected != connected) {
 		// Clear the collection cache whenever we reconnect so we resend all the information!
 		clearBitSet(&MOD_LastCollected);
@@ -636,11 +918,18 @@ void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsan
 		MOD_LumGates[i] = lumGates[i];
 	}
 	for (int i = 0; i < LEVEL_COUNT; i++) {
-		strncpy(MOD_LevelSwapSource[i], levelSwapKeys[i], MAX_LENGTH - 1);
+		strncpy(MOD_LevelIds[i], levelIds[i], MAX_LENGTH - 1);
 	}
-	for (int i = 0; i < LEVEL_COUNT; i++) {
-		strncpy(MOD_LevelSwapTarget[i], levelSwapTargets[i], MAX_LENGTH - 1);
+	for (int i = 0; i < CHAIN_COUNT; i++) {
+		MOD_LevelChainsLengths[i] = chainLengths[i];
 	}
+	for (int i = 0; i < CHAIN_COUNT; i++) {
+		if (MOD_InitLevelChains) {
+			free(MOD_LevelChainContents[i]);
+		}
+		MOD_LevelChainContents[i] = chainContents[i];
+	}
+	MOD_InitLevelChains = TRUE;
 }
 
 /** Updates the current progression state. */
@@ -722,7 +1011,7 @@ void MOD_Print(char* text, ...) {
 #endif
 
 		// Print all messages to a log file
-		FILE* pFile = fopen("parent_log.txt", "a");
+		FILE* pFile = fopen("ap_log_console.txt", "a");
 		if (pFile != NULL) {
 			fprintf(pFile, szBuffer);
 			fprintf(pFile, "\n");

@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <thread>
 #include <windows.h>
+#include <algorithm>
 
 // Stores the ids of all super lums.
 const int COBD_KNOWLEDGE_ID = 1101;
@@ -28,7 +29,7 @@ int endGoal = 1;
 bool lumsanity = false;
 bool roomRandomisation = false;
 int lumGates[6] = {100, 300, 475, 550, 60, 450};
-std::unordered_map<std::string, std::string> levelSwaps;
+std::unordered_map<std::string, std::vector<std::string>> levelChains;
 std::string lastIp;
 bool connected = false;
 std::chrono::steady_clock::time_point connectStart;
@@ -220,8 +221,19 @@ void sendSettings(bool force) {
         oss << lumGates[i] << ",";
     }
 
-    for (const auto& pair : levelSwaps) {
-        oss << pair.first << "|" << pair.second << ";";
+    // Sort the level ids alphabetically so the game can just use indices
+    std::vector<std::string> keys;
+    keys.reserve(levelChains.size());
+    for (const auto& pair : levelChains) {
+        keys.push_back(pair.first);
+    }
+    std::sort(keys.begin(), keys.end());
+
+    for (const auto& key : keys) {
+        for (const auto second : levelChains[key]) {
+            oss << second << "|";
+        }
+        oss << ";";
     }
     instance->send(MESSAGE_TYPE_SETTINGS, oss.str());
 }
@@ -252,7 +264,7 @@ void handleReset() {
     lumGates[3] = 550;
     lumGates[4] = 60;
     lumGates[5] = 450;
-    levelSwaps.clear();
+    levelChains.clear();
     sendSettings(wasConnected);
 }
 
@@ -316,26 +328,37 @@ void handleLocation(int64_t id) {
     // We currently don't support checking off locations.
 }
 
-/** Handles level swap data being delivered. */
-void handleLevelSwaps(std::string data) {
+/** Handles level chain data being delivered. */
+void handleLevelChains(std::string data) {
     try {
         // Parses the level swaps from the archipelago input
-        levelSwaps.clear();
+        levelChains.clear();
         if (data.length() < 4) return;
         std::string inner = data.substr(1, data.length() - 3);
         std::stringstream stream(inner);
         std::string token;
-        while (std::getline(stream, token, ',')) {
+        bool first = true;
+        while (std::getline(stream, token, ']')) {
             size_t colonPos = token.find(":");
             if (colonPos == std::string::npos) continue;
-            std::string key = token.substr(0, colonPos);
+            std::string level = token.substr(0, colonPos);
             std::string value = token.substr(colonPos + 1);
-            levelSwaps[key.substr(1, key.length() - 2)] = value.substr(1, value.length() - 2);
+            std::vector<std::string> levels;
+
+            std::stringstream innerStream(value.substr(1, value.length() - 1));
+            std::string innerToken;
+            while (std::getline(innerStream, innerToken, ',')) {
+                levels.push_back(innerToken.substr(1, innerToken.length() - 2));
+            }
+
+            auto levelId = level.substr(first ? 1 : 2, first ? level.length() - 2 : level.length() - 3);
+            levelChains[levelId] = levels;
+            first = false;
         }
     } catch (const std::exception& e) {
-        instance->send(MESSAGE_TYPE_MESSAGE, "[handleLevelSwaps] Caught exception: " + std::string(e.what()));
+        instance->send(MESSAGE_TYPE_MESSAGE, "[handleLevelChains] Caught exception: " + std::string(e.what()));
     } catch (...) {
-        instance->send(MESSAGE_TYPE_MESSAGE, "[handleLevelSwaps] Caught an unknown exception!");
+        instance->send(MESSAGE_TYPE_MESSAGE, "[handleLevelChains] Caught an unknown exception!");
     }
 }
 
@@ -411,7 +434,7 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_SetItemRecvCallback(handleItem);
     AP_SetLocationCheckedCallback(handleLocation);
     AP_SetDeathLinkRecvCallback(handleDeathLink);
-    AP_RegisterSlotDataRawCallback("level_swaps", handleLevelSwaps);
+    AP_RegisterSlotDataRawCallback("level_chains", handleLevelChains);
     AP_RegisterSlotDataRawCallback("lum_gates", handleLumGates);
     AP_RegisterSlotDataRawCallback("death_link", handleDeathLinkEnabled);
     AP_RegisterSlotDataRawCallback("end_goal", handleEndGoal);

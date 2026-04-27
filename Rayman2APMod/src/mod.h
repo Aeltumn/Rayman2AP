@@ -7,12 +7,17 @@ int compareStringCaseInsensitive(char const* a, char const* b);
 
 void MOD_EngineTick();
 void MOD_Init();
+
+BOOL MOD_ProgressLevelChainAndIncrement(int increment);
+BOOL MOD_ProgressLevelChain();
+void MOD_EnterLevelChain(int chainId);
+void MOD_ExitChain(ACP_tdxBool bSaveGame);
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame);
 
 void MOD_Print(char*, ...);
 void MOD_ShowScreenText(char*, ...);
 void MOD_Main();
-void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, int* lumGates, char** levelSwapKeys, char** levelSwapTargets);
+void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, int* lumGates, char** levelIds, int* chainLengths, int** chainContents);
 void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, BOOL knowledge);
 void MOD_TriggerDeath();
 BOOL MOD_HasUnlockedPirateShip();

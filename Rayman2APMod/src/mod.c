@@ -78,6 +78,14 @@ BOOL MOD_InMenhirHills = FALSE;
 BOOL MOD_HadElixirPreviously = FALSE;
 BOOL MOD_SentKnowledgeOfCOBD = FALSE;
 
+// While sending you back to Marshes we lie about having finshed COBD but we need to put things back in place after
+BOOL MOD_InMarshes = FALSE;
+BOOL MOD_HadFinishedCOBDPreviously = FALSE;
+
+// When playing The Canopy we have to hide the portal otherwise Globox thinks he's allowed outside
+BOOL MOD_InCanopy = FALSE;
+BOOL MOD_HasSavedGloboxPreviously = FALSE;
+
 // Level chain info
 char MOD_LevelIds[LEVEL_COUNT][MAX_LENGTH];
 int MOD_LevelChainsLengths[CHAIN_COUNT];
@@ -148,8 +156,8 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 		MOD_Print("Progressing through chain %d, level is %d out of %d", chainId, currentLevel, chainLength);
 
 		if (currentLevel < 0 || currentLevel >= chainLength) {
-			// We can't progress past the end of the chain!
-			return;
+			// If you finish the side temple or revisit we have to move you back to where you were!
+			MOD_ExitChain(FALSE);
 		} else {
 			// Find which level ID this is
 			int levelId = MOD_LevelChainContents[chainId][currentLevel];
@@ -162,7 +170,37 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 				// 70 is cask_10 which makes it use the right entrance!
 				GAM_g_stEngineStructure->ucPreviousLevel = 70;
 			}
-			MOD_Print("Due to level chain we're entering %s", levelName);
+
+			// Before moving into The Canopy we need to ensure Globox is there!
+			// 979 is portal but also whether globox is present in the level
+			if (compareStringCaseInsensitive(levelName, "glob_10") == 0) {
+				if (!MOD_InCanopy) {
+					HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+					if (pGlobal) {
+						// DSG 957 stores if you opened the gate at the end of Canopy #2, if you
+						// have that you have beat this level before and we don't want to repeat the sequence.
+						MOD_HasSavedGloboxPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 979);
+						BOOL FinishedCanopy = AI_fn_bGetBooleanInArray(pGlobal, 42, 957);
+						AI_fn_bSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
+					}
+					MOD_InCanopy = TRUE;
+				}
+			}
+			if (compareStringCaseInsensitive(levelName, "glob_20") == 0) {
+				if (!MOD_InCanopy) {
+					HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+					if (pGlobal) {
+						// DSG 873 stores if you freed the teensie at the end of the level, if you
+						// have that you have beat this level before and we don't want to repeat the sequence.
+						MOD_HasSavedGloboxPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 979);
+						BOOL FinishedCanopy = AI_fn_bGetBooleanInArray(pGlobal, 42, 873);
+						AI_fn_bSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
+					}
+					MOD_InCanopy = TRUE;
+				}
+			}
+				 
+			// Actually enter the level!
 			GAM_fn_vAskToChangeLevel(levelName, FALSE);
 
 			// If we enter a walk level or COBD we spawn their portal which makes them
@@ -329,8 +367,10 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 
 			// This triggers the cutscene granting the Elixir of Life after re-entering Ski_10!
 			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-			if (pGlobal) {
+			if (pGlobal && !MOD_InMarshes) {
+				MOD_HadFinishedCOBDPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1120);
 				AI_fn_bSetBooleanInArray(pGlobal, 42, 1120, TRUE);
+				MOD_InMarshes = TRUE;
 			}
 		} else if (chainId == CHAIN_FAIRY_REVISIT) {
 			structure->ucPreviousLevel = 11;
@@ -360,6 +400,23 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// Re-check for the COBD knowledge & treasure ending check on level switch
 	MOD_SentKnowledgeOfCOBD = FALSE;
 	MOD_TreasureComplete = FALSE;
+
+	// When changing levels we return temporary overrides for DSG variables that we wanted
+	// to last for just one level!
+	if (MOD_InMarshes) {
+		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+		if (pGlobal) {
+			AI_fn_bSetBooleanInArray(pGlobal, 42, 1120, MOD_HadFinishedCOBDPreviously);
+		}
+		MOD_InMarshes = FALSE;
+	}
+	if (MOD_InCanopy) {
+		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+		if (pGlobal) {
+			AI_fn_bSetBooleanInArray(pGlobal, 42, 979, MOD_HasSavedGloboxPreviously);
+		}
+		MOD_InCanopy = FALSE;
+	}
 
 	// In dev mode print which locations we switch to
 	if (MOD_DevMode) {

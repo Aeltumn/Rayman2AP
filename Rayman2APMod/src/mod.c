@@ -145,6 +145,7 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 
 		// Save the new index on this chain
 		MOD_LevelChainActive[chainId] = currentLevel;
+		MOD_Print("Progressing through chain %d, level is %d out of %d", chainId, currentLevel, chainLength);
 
 		if (currentLevel < 0 || currentLevel >= chainLength) {
 			// This should not normally happen, it's more of a fallback if 
@@ -158,9 +159,23 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 			// Learn_32 is the internal ID for the fairy glade revisit!
 			if (compareStringCaseInsensitive(levelName, "Learn_32") == 0) {
 				levelName = "Learn_31";
-				GAM_g_stEngineStructure->ucExitIdToQuitPrevLevel = 1;
+
+				// 70 is cask_10 which makes it use the right entrance!
+				GAM_g_stEngineStructure->ucPreviousLevel = 70;
 			}
+			MOD_Print("Due to level chain we're entering %s", levelName);
 			GAM_fn_vAskToChangeLevel(levelName, FALSE);
+
+			// If we enter a walk level we spawn their portal which makes them
+			// accessible from the HOF and remove the lum check.
+			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+			if (pGlobal) {
+				if (chainId == CHAIN_WALK_LIFE) {
+					AI_fn_bSetBooleanInArray(pGlobal, 42, 969, TRUE);
+				} else if (chainId == CHAIN_WALK_POWER) {
+					AI_fn_bSetBooleanInArray(pGlobal, 42, 992, TRUE);
+				}
+			}
 		}
 	}
 	return false;
@@ -173,12 +188,14 @@ BOOL MOD_ProgressLevelChain() {
 void MOD_EnterLevelChain(int chainId) {
 	if (MOD_InLevelChain) {
 		// Store on the new chain that we were previously in the previous one.
-		MOD_LevelChainLast[chainId] = MOD_LevelChainCurrent;
+		MOD_Print("We were in %d before!", MOD_LevelChainCurrent);
+		MOD_LevelChainLast[chainId] = MOD_LevelChainCurrent + 1;
 	}
 
 	// Mark down that we've entered a level chain, then determine what the first level is in this chain!
 	MOD_InLevelChain = TRUE;
 	MOD_LevelChainCurrent = chainId;
+	MOD_Print("Entering chain %d", chainId);
 	MOD_ProgressLevelChainAndIncrement(0);
 }
 
@@ -191,13 +208,13 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 
 	// Read data and then immediately void it as we exit
 	int chainId = MOD_LevelChainCurrent;
-	int lastChain = MOD_LevelChainLast[chainId];
+	int lastChain = MOD_LevelChainLast[chainId] - 1;
 	int currentLevel = MOD_LevelChainActive[chainId];
 	int chainLength = MOD_LevelChainsLengths[chainId];
 
 	MOD_LevelChainCurrent = -1;
 	MOD_InLevelChain = FALSE;
-	MOD_LevelChainLast[chainId] = -1;
+	MOD_LevelChainLast[chainId] = 0;
 	MOD_LevelChainActive[chainId] = 0;
 
 	// Determine if this chain was completed and we should unlock the next level!
@@ -208,14 +225,14 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 		completedChain = FALSE;
 	}
 
+	MOD_Print("Exiting chain %d, last is %d, completed %d (%d out of %d)", chainId, lastChain, completedChain, currentLevel, chainLength);
+
 	// If you didn't complete the chain, didn't have a last chain, or it's the walks you return to the hall of doors instead of
 	// your previous level you were in.
-	if (!completedChain || lastChain == -1 || lastChain == CHAIN_WALK_LIFE || lastChain == CHAIN_WALK_POWER) {
+	if (!completedChain || lastChain == -1 || chainId == CHAIN_WALK_LIFE || chainId == CHAIN_WALK_POWER) {
 		// If there isn't a last change or the chain wasn't completed, let you go to the hall of doors with a specific exit!
 		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 		if (completedChain) {
-			structure->ucExitIdToQuitPrevLevel = 1;
-
 			// The ids of exit level are different if you completed a level!
 			// (These ids are in STH_teleport_GEN_STH.
 			if (chainId == CHAIN_FAIRY_GLADE) {
@@ -246,7 +263,7 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 				structure->ucPreviousLevel = 41;
 			} else if (chainId == CHAIN_SANC_ROCK) {
 				structure->ucPreviousLevel = 103;
-			} else if (chainId == CHAIN_WALK_POWER) {
+			} else if (chainId == CHAIN_WALK_POWER) { 
 				structure->ucPreviousLevel = 115;
 			} else if (chainId == CHAIN_BENEATH) {
 				structure->ucPreviousLevel = 230;
@@ -301,8 +318,19 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 
 		GAM_fn_vAskToChangeLevel("mapmonde", bSaveGame);
 	} else {
-		// If there was a specifc chain you have to return there from the secondary exit!
-		GAM_g_stEngineStructure->ucExitIdToQuitPrevLevel = 1;
+		// If there was a specifc chain we are exiting we make sure to
+		// set the level ID properly so the right exit is used!
+		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+		structure->ucExitIdToQuitPrevLevel = 1;
+		if (chainId == CHAIN_COBD) {
+			structure->ucPreviousLevel = 137;
+		} else if (chainId == CHAIN_FAIRY_REVISIT) {
+			structure->ucPreviousLevel = 11;
+		} else if (chainId == CHAIN_SIDE_TEMPLE) {
+			structure->ucPreviousLevel = 190;
+		}
+
+		MOD_Print("Going back to chain %d", lastChain);
 		MOD_EnterLevelChain(lastChain);
 	}
 }
@@ -327,7 +355,6 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 	// In dev mode print which locations we switch to
 	if (MOD_DevMode) {
-		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 		MOD_PrintConsolePlusScreen("Changing level to %s while previous level is %d with exit %d", szLevelName, structure->ucPreviousLevel, structure->ucExitIdToQuitPrevLevel);
 	}
 
@@ -356,7 +383,6 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
 		if (MOD_Masks < 4 && structure->ucPreviousLevel == 240) {
 			structure->ucPreviousLevel = 140;
-			structure->ucExitIdToQuitPrevLevel = 0;
 		}
 	}
 
@@ -375,8 +401,8 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				MOD_EnterLevelChain(CHAIN_FAIRY_GLADE);
 				return;
 			} else if (compareStringCaseInsensitive(szLevelName, "learn_31") == 0) {
-				if (structure->ucExitIdToQuitPrevLevel == 1) {
-					// If the exit id is 1 this is the revisit from Echoing Caves!
+				if (structure->ucPreviousLevel == 70) {
+					// If the previous level is 70 this is the revisit from Echoing Caves!
 					MOD_EnterLevelChain(CHAIN_FAIRY_REVISIT);
 					return;
 				} else {

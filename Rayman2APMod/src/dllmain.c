@@ -44,6 +44,7 @@
 	44 (unsigned byte): Total lums in current level
 	45 (unsigned byte): Collected lums in current level
 	46 (unsigned byte): Collected cages for health increase
+	67 (int): Last level id in HOF
 
 	Usage notes:
 	42 should normally be set to contain the current state of the save file so we can generally safely reference against it.

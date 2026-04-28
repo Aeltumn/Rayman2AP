@@ -8,6 +8,8 @@ int compareStringCaseInsensitive(char const* a, char const* b);
 void MOD_EngineTick();
 void MOD_Init();
 
+void MOD_ClearLumGateOverrides();
+
 BOOL MOD_ProgressLevelChainAndIncrement(int increment);
 BOOL MOD_ProgressLevelChain();
 void MOD_EnterLevelChain(int chainId);
@@ -25,6 +27,6 @@ BOOL MOD_HasUnlockedPirateShip();
 BOOL MOD_GetDeathLink(BOOL ignoreOverride);
 void MOD_ToggleDeathLink();
 
-void AI_fn_bSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value);
+void AI_fn_vSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value);
 
 extern void MOD_InitCommands();

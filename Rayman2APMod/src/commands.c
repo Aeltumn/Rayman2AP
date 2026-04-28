@@ -116,7 +116,7 @@ void fn_vDsgCommand(int lNbArgs, char** d_szArgs) {
 		return;
 	}
 	if (setMode) {
-		AI_fn_bSetBooleanInArray(pGlobal, 42, var, realValue);
+		AI_fn_vSetBooleanInArray(pGlobal, 42, var, realValue);
 	} else {
 		MOD_Print("The value of DSG variable %d is: %s", var, AI_fn_bGetBooleanInArray(pGlobal, 42, var) ? "TRUE" : "FALSE");
 	}

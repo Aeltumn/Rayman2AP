@@ -99,7 +99,7 @@ int MOD_LevelChainLast[CHAIN_COUNT];
 int MOD_LevelChainCurrent = -1;
 
 // Store whether dev mode is enabled
-BOOL MOD_DevMode = TRUE;
+BOOL MOD_DevMode = FALSE;
 
 /** Compares to integers in an array. */
 static int cmpInt(const void* a, const void* b) {
@@ -142,6 +142,9 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 }
 
 BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
+	// When we exit the lum gate, restore the data again!
+	MOD_ClearLumGateOverrides();
+
 	// If we're in a level chain, continue it!
 	if (MOD_InLevelChain) {
 		// Determine the current level chain
@@ -153,11 +156,10 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 
 		// Save the new index on this chain
 		MOD_LevelChainActive[chainId] = currentLevel;
-		MOD_Print("Progressing through chain %d, level is %d out of %d", chainId, currentLevel, chainLength);
 
 		if (currentLevel < 0 || currentLevel >= chainLength) {
 			// If you finish the side temple or revisit we have to move you back to where you were!
-			MOD_ExitChain(FALSE);
+			MOD_ExitChain(TRUE);
 		} else {
 			// Find which level ID this is
 			int levelId = MOD_LevelChainContents[chainId][currentLevel];
@@ -171,50 +173,44 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 				GAM_g_stEngineStructure->ucPreviousLevel = 70;
 			}
 
-			// Before moving into The Canopy we need to ensure Globox is there!
-			// 979 is portal but also whether globox is present in the level
-			if (compareStringCaseInsensitive(levelName, "glob_10") == 0) {
-				if (!MOD_InCanopy) {
-					HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-					if (pGlobal) {
+			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+			if (pGlobal) {
+				// Before moving into The Canopy we need to ensure Globox is there!
+				// 979 is portal but also whether globox is present in the level
+				if (compareStringCaseInsensitive(levelName, "glob_10") == 0) {
+					if (!MOD_InCanopy) {
 						// DSG 957 stores if you opened the gate at the end of Canopy #2, if you
 						// have that you have beat this level before and we don't want to repeat the sequence.
 						MOD_HasSavedGloboxPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 979);
 						BOOL FinishedCanopy = AI_fn_bGetBooleanInArray(pGlobal, 42, 957);
-						AI_fn_bSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
+						AI_fn_vSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
+						MOD_InCanopy = TRUE;
 					}
-					MOD_InCanopy = TRUE;
 				}
-			}
-			if (compareStringCaseInsensitive(levelName, "glob_20") == 0) {
-				if (!MOD_InCanopy) {
-					HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-					if (pGlobal) {
+				if (compareStringCaseInsensitive(levelName, "glob_20") == 0) {
+					if (!MOD_InCanopy) {
 						// DSG 873 stores if you freed the teensie at the end of the level, if you
 						// have that you have beat this level before and we don't want to repeat the sequence.
 						MOD_HasSavedGloboxPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 979);
 						BOOL FinishedCanopy = AI_fn_bGetBooleanInArray(pGlobal, 42, 873);
-						AI_fn_bSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
+						AI_fn_vSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
+						MOD_InCanopy = TRUE;
 					}
-					MOD_InCanopy = TRUE;
 				}
-			}
-				 
-			// Actually enter the level!
-			GAM_fn_vAskToChangeLevel(levelName, FALSE);
 
-			// If we enter a walk level or COBD we spawn their portal which makes them
-			// accessible from the HOF and remove the lum check.
-			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-			if (pGlobal) {
+				// If we enter a walk level or COBD we spawn their portal which makes them
+				// accessible from the HOF and remove the lum check.
 				if (chainId == CHAIN_WALK_LIFE) {
-					AI_fn_bSetBooleanInArray(pGlobal, 42, 969, TRUE);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 969, TRUE);
 				} else if (chainId == CHAIN_WALK_POWER) {
-					AI_fn_bSetBooleanInArray(pGlobal, 42, 992, TRUE);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 992, TRUE);
 				} else if (chainId == CHAIN_COBD) {
-					AI_fn_bSetBooleanInArray(pGlobal, 42, 966, TRUE);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 966, TRUE);
 				}
 			}
+
+			// Actually enter the level!
+			GAM_fn_vAskToChangeLevel(levelName, TRUE);
 		}
 	}
 	return false;
@@ -227,14 +223,12 @@ BOOL MOD_ProgressLevelChain() {
 void MOD_EnterLevelChain(int chainId) {
 	if (MOD_InLevelChain) {
 		// Store on the new chain that we were previously in the previous one.
-		MOD_Print("We were in %d before!", MOD_LevelChainCurrent);
 		MOD_LevelChainLast[chainId] = MOD_LevelChainCurrent + 1;
 	}
 
 	// Mark down that we've entered a level chain, then determine what the first level is in this chain!
 	MOD_InLevelChain = TRUE;
 	MOD_LevelChainCurrent = chainId;
-	MOD_Print("Entering chain %d", chainId);
 	MOD_ProgressLevelChainAndIncrement(0);
 }
 
@@ -244,6 +238,9 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 		GAM_fn_vAskToChangeLevel("mapmonde", bSaveGame);
 		return;
 	}
+
+	// When we exit the lum gate, restore the data again!
+	MOD_ClearLumGateOverrides();
 
 	// Read data and then immediately void it as we exit
 	int chainId = MOD_LevelChainCurrent;
@@ -264,11 +261,50 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 		completedChain = FALSE;
 	}
 
-	MOD_Print("Exiting chain %d, last is %d, completed %d (%d out of %d)", chainId, lastChain, completedChain, currentLevel, chainLength);
-
 	// If you didn't complete the chain, didn't have a last chain, or it's the walks you return to the hall of doors instead of
 	// your previous level you were in.
 	if (!completedChain || lastChain == -1 || chainId == CHAIN_WALK_LIFE || chainId == CHAIN_WALK_POWER) {
+		int entryLevelId = -1;
+		if (chainId == CHAIN_FAIRY_GLADE) {
+			entryLevelId = 10;
+		} else if (chainId == CHAIN_MARSHES) {
+			entryLevelId = 25;
+		} else if (chainId == CHAIN_COBD) {
+			entryLevelId = 135;
+		} else if (chainId == CHAIN_BAYOU) {
+			entryLevelId = 15;
+		} else if (chainId == CHAIN_WALK_LIFE) {
+			entryLevelId = 20;
+		} else if (chainId == CHAIN_MENHIR) {
+			entryLevelId = 55;
+		} else if (chainId == CHAIN_SANC_WATER) {
+			entryLevelId = 160;
+		} else if (chainId == CHAIN_CANOPY) {
+			entryLevelId = 210;
+		} else if (chainId == CHAIN_WHALE) {
+			entryLevelId = 45;
+		} else if (chainId == CHAIN_SANC_STONE) {
+			entryLevelId = 195;
+		} else if (chainId == CHAIN_ECHOING) {
+			entryLevelId = 130;
+		} else if (chainId == CHAIN_PRECIPICE) {
+			entryLevelId = 80;
+		} else if (chainId == CHAIN_TOP) {
+			entryLevelId = 40;
+		} else if (chainId == CHAIN_SANC_ROCK) {
+			entryLevelId = 95;
+		} else if (chainId == CHAIN_WALK_POWER) {
+			entryLevelId = 115;
+		} else if (chainId == CHAIN_BENEATH) {
+			entryLevelId = 105;
+		} else if (chainId == CHAIN_TOMB) {
+			entryLevelId = 118;
+		} else if (chainId == CHAIN_IRON_MOUNT) {
+			entryLevelId = 12;
+		} else if (chainId == CHAIN_PRISON) {
+			entryLevelId = 140;
+		}
+
 		// If there isn't a last change or the chain wasn't completed, let you go to the hall of doors with a specific exit!
 		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 		if (completedChain) {
@@ -315,44 +351,17 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 				structure->ucPreviousLevel = 240;
 			}
 		} else {
-			if (chainId == CHAIN_FAIRY_GLADE) {
-				structure->ucPreviousLevel = 10;
-			} else if (chainId == CHAIN_MARSHES) {
-				structure->ucPreviousLevel = 25;
-			} else if (chainId == CHAIN_COBD) {
-				structure->ucPreviousLevel = 135;
-			} else if (chainId == CHAIN_BAYOU) {
-				structure->ucPreviousLevel = 15;
-			} else if (chainId == CHAIN_WALK_LIFE) {
-				structure->ucPreviousLevel = 20;
-			} else if (chainId == CHAIN_MENHIR) {
-				structure->ucPreviousLevel = 55;
-			} else if (chainId == CHAIN_SANC_WATER) {
-				structure->ucPreviousLevel = 160;
-			} else if (chainId == CHAIN_CANOPY) {
-				structure->ucPreviousLevel = 210;
-			} else if (chainId == CHAIN_WHALE) {
-				structure->ucPreviousLevel = 45;
-			} else if (chainId == CHAIN_SANC_STONE) {
-				structure->ucPreviousLevel = 195;
-			} else if (chainId == CHAIN_ECHOING) {
-				structure->ucPreviousLevel = 130;
-			} else if (chainId == CHAIN_PRECIPICE) {
-				structure->ucPreviousLevel = 80;
-			} else if (chainId == CHAIN_TOP) {
-				structure->ucPreviousLevel = 40;
-			} else if (chainId == CHAIN_SANC_ROCK) {
-				structure->ucPreviousLevel = 95;
-			} else if (chainId == CHAIN_WALK_POWER) {
-				structure->ucPreviousLevel = 115;
-			} else if (chainId == CHAIN_BENEATH) {
-				structure->ucPreviousLevel = 105;
-			} else if (chainId == CHAIN_TOMB) {
-				structure->ucPreviousLevel = 118;
-			} else if (chainId == CHAIN_IRON_MOUNT) {
-				structure->ucPreviousLevel = 12;
-			} else if (chainId == CHAIN_PRISON) {
-				structure->ucPreviousLevel = 140;
+			if (entryLevelId != -1) {
+				structure->ucPreviousLevel = entryLevelId;
+			}
+		}
+
+		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+		if (pGlobal) {
+			// Update the portal the player comes out of when reloading the save!
+			if (entryLevelId != -1) {
+				int level = entryLevelId;
+				AI_fn_bSetDsgVar(pGlobal, 67, &level);
 			}
 		}
 
@@ -369,7 +378,7 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 			if (pGlobal && !MOD_InMarshes) {
 				MOD_HadFinishedCOBDPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1120);
-				AI_fn_bSetBooleanInArray(pGlobal, 42, 1120, TRUE);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1120, TRUE);
 				MOD_InMarshes = TRUE;
 			}
 		} else if (chainId == CHAIN_FAIRY_REVISIT) {
@@ -378,7 +387,6 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 			structure->ucPreviousLevel = 190;
 		}
 
-		MOD_Print("Going back to chain %d", lastChain);
 		MOD_EnterLevelChain(lastChain);
 	}
 }
@@ -387,7 +395,7 @@ BOOL MOD_ReturnToPreviousChain(int ifChain, int thenChain) {
 	// If we're in a chain and it's the if chain then move into the then chain
 	// instead of progressing! This is used to cap off revisits.
 	if (MOD_InLevelChain && MOD_LevelChainCurrent == ifChain) {
-		MOD_ExitChain(FALSE);
+		MOD_ExitChain(TRUE);
 		return true;
 	}
 	return false;
@@ -396,6 +404,9 @@ BOOL MOD_ReturnToPreviousChain(int ifChain, int thenChain) {
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// Fetch the base game strucure as we'll have to modify it
 	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+
+	// When we exit the lum gate, restore the data again before we make any edits!
+	MOD_ClearLumGateOverrides();
 
 	// Re-check for the COBD knowledge & treasure ending check on level switch
 	MOD_SentKnowledgeOfCOBD = FALSE;
@@ -406,14 +417,14 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	if (MOD_InMarshes) {
 		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 		if (pGlobal) {
-			AI_fn_bSetBooleanInArray(pGlobal, 42, 1120, MOD_HadFinishedCOBDPreviously);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1120, MOD_HadFinishedCOBDPreviously);
 		}
 		MOD_InMarshes = FALSE;
 	}
 	if (MOD_InCanopy) {
 		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 		if (pGlobal) {
-			AI_fn_bSetBooleanInArray(pGlobal, 42, 979, MOD_HasSavedGloboxPreviously);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 979, MOD_HasSavedGloboxPreviously);
 		}
 		MOD_InCanopy = FALSE;
 	}
@@ -678,7 +689,7 @@ BOOL AI_fn_bSetDsgVar(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarI
 }
 
 /** Sets the value of the boolean array. */
-void AI_fn_bSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value) {
+void AI_fn_vSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value) {
 	AI_tdstArray* p_stArray;
 	AI_fn_bGetDsgVar(p_stSuperObj, ucDsgVarId, NULL, &p_stArray);
 
@@ -698,13 +709,16 @@ void AI_fn_bSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char u
 }
 
 /** Clears lum gate overrides. */
-void clearLumGateOverrides() {
+void MOD_ClearLumGateOverrides() {
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal && MOD_InLumGate) {
 		MOD_InLumGate = false;
 		MOD_CurrentLumGate = -1;
 		for (int i = 1; i <= 1400; i++) {
-			AI_fn_bSetBooleanInArray(pGlobal, 42, i, getBitSet(&MOD_RealCollected, i));
+			// Only update lumlike values!
+			if (isLumLike(i)) {
+				AI_fn_vSetBooleanInArray(pGlobal, 42, i, getBitSet(&MOD_RealCollected, i));
+			}
 		}
 	}
 }
@@ -716,7 +730,7 @@ void setLumGateOverride(int lumGateId) {
 	if (pGlobal && MOD_CurrentLumGate != lumGateId) {
 		if (MOD_InLumGate) {
 			// If we were already in a gate, clear overrides first before we re-apply!
-			clearLumGateOverrides();
+			MOD_ClearLumGateOverrides();
 		}
 
 		MOD_InLumGate = true;
@@ -737,12 +751,12 @@ void setLumGateOverride(int lumGateId) {
 		clearBitSet(&MOD_RealCollected);
 
 		for (int i = 1; i <= 1400; i++) {
-			// Copy out the data into the real collection
-			setBitSet(&MOD_RealCollected, i, AI_fn_bGetBooleanInArray(pGlobal, 42, i));
-
-			// Update the data to set the correct lum count we want
 			if (isLumLike(i)) {
-				AI_fn_bSetBooleanInArray(pGlobal, 42, i, givenLums++ < finalLums);
+				// Copy out the data into the real collection
+				setBitSet(&MOD_RealCollected, i, AI_fn_bGetBooleanInArray(pGlobal, 42, i));
+
+				// Update the data to set the correct lum count we want
+				AI_fn_vSetBooleanInArray(pGlobal, 42, i, givenLums++ < finalLums);
 			}
 		}
 	}
@@ -752,10 +766,8 @@ void setLumGateOverride(int lumGateId) {
 void MOD_CheckVariables() {
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
-		// If we're in the lum gate level we customise everything!
-		const char* szLevelName = GAM_fn_p_szGetLevelName();
-
 		// If we're in a lum gate, override the lum gate values.
+		const char* szLevelName = GAM_fn_p_szGetLevelName();
 		if (compareStringCaseInsensitive(szLevelName, "Nego_10") == 0) {
 			if (!MOD_InLumGate) {
 				HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("NIK_DS1_ZyvaEnvoieTesLums");
@@ -812,12 +824,15 @@ void MOD_CheckVariables() {
 			}
 		}
 
+		// When we exit the lum gate, restore the data again!
+		MOD_ClearLumGateOverrides();
+
 		// If you are in the Menhir Hills 2 we have to fake you having the Elixir, otherwise
 		// we leave it default so we don't despawn Jano incorrectly.
 		if (compareStringCaseInsensitive(szLevelName, "Rodeo_40") == 0 || compareStringCaseInsensitive(szLevelName, "rodeo_40$01") == 0) {
 			if (!MOD_InMenhirHills) {
 				MOD_HadElixirPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1123);
-				AI_fn_bSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
 				MOD_InMenhirHills = TRUE;
 			}
 
@@ -842,13 +857,10 @@ void MOD_CheckVariables() {
 			}
 		} else {
 			if (MOD_InMenhirHills) {
-				AI_fn_bSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
 				MOD_InMenhirHills = FALSE;
 			}
 		}
-
-		// When we exit the lum gate, restore the data again!
-		clearLumGateOverrides();
 
 		// Check if any items have been collected
 		for (int i = 1; i <= 1400; i++) {
@@ -922,21 +934,21 @@ void MOD_CheckVariables() {
 
 		// Set the silver lum states based on the amount of upgrades
 		if (MOD_Upgrades == 0) {
-			AI_fn_bSetBooleanInArray(pGlobal, 42, 1095, FALSE);
-			AI_fn_bSetBooleanInArray(pGlobal, 42, 1143, FALSE);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, FALSE);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, FALSE);
 		} else if (MOD_Upgrades == 1) {
-			AI_fn_bSetBooleanInArray(pGlobal, 42, 1095, TRUE);
-			AI_fn_bSetBooleanInArray(pGlobal, 42, 1143, FALSE);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, FALSE);
 		} else {
-			AI_fn_bSetBooleanInArray(pGlobal, 42, 1095, TRUE);
-			AI_fn_bSetBooleanInArray(pGlobal, 42, 1143, TRUE);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, TRUE);
 		}
 
 		// Set whether you have knowledge of the cave of bad dreams always
-		AI_fn_bSetBooleanInArray(pGlobal, 42, 1101, MOD_Knowledge);
+		AI_fn_vSetBooleanInArray(pGlobal, 42, 1101, MOD_Knowledge);
 
 		// Show the final portal if and only if you have enough masks!
-		AI_fn_bSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, MOD_Masks >= 4);
+		AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, MOD_Masks >= 4);
 	}
 }
 

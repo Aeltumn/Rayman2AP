@@ -186,7 +186,7 @@ void MOD_HandleMessage(int type, const char* data) {
             GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
             structure->ucPreviousLevel = 240;
             structure->ucExitIdToQuitPrevLevel = 1;
-            GAM_fn_vAskToChangeLevel("mapmonde", false);
+            GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
         }
 
         // Inform the player that they can now access the final portal!

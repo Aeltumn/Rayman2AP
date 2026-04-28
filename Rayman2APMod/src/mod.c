@@ -148,9 +148,8 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 		MOD_Print("Progressing through chain %d, level is %d out of %d", chainId, currentLevel, chainLength);
 
 		if (currentLevel < 0 || currentLevel >= chainLength) {
-			// This should not normally happen, it's more of a fallback if 
-			// we somehow get stuck!
-			MOD_ExitChain(FALSE);
+			// We can't progress past the end of the chain!
+			return;
 		} else {
 			// Find which level ID this is
 			int levelId = MOD_LevelChainContents[chainId][currentLevel];
@@ -166,7 +165,7 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 			MOD_Print("Due to level chain we're entering %s", levelName);
 			GAM_fn_vAskToChangeLevel(levelName, FALSE);
 
-			// If we enter a walk level we spawn their portal which makes them
+			// If we enter a walk level or COBD we spawn their portal which makes them
 			// accessible from the HOF and remove the lum check.
 			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 			if (pGlobal) {
@@ -174,6 +173,8 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 					AI_fn_bSetBooleanInArray(pGlobal, 42, 969, TRUE);
 				} else if (chainId == CHAIN_WALK_POWER) {
 					AI_fn_bSetBooleanInArray(pGlobal, 42, 992, TRUE);
+				} else if (chainId == CHAIN_COBD) {
+					AI_fn_bSetBooleanInArray(pGlobal, 42, 966, TRUE);
 				}
 			}
 		}
@@ -235,6 +236,7 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 		if (completedChain) {
 			// The ids of exit level are different if you completed a level!
 			// (These ids are in STH_teleport_GEN_STH.
+			structure->ucExitIdToQuitPrevLevel = 1;
 			if (chainId == CHAIN_FAIRY_GLADE) {
 				structure->ucPreviousLevel = 220;
 			} else if (chainId == CHAIN_MARSHES) {
@@ -254,7 +256,7 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 			} else if (chainId == CHAIN_WHALE) {
 				structure->ucPreviousLevel = 50;
 			} else if (chainId == CHAIN_SANC_STONE) {
-				structure->ucPreviousLevel = 190;
+				structure->ucPreviousLevel = 90;
 			} else if (chainId == CHAIN_ECHOING) {
 				structure->ucPreviousLevel = 75;
 			} else if (chainId == CHAIN_PRECIPICE) {
@@ -324,6 +326,12 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 		structure->ucExitIdToQuitPrevLevel = 1;
 		if (chainId == CHAIN_COBD) {
 			structure->ucPreviousLevel = 137;
+
+			// This triggers the cutscene granting the Elixir of Life after re-entering Ski_10!
+			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+			if (pGlobal) {
+				AI_fn_bSetBooleanInArray(pGlobal, 42, 1120, TRUE);
+			}
 		} else if (chainId == CHAIN_FAIRY_REVISIT) {
 			structure->ucPreviousLevel = 11;
 		} else if (chainId == CHAIN_SIDE_TEMPLE) {
@@ -800,13 +808,6 @@ void MOD_CheckVariables() {
 					// When connected in non-lumsanity update the lum counter immediately for any non-super lums gathered!
 					if (MOD_Connected && !MOD_Lumsanity && isLumLike(i) && !isSuperLum(i)) {
 						MOD_Lums++;
-					}
-
-					// This is the ID for being kicked out of the Cave of Bad Dreams after winning, which we treat as
-					// obtaining the elixir which gets skipped if there's room randomisation as you get the elixir
-					// in a cutscene in the Marshes, which gets ignored here.
-					if (i == 1120) {
-						i = 1123;
 					}
 
 					// If you rescue Ly we change it into the first silver lum check so it fires even if you already have

@@ -10,6 +10,9 @@ void MOD_Init();
 
 void MOD_ClearLumGateOverrides();
 
+BOOL MOD_InDevMode();
+
+BOOL MOD_CanProgressChain();
 BOOL MOD_ProgressLevelChainAndIncrement(int increment);
 BOOL MOD_ProgressLevelChain();
 void MOD_EnterLevelChain(int chainId);

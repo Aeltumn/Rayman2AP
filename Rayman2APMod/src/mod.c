@@ -141,6 +141,22 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 	return (long)height + TEXT_MARGIN + TEXT_MARGIN;
 }
 
+BOOL MOD_InDevMode() {
+	return MOD_DevMode;
+}
+
+BOOL MOD_CanProgressChain() {
+	// Returns whether there is a next level in the chain to progress
+	// to, or if the level has to be manually exited.
+	if (MOD_InLevelChain) {
+		int chainId = MOD_LevelChainCurrent;
+		int currentLevel = MOD_LevelChainActive[chainId] + 1;
+		int chainLength = MOD_LevelChainsLengths[chainId];
+		return currentLevel > 0 && currentLevel < chainLength;
+	}
+	return false;
+}
+
 BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 	// When we exit the lum gate, restore the data again!
 	MOD_ClearLumGateOverrides();

@@ -12,8 +12,11 @@ void MOD_InitCommands(void) {
 	fn_vRegisterCommand("ap", fn_vApCmd);
 	fn_vRegisterCommand("deathlink", fn_vDeathlinkCommand);
 	fn_vRegisterCommand("say", fn_vSayCommand);
-	fn_vRegisterCommand("dsg", fn_vDsgCommand);
-	fn_vRegisterCommand("progress", fn_vProgress);
+
+	if (MOD_InDevMode()) {
+		fn_vRegisterCommand("dsg", fn_vDsgCommand);
+		fn_vRegisterCommand("progress", fn_vProgress);
+	}
 }
 
 /** Reconstructs input arguments. */
@@ -124,5 +127,7 @@ void fn_vDsgCommand(int lNbArgs, char** d_szArgs) {
 
 /** Sends you to the hall of doors. */
 void fn_vProgress(int lNbArgs, char** d_szArgs) {
-	MOD_ProgressLevelChain();
+	if (MOD_CanProgressChain()) {
+		MOD_ProgressLevelChain();
+	}
 }

@@ -1011,6 +1011,11 @@ void MOD_CheckVariables() {
 		if (MOD_InMenhirHills) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
 		}
+
+		// If you're in the menu, quit any chains!
+		if (MOD_InLevelChain && compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+			MOD_ExitChain(TRUE);
+		}
 	}
 }
 

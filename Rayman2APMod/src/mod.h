@@ -3,6 +3,15 @@
 #include "connector.h"
 #include "bitset.h"
 
+typedef struct LevelInfo {
+	char name[MAX_LEVEL_NAME_LENGTH];
+	int lums;
+	int lumsMax;
+	int cages;
+	int cagesMax;
+	int depth;
+} LevelInfo;
+
 int compareStringCaseInsensitive(char const* a, char const* b);
 
 void MOD_EngineTick();

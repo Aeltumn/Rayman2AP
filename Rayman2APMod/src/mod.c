@@ -686,6 +686,40 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 }
 
+/** Counts a series of lum collectables. */
+int CountCollectibleLums(int* values, int* superValues, int superLums, int count) {
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+	int total = 0;
+	if (pGlobal) {
+		for (int i = 0; i < (count - superLums * 5); i++) {
+			if (AI_fn_bGetBooleanInArray(pGlobal, 42, values[i])) {
+				total++;
+			}
+		}
+		for (int i = 0; i < superLums; i++) {
+			if (AI_fn_bGetBooleanInArray(pGlobal, 42, superValues[i])) {
+				total += 5;
+			}
+		}
+	}
+	return total;
+}
+
+/** Counts a series of cage collectables. */
+int CountCollectibleCages(int* values, int count) {
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+	int total = 0;
+	if (pGlobal) {
+		for (int i = 0; i < count; i++) {
+			if (AI_fn_bGetBooleanInArray(pGlobal, 42, values[i])) {
+				total++;
+			}
+		}
+
+	}
+	return total;
+}
+
 /** Sets the value of a DSG variable. */
 BOOL AI_fn_bSetDsgVar(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, void** p_pValue_In) {
 	if (!HIE_M_bSuperObjectIsActor(p_stSuperObj))
@@ -1197,6 +1231,87 @@ void MOD_ToggleDeathLink() {
 	}
 }
 
+/** Crawls through the level chains and appends to the output list. */
+void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length, int depth) {
+	// Determine the level to place here
+	int chainLength = MOD_LevelChainsLengths[chainId];
+	if (currentLevel < 0 || currentLevel >= chainLength) return;
+
+	// Extend the length and array with this new level
+	*length = *length + 1;
+	LevelInfo* tmp = realloc(*info, *length * sizeof(LevelInfo));
+	if (!tmp) return;
+	*info = tmp;
+
+	// Prepare the level data for this level
+	LevelInfo* level = &(*info)[*length - 1];
+	memset(level, 0, sizeof(LevelInfo));
+
+	level->depth = depth;
+
+	// Determine the level in this spot
+	int levelId = MOD_LevelChainContents[chainId][currentLevel];
+	char* levelName = MOD_LevelIds[levelId];
+
+	// Determine the lums/cages of this level
+	if (compareStringCaseInsensitive(levelName, "Learn_30") == 0) {
+		strcpy(level->name, "Fairy Glade 1");
+		level->lumsMax = 9;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 6, 7, 8, 12 }, (int[]) { 1 }, 1, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 842, 843 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "learn_31") == 0) {
+		strcpy(level->name, "Fairy Glade 2");
+		level->lumsMax = 1;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 11 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "Learn_32") == 0) {
+		strcpy(level->name, "Fairy Glade - Revisit");
+		level->lumsMax = 2;
+		level->cagesMax = 1;
+		level->lums = CountCollectibleLums((int[]) { 9, 10 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 844 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "bast_20") == 0) {
+		strcpy(level->name, "Fairy Glade 3");
+		level->lumsMax = 17;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 27, 26, 25, 29, 28, 23, 24 }, (int[]) { 13, 18 }, 2, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 845, 846 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "bast_22") == 0) {
+		strcpy(level->name, "Fairy Glade 4");
+		level->lumsMax = 4;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 31, 30, 32, 33 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "learn_60") == 0) {
+		strcpy(level->name, "Fairy Glade 5");
+		level->lumsMax = 17;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 34, 35, 36, 37, 48, 49, 50, 38, 42, 45, 44, 43, 39, 46, 47, 41, 40 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 847, 848 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "cask_10") == 0) {
+		strcpy(level->name, "Echoing Caves 1");
+		level->lumsMax = 15;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 421, 422, 423, 430, 431, 432, 428, 429, 424, 425, 426, 427, 433, 434, 435 }, (int[]) {0}, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) {887, 888}, level->cagesMax);
+	} else {
+		strcpy(level->name, levelName);
+		level->lumsMax = 0;
+		level->cagesMax = 0;
+	}
+
+	// Crawl for the next level, if this is Sanc of Stone and Fire or Echoing Caves we include the revisit area!
+	// The other three have their own portals which show their contents.
+	if (compareStringCaseInsensitive(levelName, "cask_10") == 0) {
+		CrawlLevelInfo(CHAIN_FAIRY_REVISIT, 0, info, length, depth + 1);
+	} else if (compareStringCaseInsensitive(levelName, "plum_00") == 0) {
+		CrawlLevelInfo(CHAIN_SIDE_TEMPLE, 0, info, length, depth + 1);
+	}
+	CrawlLevelInfo(chainId, currentLevel + 1, info, length, depth);
+}
+
 /** Draws text to the screen with the recent screen text and progression statistics. */
 void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 	// Determine the current time
@@ -1225,22 +1340,170 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 		SPTXT_vPrint(screen);
 	}
 
-	// Draw the current Archipelago progression to the bottom in the hall of doors or on the pause screen
-	const char* szLevelName = GAM_fn_p_szGetLevelName();
-	if (MOD_Connected && (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 || *AI_g_bInGameMenu)) {
-		pInfo->xSize = 6;
-		pInfo->bRightAlign = TRUE;
-		long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
+	if (MOD_Connected) {
+		// Draw the current Archipelago progression to the bottom in the hall of doors or on the pause screen
+		const char* szLevelName = GAM_fn_p_szGetLevelName();
+		const auto inMapMonde = compareStringCaseInsensitive(szLevelName, "mapmonde") == 0;
+		if (inMapMonde || *AI_g_bInGameMenu) {
+			pInfo->xSize = 6;
+			pInfo->bRightAlign = TRUE;
+			long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
 
-		pInfo->X = 995;
-		pInfo->Y = 990 - 4 * lineHeight;
-		SPTXT_vPrintFmtLine("/o200:Archipelago Received");
-		pInfo->Y = 990 - 3 * lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_Lums, MOD_Cages);
-		pInfo->Y = 990 - 2 * lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Power /o0:%d of 2", MOD_Masks, MOD_Upgrades);
-		pInfo->Y = 990 - lineHeight;
-		SPTXT_vPrintFmtLine("/o400:Elixir %s/o400:, Knowledge %s", MOD_Elixir ? "/o0:Yes" : "/o200:No", MOD_Knowledge ? "/o0:Yes" : "/o200:No");
+			pInfo->X = 995;
+			pInfo->Y = 990 - 4 * lineHeight;
+			SPTXT_vPrintFmtLine("/o200:Archipelago Received");
+			SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_Lums, MOD_Cages);
+			SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Power /o0:%d of 2", MOD_Masks, MOD_Upgrades);
+			SPTXT_vPrintFmtLine("/o400:Elixir %s/o400:, Knowledge %s", MOD_Elixir ? "/o0:Yes" : "/o200:No", MOD_Knowledge ? "/o0:Yes" : "/o200:No");
+		}
+
+		// When hovering over a portal in mapmonde we show information on the level chain inside
+		if (inMapMonde) {
+			HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("YAM_Lums_I1");
+			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+			if (pLums && pGlobal) {
+				// This variable stores the fade time on the UI box, so 255
+				// means that we've been at a portal for enough time to show
+				// the UI.
+				int* p_stInt;
+				AI_fn_bGetDsgVar(pLums, 19, NULL, &p_stInt);
+				if (*p_stInt == 255) {
+					// Load the currently highlighted portal into a variable
+					HIE_tdstSuperObject** pPastille;
+					AI_fn_bGetDsgVar(pLums, 5, NULL, &pPastille);
+
+					if (*pPastille) {
+						// Dsg var 2 on portals stores their level offset relative to 960
+						int* p_stLevelId;
+						AI_fn_bGetDsgVar(*pPastille, 2, NULL, &p_stLevelId);
+
+						// Draw information based on the chain
+						int chainId = -1;
+						int nextLevelValue = 960;
+						int portal = 1;
+
+						// Determine which chain this is and what the next level is for checking if this was completed
+						if (*p_stLevelId == 1) {
+							chainId = CHAIN_FAIRY_GLADE;
+							nextLevelValue += 4;
+						} else if (*p_stLevelId == 4) {
+							chainId = CHAIN_MARSHES;
+							nextLevelValue += 7;
+							portal = 2;
+						} else if (*p_stLevelId == 6) {
+							chainId = CHAIN_COBD;
+							nextLevelValue = 1123; // We show info when you have the Elixir of Life!
+							portal = 3;
+						} else if (*p_stLevelId == 7) {
+							chainId = CHAIN_BAYOU;
+							nextLevelValue += 10;
+							portal = 4;
+						} else if (*p_stLevelId == 9) {
+							chainId = CHAIN_WALK_LIFE;
+							nextLevelValue += 0; // Walk is always visible!
+							portal = 5;
+						} else if (*p_stLevelId == 10) {
+							chainId = CHAIN_SANC_WATER;
+							nextLevelValue += 12;
+							portal = 6;
+						} else if (*p_stLevelId == 12) {
+							chainId = CHAIN_MENHIR;
+							nextLevelValue += 16;
+							portal = 7;
+						} else if (*p_stLevelId == 16) {
+							chainId = CHAIN_CANOPY;
+							nextLevelValue += 19;
+							portal = 8;
+						} else if (*p_stLevelId == 19) {
+							chainId = CHAIN_WHALE;
+							nextLevelValue += 21;
+							portal = 9;
+						} else if (*p_stLevelId == 21) {
+							chainId = CHAIN_SANC_STONE;
+							nextLevelValue += 15;
+							portal = 10;
+						} else if (*p_stLevelId == 15) {
+							chainId = CHAIN_ECHOING;
+							nextLevelValue += 25;
+							portal = 11;
+						} else if (*p_stLevelId == 25) {
+							chainId = CHAIN_PRECIPICE;
+							nextLevelValue += 28;
+							portal = 12;
+						} else if (*p_stLevelId == 28) {
+							chainId = CHAIN_TOP;
+							nextLevelValue += 30;
+							portal = 13;
+						} else if (*p_stLevelId == 32) {
+							chainId = CHAIN_WALK_POWER;
+							nextLevelValue += 0; // Walk is always visible!
+							portal = 14;
+						} else if (*p_stLevelId == 30) {
+							chainId = CHAIN_SANC_ROCK;
+							nextLevelValue += 33;
+							portal = 15;
+						} else if (*p_stLevelId == 33) {
+							chainId = CHAIN_BENEATH;
+							nextLevelValue += 47;
+							portal = 16;
+						} else if (*p_stLevelId == 47) {
+							chainId = CHAIN_TOMB;
+							nextLevelValue += 40;
+							portal = 17;
+						} else if (*p_stLevelId == 40) {
+							chainId = CHAIN_IRON_MOUNT;
+							nextLevelValue += 42;
+							portal = 18;
+						} else if (*p_stLevelId == 42) {
+							chainId = CHAIN_PRISON;
+							nextLevelValue += 0; // Prison Ship is always visible because we have no reliable checks and it's the last level anyway so you can process of elimination it.
+							portal = 19;
+						}
+
+						if (chainId != -1) {
+							pInfo->xSize = 7;
+							pInfo->bRightAlign = FALSE;
+							pInfo->X = 15;
+
+							long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
+							ACP_tdxBool isCompleted = AI_fn_bGetBooleanInArray(pGlobal, 42, nextLevelValue);
+
+							if (!isCompleted) {
+								int lines = 1;
+								pInfo->Y = 550 - lines * lineHeight;
+								SPTXT_vPrintFmtLine("/o200:Unlock the next level to reveal rooms!");
+							} else {
+								// Determine the level contents!
+								LevelInfo* levelInfo = NULL;
+								int length = 0;
+								CrawlLevelInfo(chainId, 0, &levelInfo, &length, 0);
+
+								// Draw the level info in a list, start with a header showing portal number and room count
+								long spacer = lineHeight - 2;
+								pInfo->Y = 320;
+								SPTXT_vPrintFmtLine("/o200:Portal nr. %d", portal);
+								pInfo->X = 22;
+								SPTXT_vPrintFmtLine("/o0:%d rooms", length);
+								pInfo->Y = pInfo->Y + spacer;
+
+								for (int i = 0; i < length; i++) {
+									LevelInfo info = levelInfo[i];
+									pInfo->X = 15 + info.depth * 10;
+									SPTXT_vPrintFmtLine("/o400:%s", info.name);
+									pInfo->X = 22 + info.depth * 10;
+									if (info.cagesMax > 0) {
+										SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of %d/o400:", info.lums, info.lumsMax);
+									} else {
+										SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of %d/o400:, Cages /o0:%d of %d", info.lums, info.lumsMax, info.cages, info.cagesMax);
+									}
+									pInfo->Y = pInfo->Y + spacer;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	SPTXT_vResetTextInfo(pInfo);
 }

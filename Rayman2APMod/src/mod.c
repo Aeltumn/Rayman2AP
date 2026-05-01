@@ -936,6 +936,10 @@ void MOD_CheckVariables() {
 						continue;
 					}
 
+					// Don't send the base game syncs for getting upgrades since we override them
+					// and it causes them to incorrectly be marked off!
+					if (i == 1095 || i == 1143) continue;
+
 					// If you rescue Ly we change it into the first silver lum check so it fires even if you already have
 					// the silver lum!
 					if (i == 953) {

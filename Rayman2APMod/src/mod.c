@@ -574,7 +574,8 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				// own chain, not progress through the chain!
 				MOD_EnterLevelChain(CHAIN_SIDE_TEMPLE);
 				return;
-			} else if (compareStringCaseInsensitive(szLevelName, "plum_10") == 0) {
+			} else if (compareStringCaseInsensitive(szLevelName, "plum_10") == 0 ||
+					   compareStringCaseInsensitive(szLevelName, "plum_10$01$00") == 0) {
 				if (MOD_ProgressLevelChain()) return;
 			}
 

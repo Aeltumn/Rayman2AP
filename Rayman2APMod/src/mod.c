@@ -1254,49 +1254,374 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 	char* levelName = MOD_LevelIds[levelId];
 
 	// Determine the lums/cages of this level
+	// Fairy Glade
 	if (compareStringCaseInsensitive(levelName, "Learn_30") == 0) {
-		strcpy(level->name, "Fairy Glade 1");
+		strcpy(level->name, "The Fairy Glade 1");
 		level->lumsMax = 9;
 		level->cagesMax = 2;
 		level->lums = CountCollectibleLums((int[]) { 6, 7, 8, 12 }, (int[]) { 1 }, 1, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 842, 843 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "learn_31") == 0) {
-		strcpy(level->name, "Fairy Glade 2");
+		strcpy(level->name, "The Fairy Glade 2");
 		level->lumsMax = 1;
 		level->cagesMax = 0;
 		level->lums = CountCollectibleLums((int[]) { 11 }, (int[]) { 0 }, 0, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "Learn_32") == 0) {
-		strcpy(level->name, "Fairy Glade - Revisit");
+		strcpy(level->name, "The Fairy Glade - Revisit");
 		level->lumsMax = 2;
 		level->cagesMax = 1;
 		level->lums = CountCollectibleLums((int[]) { 9, 10 }, (int[]) { 0 }, 0, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 844 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "bast_20") == 0) {
-		strcpy(level->name, "Fairy Glade 3");
+		strcpy(level->name, "The Fairy Glade 3");
 		level->lumsMax = 17;
 		level->cagesMax = 2;
 		level->lums = CountCollectibleLums((int[]) { 27, 26, 25, 29, 28, 23, 24 }, (int[]) { 13, 18 }, 2, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 845, 846 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "bast_22") == 0) {
-		strcpy(level->name, "Fairy Glade 4");
+		strcpy(level->name, "The Fairy Glade 4");
 		level->lumsMax = 4;
 		level->cagesMax = 0;
 		level->lums = CountCollectibleLums((int[]) { 31, 30, 32, 33 }, (int[]) { 0 }, 0, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "learn_60") == 0) {
-		strcpy(level->name, "Fairy Glade 5");
+		strcpy(level->name, "The Fairy Glade 5");
 		level->lumsMax = 17;
 		level->cagesMax = 2;
 		level->lums = CountCollectibleLums((int[]) { 34, 35, 36, 37, 48, 49, 50, 38, 42, 45, 44, 43, 39, 46, 47, 41, 40 }, (int[]) { 0 }, 0, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 847, 848 }, level->cagesMax);
-	} else if (compareStringCaseInsensitive(levelName, "cask_10") == 0) {
-		strcpy(level->name, "Echoing Caves 1");
+	}
+
+	// Marshes
+	else if (compareStringCaseInsensitive(levelName, "Ski_10") == 0) {
+		strcpy(level->name, "The Marshes of Awakening 1");
+		level->lumsMax = 25;
+		level->cagesMax = 4;
+		level->lums = CountCollectibleLums((int[]) { 76, 77, 78, 79, 80 }, (int[]) { 66, 81, 86, 91 }, 4, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 852, 849, 850, 851 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "Ski_60") == 0) {
+		strcpy(level->name, "The Marshes of Awakening 2");
+		level->lumsMax = 25;
+		level->cagesMax = 1;
+		level->lums = CountCollectibleLums((int[]) { 59, 60, 56, 58, 57 }, (int[]) { 71, 61, 51, 96 }, 4, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 853 }, level->cagesMax);
+	}
+
+	// Cave of Bad Dreams
+	else if (compareStringCaseInsensitive(levelName, "vulca_10") == 0) {
+		strcpy(level->name, "The Cave of Bad Dreams 1");
+		level->lumsMax = 30;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 752, 753, 754, 755, 756, 757, 758, 759, 760, 761, 769, 768, 767, 770, 771, 772, 773, 774, 775 }, (int[]) { 762, 776 }, 2, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "vulca_20") == 0) {
+		strcpy(level->name, "The Cave of Bad Dreams 2");
+		level->lumsMax = 20;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 0 }, (int[]) { 781, 786, 791, 796 }, 4, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	}
+
+	// Bayou
+	else if (compareStringCaseInsensitive(levelName, "chase_10") == 0) {
+		strcpy(level->name, "The Bayou 1");
+		level->lumsMax = 35;
+		level->cagesMax = 5;
+		level->lums = CountCollectibleLums((int[]) { 122, 123, 101, 102, 103, 120, 121, 128, 129, 130, 131, 104, 105, 106, 107, 108, 118, 119, 109, 110, 111, 135, 124, 125, 126, 127, 114, 115, 116, 117, 112, 113, 132, 133, 134 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 854, 856, 855, 858, 857 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "chase_22") == 0) {
+		strcpy(level->name, "The Bayou 2");
 		level->lumsMax = 15;
 		level->cagesMax = 2;
-		level->lums = CountCollectibleLums((int[]) { 421, 422, 423, 430, 431, 432, 428, 429, 424, 425, 426, 427, 433, 434, 435 }, (int[]) {0}, 0, level->lumsMax);
-		level->cages = CountCollectibleCages((int[]) {887, 888}, level->cagesMax);
-	} else {
+		level->lums = CountCollectibleLums((int[]) { 137, 144, 145, 146, 147, 148, 149, 150, 136, 138, 139, 140, 141, 142, 143 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 859, 860 }, level->cagesMax);
+	}
+
+	// Ice and Water
+	else if (compareStringCaseInsensitive(levelName, "water_10") == 0) {
+		strcpy(level->name, "The Sanctuary of Water and Ice 1");
+		level->lumsMax = 40;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 156, 157, 158, 166, 167, 168, 169, 170, 171, 178, 177, 151, 152, 153, 154, 155, 159, 160, 180, 182, 183, 181, 184, 186, 187, 185, 188, 189, 179, 190 }, (int[]) { 172, 161 }, 2, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 862, 861 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "water_20") == 0) {
+		strcpy(level->name, "The Sanctuary of Water and Ice 2");
+		level->lumsMax = 10;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 197, 199, 193, 194, 195, 198, 196, 191, 192, 200 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	}
+
+	// Menhir Hills
+	else if (compareStringCaseInsensitive(levelName, "rodeo_10") == 0) {
+		strcpy(level->name, "The Menhir Hills 1");
+		level->lumsMax = 15;
+		level->cagesMax = 3;
+		level->lums = CountCollectibleLums((int[]) { 0 }, (int[]) { 206, 201, 211 }, 3, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 864, 865, 863 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "rodeo_40") == 0) {
+		strcpy(level->name, "The Menhir Hills 2");
+		level->lumsMax = 23;
+		level->cagesMax = 3;
+		level->lums = CountCollectibleLums((int[]) { 226, 224, 223, 225, 231, 228, 222, 233, 232, 230, 235, 234, 229, 216, 217, 218, 227, 219, 220, 221, 236, 237, 238 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 866, 868, 867 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "rodeo_60") == 0) {
+		strcpy(level->name, "The Menhir Hills 3");
+		level->lumsMax = 12;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 246, 245, 239, 240, 243, 244, 248, 247, 249, 250, 241, 242 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 869, 870 }, level->cagesMax);
+	}
+
+	// Canopy
+	else if (compareStringCaseInsensitive(levelName, "glob_30") == 0) {
+		strcpy(level->name, "The Canopy 1");
+		level->lumsMax = 20;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 266, 251, 262, 252, 253, 254, 263, 258, 264, 259, 255, 265, 256, 261, 260, 257, 267, 268, 268, 270 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 871, 872 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "glob_10") == 0) {
+		strcpy(level->name, "The Canopy 2");
+		level->lumsMax = 15;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 283, 276, 275, 271, 274, 281, 285, 280, 284, 282, 277, 273, 272, 279, 278 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "glob_20") == 0) {
+		strcpy(level->name, "The Canopy 3");
+		level->lumsMax = 15;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 286, 291, 290, 287, 288, 289, 299, 300, 297, 298 }, (int[]) { 292 }, 1, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 874, 873 }, level->cagesMax);
+	}
+
+	// Whale Bay
+	else if (compareStringCaseInsensitive(levelName, "whale_00") == 0) {
+		strcpy(level->name, "Whale Bay 1");
+		level->lumsMax = 15;
+		level->cagesMax = 1;
+		level->lums = CountCollectibleLums((int[]) { 339, 341, 327, 320, 323, 321, 326, 338, 340, 322 }, (int[]) { 315 }, 1, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 875 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "whale_05") == 0) {
+		strcpy(level->name, "Whale Bay 2");
+		level->lumsMax = 12;
+		level->cagesMax = 1;
+		level->lums = CountCollectibleLums((int[]) { 325, 324 }, (int[]) { 333, 328 }, 2, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 876 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "whale_10") == 0) {
+		strcpy(level->name, "Whale Bay 3");
+		level->lumsMax = 23;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 303, 302, 348, 307, 306, 345, 308, 309, 350, 344, 346, 349, 347, 342, 3434, 304, 301, 305 }, (int[]) { 310 }, 1, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 877, 878 }, level->cagesMax);
+	}
+
+	// Stone and Fire
+	else if (compareStringCaseInsensitive(levelName, "plum_00") == 0) {
+		strcpy(level->name, "The Sanctuary of Stone and Fire 1");
+		level->lumsMax = 23;
+		level->cagesMax = 3;
+		level->lums = CountCollectibleLums((int[]) { 353, 356, 354, 357, 532, 355, 358, 351 }, (int[]) { 364, 359, 369 }, 3, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 885, 883, 884 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "plum_10") == 0) {
+		strcpy(level->name, "The Sanctuary of Stone and Fire 2");
+		level->lumsMax = 17;
+		level->cagesMax = 1;
+		level->lums = CountCollectibleLums((int[]) { 386, 390, 388, 374, 387, 385, 389 }, (int[]) { 380, 375 }, 2, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 886 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "plum_20") == 0) {
+		strcpy(level->name, "The Sanctuary of Stone and Fire - Side Temple");
+		level->lumsMax = 10;
+		level->cagesMax = 4;
+		level->lums = CountCollectibleLums((int[]) { 391, 392, 393, 394, 395, 396, 397, 398, 399, 400 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 879, 880, 881, 882 }, level->cagesMax);
+	}
+
+	// Echoing Caves
+	else if (compareStringCaseInsensitive(levelName, "bast_10") == 0) {
+		strcpy(level->name, "The Echoing Caves 1");
+		level->lumsMax = 20;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 0 }, (int[]) { 406, 401, 416, 411 }, 4, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "cask_10") == 0) {
+		strcpy(level->name, "The Echoing Caves 2");
+		level->lumsMax = 15;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 421, 422, 423, 430, 431, 432, 428, 429, 424, 425, 426, 427, 433, 434, 435 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 887, 888 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "cask_30") == 0) {
+		strcpy(level->name, "The Echoing Caves 3");
+		level->lumsMax = 15;
+		level->cagesMax = 3;
+		level->lums = CountCollectibleLums((int[]) { 436, 437, 438, 448, 449, 446, 447, 439, 440, 441, 442, 443, 444, 445, 450 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 889, 890, 891 }, level->cagesMax);
+	}
+
+	// Precipice
+	else if (compareStringCaseInsensitive(levelName, "nave_10") == 0) {
+		strcpy(level->name, "The Precipice 1");
+		level->lumsMax = 10;
+		level->cagesMax = 3;
+		level->lums = CountCollectibleLums((int[]) { 451, 452, 454, 455, 460, 456, 457, 453, 458, 459 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 892, 893, 894 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "nave_15") == 0) {
+		strcpy(level->name, "The Precipice 2");
+		level->lumsMax = 15;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 465, 466, 468, 470, 471, 472, 469, 462, 473, 474, 463, 467, 475, 461, 464 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 896, 895 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "nave_20") == 0) {
+		strcpy(level->name, "The Precipice 3");
+		level->lumsMax = 25;
+		level->cagesMax = 1;
+		level->lums = CountCollectibleLums((int[]) { 489, 476, 480, 483, 485, 481, 484, 478, 490, 477, 479, 482, 487, 486, 488 }, (int[]) { 491, 496 }, 2, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 897 }, level->cagesMax);
+	}
+
+	// Top of the World
+	else if (compareStringCaseInsensitive(levelName, "Seat_10") == 0) {
+		strcpy(level->name, "The Top of the World 1");
+		level->lumsMax = 33;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 540, 521, 541, 542, 543, 518, 519, 520, 531, 539, 532, 524, 525, 533, 522, 523, 527, 528, 529, 530, 526, 537, 536, 535, 538, 544, 545, 546, 547, 548, 534, 549, 550 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "seat_11") == 0) {
+		strcpy(level->name, "The Top of the World 2");
+		level->lumsMax = 17;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 501, 502, 505, 504, 503, 511, 512, 513, 506, 507, 508, 517, 509, 510, 514, 515, 516 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 899, 898 }, level->cagesMax);
+	}
+
+	// Rock and Lava
+	else if (compareStringCaseInsensitive(levelName, "earth_10") == 0) {
+		strcpy(level->name, "The Sanctuary of Rock and Lava 1");
+		level->lumsMax = 10;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 555, 551, 552, 553, 554 }, (int[]) { 556 }, 1, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 900, 901 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "earth_20") == 0) {
+		strcpy(level->name, "The Sanctuary of Rock and Lava 2");
+		level->lumsMax = 15;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 561, 562, 563, 575, 576, 577, 564, 565, 566, 567, 568, 569, 570, 571, 572, 574, 579, 578, 580, 573 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 902, 903 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "earth_30") == 0) {
+		strcpy(level->name, "The Sanctuary of Rock and Lava 3");
+		level->lumsMax = 15;
+		level->cagesMax = 3;
+		level->lums = CountCollectibleLums((int[]) { 581, 582, 583, 584, 585, 586, 593, 594, 595, 587, 588, 589, 591, 592, 590, 596, 597, 598, 599, 600 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 904, 905, 906 }, level->cagesMax);
+	}
+
+	// Beneath
+	else if (compareStringCaseInsensitive(levelName, "helic_10") == 0) {
+		strcpy(level->name, "Beneath the Sanctuary of Rock and Lava 1");
+		level->lumsMax = 20;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 610, 611, 612, 643, 644, 645, 606, 601, 602, 607, 608, 609, 603, 604, 605 }, (int[]) { 646 }, 1, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 900, 901 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "helic_20") == 0) {
+		strcpy(level->name, "Beneath the Sanctuary of Rock and Lava 2");
+		level->lumsMax = 30;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 623, 624, 641, 625, 627, 629, 626, 642, 628, 630 }, (int[]) { 618, 613, 631, 636 }, 4, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 910, 909 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "helic_30") == 0) {
+		strcpy(level->name, "Beneath the Sanctuary of Rock and Lava 3");
+		level->lumsMax = 0;
+		level->cagesMax = 0;
+	}
+
+	// Tomb of the Ancients
+	else if (compareStringCaseInsensitive(levelName, "morb_00") == 0) {
+		strcpy(level->name, "Tomb of the Ancients 1");
+		level->lumsMax = 11;
+		level->cagesMax = 1;
+		level->lums = CountCollectibleLums((int[]) { 697, 698, 699, 700, 694, 695, 696, 691, 692, 693, 1014 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 911 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "morb_10") == 0) {
+		strcpy(level->name, "Tomb of the Ancients 2");
+		level->lumsMax = 40;
+		level->cagesMax = 3;
+		level->lums = CountCollectibleLums((int[]) { 656, 655, 654, 657, 652, 653, 651, 658, 660, 659 }, (int[]) { 686, 681, 661, 666, 671, 676 }, 6, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 910, 909, 913 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "morb_20") == 0) {
+		strcpy(level->name, "Tomb of the Ancients 3");
+		level->lumsMax = 0;
+		level->cagesMax = 1;
+		level->cages = CountCollectibleCages((int[]) { 916 }, level->cagesMax);
+	}
+
+	// Iron Mountains
+	else if (compareStringCaseInsensitive(levelName, "learn_40") == 0) {
+		strcpy(level->name, "The Iron Mountains 1");
+		level->lumsMax = 19;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 711, 708, 707, 709, 712, 713, 717, 716, 715, 714, 719, 718, 710, 701, 702, 703, 706, 705, 704 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 917, 918 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "ile_10") == 0) {
+		strcpy(level->name, "The Iron Mountains 2");
+		level->lumsMax = 20;
+		level->cagesMax = 1;
+		level->lums = CountCollectibleLums((int[]) { 730, 726, 728, 727, 729 }, (int[]) { 721, 736, 731 }, 3, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 919 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "mine_10") == 0) {
+		strcpy(level->name, "The Iron Mountains 3");
+		level->lumsMax = 11;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 720 }, (int[]) { 746, 741 }, 2, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	}
+
+	// Prison Ship
+	else if (compareStringCaseInsensitive(levelName, "boat01") == 0) {
+		strcpy(level->name, "The Prison Ship 1");
+		level->lumsMax = 21;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 1370, 1359, 1369, 1373, 1371, 1377, 1372, 1379, 1374, 1375, 1368, 1376, 1360, 1361, 1367, 1362, 1366, 1364, 1365, 1378, 1363 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "boat02") == 0) {
+		strcpy(level->name, "The Prison Ship 2");
+		level->lumsMax = 43;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 1334, 1333, 1352, 1351, 1353, 1348, 1324, 1317, 1319, 1318, 1321, 1322, 1331, 1316, 1332, 1320, 1323, 1329, 1330, 1336, 1343, 1341, 1328, 1337, 1338, 1339, 1342, 1344, 1327, 1340, 1326, 1325, 1335, 1345, 1347, 1346, 1349, 1350 }, (int[]) { 1354 }, 1, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "astro_00") == 0) {
+		strcpy(level->name, "The Prison Ship 3");
+		level->lumsMax = 15;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 1387, 1388, 1385, 1383, 1382, 1381, 18380, 1384, 1386, 1394 }, (int[]) { 1389 }, 1, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	} else if (compareStringCaseInsensitive(levelName, "astro_10") == 0) {
+		strcpy(level->name, "The Prison Ship 3");
+		level->lumsMax = 15;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 1301, 1302, 1303, 1304, 1305, 1306, 1307, 1308, 1309, 1310 }, (int[]) { 1311 }, 1, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	}
+
+	// Walk of Life
+	else if (compareStringCaseInsensitive(levelName, "Ly_10") == 0) {
+		strcpy(level->name, "The Walk of Life");
+		level->lumsMax = 50;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 1201, 1202, 1203, 1236, 1206, 1205, 1208, 1210, 1212, 1209, 1214, 1211, 1215, 1217, 1216, 1218, 1219, 1220, 1221, 1222, 1223, 1224, 1225, 1226, 1227, 1229, 1230, 1231, 1233, 1244, 1246, 1242, 1232, 1243, 1238, 1239, 1240, 1245, 1247, 1237, 1234, 1228, 1207, 1235, 1241, 1249, 1213, 1250, 1248, 1204 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	}
+
+	// Walk of Power
+	else if (compareStringCaseInsensitive(levelName, "Ly_20") == 0) {
+		strcpy(level->name, "The Walk of Power");
+		level->lumsMax = 50;
+		level->cagesMax = 0;
+		level->lums = CountCollectibleLums((int[]) { 1272, 1251, 1271, 1273, 1274, 1275, 1252, 1253, 1278, 1277, 1254, 1279, 1255, 1280, 1281, 1282, 1256, 1257, 1284, 1258, 1285, 1276, 1259, 1286, 1269, 1289, 1288, 1260, 1261, 1287, 1262, 1263, 1290, 1291, 1295, 1267, 1292, 1270, 1293, 1265, 1266, 1294, 1296, 1299, 1298, 1268, 1300, 1283, 1297, 1264 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
+	}
+
+	// Fallback
+	else {
 		strcpy(level->name, levelName);
 		level->lumsMax = 0;
 		level->cagesMax = 0;
@@ -1437,11 +1762,11 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 						} else if (*p_stLevelId == 32) {
 							chainId = CHAIN_WALK_POWER;
 							nextLevelValue += 0; // Walk is always visible!
-							portal = 14;
+							portal = 15;
 						} else if (*p_stLevelId == 30) {
 							chainId = CHAIN_SANC_ROCK;
 							nextLevelValue += 33;
-							portal = 15;
+							portal = 14;
 						} else if (*p_stLevelId == 33) {
 							chainId = CHAIN_BENEATH;
 							nextLevelValue += 47;
@@ -1491,10 +1816,10 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 									pInfo->X = 15 + info.depth * 10;
 									SPTXT_vPrintFmtLine("/o400:%s", info.name);
 									pInfo->X = 22 + info.depth * 10;
-									if (info.cagesMax > 0) {
-										SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of %d/o400:", info.lums, info.lumsMax);
+									if (info.cagesMax == 0) {
+										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax);
 									} else {
-										SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of %d/o400:, Cages /o0:%d of %d", info.lums, info.lumsMax, info.cages, info.cagesMax);
+										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Cages %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, info.cages >= info.cagesMax ? "/o200:" : "/o0:", info.cages, info.cagesMax);
 									}
 									pInfo->Y = pInfo->Y + spacer;
 								}

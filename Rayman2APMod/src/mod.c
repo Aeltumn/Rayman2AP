@@ -645,7 +645,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				return;
 			} else if (compareStringCaseInsensitive(szLevelName, "ile_10") == 0) {
 				if (MOD_ProgressLevelChain()) return;
-			} else if (compareStringCaseInsensitive(szLevelName, "mine_10") == 0) {
+			} else if (compareStringCaseInsensitive(szLevelName, "Mine_10") == 0) {
 				if (MOD_ProgressLevelChain()) return;
 			}
 
@@ -1000,6 +1000,11 @@ void MOD_CheckVariables() {
 
 		// Show the final portal if and only if you have enough masks!
 		AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, MOD_Masks >= 4);
+
+		// While in the menhir hills we sync the elixir state! 
+		if (MOD_InMenhirHills) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
+		}
 	}
 }
 
@@ -1422,7 +1427,7 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 		strcpy(level->name, "The Sanctuary of Stone and Fire 1");
 		level->lumsMax = 23;
 		level->cagesMax = 3;
-		level->lums = CountCollectibleLums((int[]) { 353, 356, 354, 357, 532, 355, 358, 351 }, (int[]) { 364, 359, 369 }, 3, level->lumsMax);
+		level->lums = CountCollectibleLums((int[]) { 353, 356, 354, 357, 352, 355, 358, 351 }, (int[]) { 364, 359, 369 }, 3, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 885, 883, 884 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "plum_10") == 0) {
 		strcpy(level->name, "The Sanctuary of Stone and Fire 2");

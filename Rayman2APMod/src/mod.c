@@ -1795,8 +1795,9 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 
 							if (!isCompleted) {
 								int lines = 1;
-								pInfo->Y = 550 - lines * lineHeight;
-								SPTXT_vPrintFmtLine("/o200:Unlock the next level to reveal rooms!");
+								pInfo->Y = 450 - lines * lineHeight;
+								SPTXT_vPrintFmtLine("/o200:Unlock the next level");
+								SPTXT_vPrintFmtLine("/o200:to reveal rooms!");
 							} else {
 								// Determine the level contents!
 								LevelInfo* levelInfo = NULL;

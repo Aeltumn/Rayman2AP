@@ -908,8 +908,8 @@ void MOD_CheckVariables() {
 			}
 		} else {
 			if (MOD_InMenhirHills) {
-				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
 				MOD_InMenhirHills = FALSE;
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
 			}
 		}
 
@@ -928,6 +928,12 @@ void MOD_CheckVariables() {
 					// When connected in non-lumsanity update the lum counter immediately for any non-super lums gathered!
 					if (MOD_Connected && !MOD_Lumsanity && isLumLike(i) && !isSuperLum(i)) {
 						MOD_Lums++;
+					}
+
+					// Don't allow collecting the Elixir of Life while in Menhir Hills as that's 
+					// the remote version!
+					if (i == 1123 && MOD_InMenhirHills) {
+						continue;
 					}
 
 					// If you rescue Ly we change it into the first silver lum check so it fires even if you already have

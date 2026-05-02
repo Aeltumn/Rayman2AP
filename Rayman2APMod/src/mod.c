@@ -72,6 +72,7 @@ int MOD_ScreenTextLatest = -1;
 BitSet MOD_LastCollected;
 BitSet MOD_DevCollected;
 BitSet MOD_RealCollected;
+int MOD_VariableCheckTicks = 0;
 
 // While in the Menhir Hills store if you had the elixir beforehand
 BOOL MOD_InMenhirHills = FALSE;
@@ -182,7 +183,11 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 			char* levelName = MOD_LevelIds[levelId];
 
 			// Learn_32 is the internal ID for the fairy glade revisit!
-			if (compareStringCaseInsensitive(levelName, "Learn_32") == 0) {
+			if (compareStringCaseInsensitive(levelName, "Learn_31") == 0) {
+				// If you go to the normal second zone of fairy glade make sure
+				// we send you with the right level id!
+				GAM_g_stEngineStructure->ucPreviousLevel = 10;
+			} else if (compareStringCaseInsensitive(levelName, "Learn_32") == 0) {
 				levelName = "Learn_31";
 
 				// 70 is cask_10 which makes it use the right entrance!
@@ -815,6 +820,11 @@ void setLumGateOverride(int lumGateId) {
 
 /** Checks if any lums/cages have been collected since last frame. */
 void MOD_CheckVariables() {
+	// Check at most thrice per second!
+	MOD_VariableCheckTicks++;
+	if (MOD_VariableCheckTicks < 20) return;
+	MOD_VariableCheckTicks = 0;
+
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
 		// If we're in a lum gate, override the lum gate values.

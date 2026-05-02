@@ -269,6 +269,27 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 	int currentLevel = MOD_LevelChainActive[chainId];
 	int chainLength = MOD_LevelChainsLengths[chainId];
 
+	// If we finish COBD we have to return to whichever chain contains Ski_10!
+	// We may have exited to menu from COBD to world in which case we lost the previous chain
+	// link.
+	if (chainId == CHAIN_COBD && lastChain == -1) {
+		for (int i = 0; i <= 20; i++) {
+			int thisChainLength = MOD_LevelChainsLengths[i];
+			for (int j = 0; j < thisChainLength; j++) {
+				int chainLevelId = MOD_LevelChainContents[i][j];
+				char* chainLevelName = MOD_LevelIds[chainLevelId];
+				if (compareStringCaseInsensitive(chainLevelName, "Ski_10") == 0) {
+					lastChain = i;
+
+					// Ensure we return to Ski_10!
+					MOD_LevelChainActive[i] = j;
+					break;
+				}
+			}
+			if (lastChain != -1) break;
+		}
+	}
+
 	MOD_LevelChainCurrent = -1;
 	MOD_InLevelChain = FALSE;
 	MOD_LevelChainLast[chainId] = 0;
@@ -363,9 +384,9 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 			} else if (chainId == CHAIN_WALK_POWER) { 
 				structure->ucPreviousLevel = 115;
 			} else if (chainId == CHAIN_BENEATH) {
-				structure->ucPreviousLevel = 230;
+				structure->ucPreviousLevel = 110;
 			} else if (chainId == CHAIN_TOMB) {
-				structure->ucPreviousLevel = 118;
+				structure->ucPreviousLevel = 215;
 			} else if (chainId == CHAIN_IRON_MOUNT) {
 				structure->ucPreviousLevel = 125;
 			} else if (chainId == CHAIN_PRISON) {
@@ -412,7 +433,7 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 	}
 }
 
-BOOL MOD_ReturnToPreviousChain(int ifChain, int thenChain) {
+BOOL MOD_ReturnToPreviousChain(int ifChain) {
 	// If we're in a chain and it's the if chain then move into the then chain
 	// instead of progressing! This is used to cap off revisits.
 	if (MOD_InLevelChain && MOD_LevelChainCurrent == ifChain) {
@@ -435,19 +456,20 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 	// When changing levels we return temporary overrides for DSG variables that we wanted
 	// to last for just one level!
-	if (MOD_InMarshes) {
-		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-		if (pGlobal) {
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+	if (pGlobal) {
+		if (MOD_InMarshes) {
+			MOD_InMarshes = FALSE;
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1120, MOD_HadFinishedCOBDPreviously);
 		}
-		MOD_InMarshes = FALSE;
-	}
-	if (MOD_InCanopy) {
-		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-		if (pGlobal) {
+		if (MOD_InCanopy) {
+			MOD_InCanopy = FALSE;
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 979, MOD_HasSavedGloboxPreviously);
 		}
-		MOD_InCanopy = FALSE;
+		if (MOD_InMenhirHills) {
+			MOD_InMenhirHills = FALSE;
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
+		}
 	}
 
 	// In dev mode print which locations we switch to
@@ -467,10 +489,14 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			int hasEnoughCages = MOD_Cages >= 80;
 			if (!hasEnoughLums) {
 				MOD_PrintConsolePlusScreen("Game not complete, not enough lums!");
+				MOD_ExitChain(bSaveGame);
+				return;
 			} else if (!hasEnoughCages) {
 				MOD_PrintConsolePlusScreen("Game not complete, not enough cages!");
+				MOD_ExitChain(bSaveGame);
+				return;
 			} else {
-				MOD_PrintConsolePlusScreen("Game completed 100%!");
+				MOD_PrintConsolePlusScreen("Game completed 100 percent!");
 				MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
 			}
 		}
@@ -515,6 +541,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			
 			// Marhes of Awakening
 			if (compareStringCaseInsensitive(szLevelName, "Ski_10") == 0) {
+				if (MOD_ReturnToPreviousChain(CHAIN_COBD)) return;
 				MOD_EnterLevelChain(CHAIN_MARSHES);
 				return;
 			} else if (compareStringCaseInsensitive(szLevelName, "ski_60") == 0) {
@@ -571,7 +598,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			// Sanctuary of Stone and Fire
 			if (compareStringCaseInsensitive(szLevelName, "plum_00") == 0 ||
 				compareStringCaseInsensitive(szLevelName, "plum_00$01$00") == 0) {
-				if (MOD_ReturnToPreviousChain(CHAIN_SIDE_TEMPLE, CHAIN_SANC_STONE)) return;
+				if (MOD_ProgressLevelChain()) return;
 				MOD_EnterLevelChain(CHAIN_SANC_STONE);
 				return;
 			} else if (compareStringCaseInsensitive(szLevelName, "plum_20") == 0) {
@@ -589,7 +616,6 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				MOD_EnterLevelChain(CHAIN_ECHOING);
 				return;
 			} else if (compareStringCaseInsensitive(szLevelName, "cask_10") == 0) {
-				if (MOD_ReturnToPreviousChain(CHAIN_FAIRY_REVISIT, CHAIN_ECHOING)) return;
 				if (MOD_ProgressLevelChain()) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "cask_30") == 0) {
 				if (MOD_ProgressLevelChain()) return;
@@ -915,11 +941,6 @@ void MOD_CheckVariables() {
 						MOD_SendMessage(MESSAGE_TYPE_COLLECTED, "1101");
 					}
 				}
-			}
-		} else {
-			if (MOD_InMenhirHills) {
-				MOD_InMenhirHills = FALSE;
-				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
 			}
 		}
 
@@ -1344,7 +1365,7 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 		strcpy(level->name, "The Cave of Bad Dreams 1");
 		level->lumsMax = 30;
 		level->cagesMax = 0;
-		level->lums = CountCollectibleLums((int[]) { 752, 753, 754, 755, 756, 757, 758, 759, 760, 761, 769, 768, 767, 770, 771, 772, 773, 774, 775 }, (int[]) { 762, 776 }, 2, level->lumsMax);
+		level->lums = CountCollectibleLums((int[]) { 751, 752, 753, 754, 755, 756, 757, 758, 759, 760, 761, 769, 768, 767, 770, 771, 772, 773, 774, 775 }, (int[]) { 762, 776 }, 2, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "vulca_20") == 0) {
 		strcpy(level->name, "The Cave of Bad Dreams 2");
@@ -1443,7 +1464,7 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 		strcpy(level->name, "Whale Bay 3");
 		level->lumsMax = 23;
 		level->cagesMax = 2;
-		level->lums = CountCollectibleLums((int[]) { 303, 302, 348, 307, 306, 345, 308, 309, 350, 344, 346, 349, 347, 342, 3434, 304, 301, 305 }, (int[]) { 310 }, 1, level->lumsMax);
+		level->lums = CountCollectibleLums((int[]) { 303, 302, 348, 307, 306, 345, 308, 309, 350, 344, 346, 349, 347, 342, 343, 304, 301, 305 }, (int[]) { 310 }, 1, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 877, 878 }, level->cagesMax);
 	}
 

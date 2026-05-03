@@ -22,9 +22,13 @@
 		1095 determines if you can grab purple lums (blue)
 		1143 determines if you can charge shots (gold)
 
+
 		1089 is for completing the intro cutscene.
 		1091 for watching woods of light intro.
+		1097 for watching the Bayou cutscene.
 		1102 for completing Menhir Hills #2 cutscene.
+		1131 for watching the Precipice cutscene.
+		1132 for watching the Tomb cutscene.
 		1133 for watching woods of light teensie cutscene.
 		1159 for deating Foutch
 

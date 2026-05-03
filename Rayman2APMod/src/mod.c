@@ -33,12 +33,11 @@ int CHAIN_WALK_POWER = 19;
 int CHAIN_WHALE = 20;
 
 // Track important portal ids
-int* NO_LUM_GATE_LEVELS[3] = { 961, 964, 967 };
-int* LUM_GATE_ONE_LEVELS[4] = { 970, 972, 976, 979 };
-int* LUM_GATE_TWO_LEVELS[5] = { 981, 975, 985, 988, 990 };
-int* LUM_GATE_THREE_LEVELS[2] = { 993, 1007 };
-int* LUM_GATE_FOUR_LEVELS[2] = { 1000, 1002 };
-int PIRATE_SHIP_PORTAL = 1002;
+int* NO_LUM_GATE_LEVELS[4] = { 961, 964, 967, 970 };
+int* LUM_GATE_ONE_LEVELS[4] = { 972, 976, 979, 981 };
+int* LUM_GATE_TWO_LEVELS[5] = { 975, 985, 988, 990, 993 };
+int* LUM_GATE_THREE_LEVELS[2] = { 1007, 1000 };
+int* LUM_GATE_FOUR_LEVELS[1] = { 1002 };
 int FINAL_LEVEL = 1005;
 
 // Store the base game lum amounts and super lum ids
@@ -104,6 +103,8 @@ BOOL MOD_InLevelChain = FALSE;
 int MOD_LevelChainActive[CHAIN_COUNT];
 int MOD_LevelChainLast[CHAIN_COUNT];
 int MOD_LevelChainCurrent = -1;
+
+int MOD_LastHoveredLevel = -1;
 
 // Store whether dev mode is enabled
 BOOL MOD_DevMode = FALSE;
@@ -259,6 +260,50 @@ void MOD_EnterLevelChain(int chainId) {
 	MOD_ProgressLevelChainAndIncrement(0);
 }
 
+/** Returns the level id of the first level in the given chain. */
+int getLevelChainEntryId(int chainId) {
+	if (chainId == CHAIN_FAIRY_GLADE) {
+		return 10;
+	} else if (chainId == CHAIN_MARSHES) {
+		return 25;
+	} else if (chainId == CHAIN_COBD) {
+		return 135;
+	} else if (chainId == CHAIN_BAYOU) {
+		return 15;
+	} else if (chainId == CHAIN_WALK_LIFE) {
+		return 20;
+	} else if (chainId == CHAIN_MENHIR) {
+		return 55;
+	} else if (chainId == CHAIN_SANC_WATER) {
+		return 160;
+	} else if (chainId == CHAIN_CANOPY) {
+		return 210;
+	} else if (chainId == CHAIN_WHALE) {
+		return 45;
+	} else if (chainId == CHAIN_SANC_STONE) {
+		return 195;
+	} else if (chainId == CHAIN_ECHOING) {
+		return 130;
+	} else if (chainId == CHAIN_PRECIPICE) {
+		return 80;
+	} else if (chainId == CHAIN_TOP) {
+		return 40;
+	} else if (chainId == CHAIN_SANC_ROCK) {
+		return 95;
+	} else if (chainId == CHAIN_WALK_POWER) {
+		return 115;
+	} else if (chainId == CHAIN_BENEATH) {
+		return 105;
+	} else if (chainId == CHAIN_TOMB) {
+		return 118;
+	} else if (chainId == CHAIN_IRON_MOUNT) {
+		return 12;
+	} else if (chainId == CHAIN_PRISON) {
+		return 140;
+	}
+	return -1;
+}
+
 void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 	// Ignore if we are not in a chain!
 	if (!MOD_InLevelChain) {
@@ -304,54 +349,10 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 	// Determine if this chain was completed and we should unlock the next level!
 	auto completedChain = currentLevel >= chainLength - 1;
 
-	// Prevent completing the prison ship chain without all masks!
-	if (chainId == CHAIN_PRISON && MOD_Masks < 4) {
-		completedChain = FALSE;
-	}
-
 	// If you didn't complete the chain, didn't have a last chain, or it's the walks you return to the hall of doors instead of
 	// your previous level you were in.
 	if (!completedChain || lastChain == -1 || chainId == CHAIN_WALK_LIFE || chainId == CHAIN_WALK_POWER) {
-		int entryLevelId = -1;
-		if (chainId == CHAIN_FAIRY_GLADE) {
-			entryLevelId = 10;
-		} else if (chainId == CHAIN_MARSHES) {
-			entryLevelId = 25;
-		} else if (chainId == CHAIN_COBD) {
-			entryLevelId = 135;
-		} else if (chainId == CHAIN_BAYOU) {
-			entryLevelId = 15;
-		} else if (chainId == CHAIN_WALK_LIFE) {
-			entryLevelId = 20;
-		} else if (chainId == CHAIN_MENHIR) {
-			entryLevelId = 55;
-		} else if (chainId == CHAIN_SANC_WATER) {
-			entryLevelId = 160;
-		} else if (chainId == CHAIN_CANOPY) {
-			entryLevelId = 210;
-		} else if (chainId == CHAIN_WHALE) {
-			entryLevelId = 45;
-		} else if (chainId == CHAIN_SANC_STONE) {
-			entryLevelId = 195;
-		} else if (chainId == CHAIN_ECHOING) {
-			entryLevelId = 130;
-		} else if (chainId == CHAIN_PRECIPICE) {
-			entryLevelId = 80;
-		} else if (chainId == CHAIN_TOP) {
-			entryLevelId = 40;
-		} else if (chainId == CHAIN_SANC_ROCK) {
-			entryLevelId = 95;
-		} else if (chainId == CHAIN_WALK_POWER) {
-			entryLevelId = 115;
-		} else if (chainId == CHAIN_BENEATH) {
-			entryLevelId = 105;
-		} else if (chainId == CHAIN_TOMB) {
-			entryLevelId = 118;
-		} else if (chainId == CHAIN_IRON_MOUNT) {
-			entryLevelId = 12;
-		} else if (chainId == CHAIN_PRISON) {
-			entryLevelId = 140;
-		}
+		int entryLevelId = getLevelChainEntryId(chainId);
 
 		// If there isn't a last change or the chain wasn't completed, let you go to the hall of doors with a specific exit!
 		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
@@ -396,7 +397,8 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 			} else if (chainId == CHAIN_IRON_MOUNT) {
 				structure->ucPreviousLevel = 125;
 			} else if (chainId == CHAIN_PRISON) {
-				structure->ucPreviousLevel = 240;
+				// Ensure you have enough masks otherwise never reveal the last level!
+				structure->ucPreviousLevel = MOD_Masks >= 4 ? 240 : 140;
 			}
 		} else {
 			if (entryLevelId != -1) {
@@ -514,6 +516,18 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			return;
 		} else {
 			// When entering a level we have to determine which chain to move you towards!
+
+			// When entering the boat cutscene map we skip any previous cutscenes if you entered
+			// a later portal first.
+			if (compareStringCaseInsensitive(szLevelName, "Batam_10") == 0) {
+				if (MOD_LastHoveredLevel == CHAIN_PRECIPICE) {
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 1097, TRUE);
+				}
+				if (MOD_LastHoveredLevel == CHAIN_TOMB) {
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 1097, TRUE);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 1131, TRUE);
+				}
+			}
 
 			// Fairy Glade
 			if (compareStringCaseInsensitive(szLevelName, "Learn_30") == 0) {
@@ -1036,7 +1050,17 @@ void MOD_CheckVariables() {
 		AI_fn_vSetBooleanInArray(pGlobal, 42, 1101, MOD_Knowledge);
 
 		// Show the final portal if and only if you have enough masks!
-		AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, MOD_Masks >= 4);
+		ACP_tdxBool reloadMapMonde = FALSE;
+		if (!AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && MOD_Masks >= 4) {
+			// Open up the portal!
+			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, TRUE);
+
+			// Inform the player that they can now access the final portal!
+			MOD_ShowScreenText("Final portal unlocked!");
+
+			// Reload the mapmonde so the portal shows up!
+			reloadMapMonde = TRUE;
+		}
 
 		// While in the menhir hills we sync the elixir state! 
 		if (MOD_InMenhirHills) {
@@ -1052,7 +1076,7 @@ void MOD_CheckVariables() {
 		if (MOD_AccessiblePortals) {
 			{
 				ACP_tdxBool changed = FALSE;
-				for (int i = 0; i < 3; i++) {
+				for (int i = 0; i < 4; i++) {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
@@ -1061,6 +1085,7 @@ void MOD_CheckVariables() {
 				}
 				if (changed) {
 					MOD_ShowScreenText("First level set unlocked!");
+					reloadMapMonde = TRUE;
 				}
 			}
 
@@ -1075,6 +1100,7 @@ void MOD_CheckVariables() {
 				}
 				if (changed) {
 					MOD_ShowScreenText("Second level set unlocked!");
+					reloadMapMonde = TRUE;
 				}
 			}
 			if (MOD_Lums >= MOD_LumGates[1]) {
@@ -1088,6 +1114,7 @@ void MOD_CheckVariables() {
 				}
 				if (changed) {
 					MOD_ShowScreenText("Third level set unlocked!");
+					reloadMapMonde = TRUE;
 				}
 			}
 			if (MOD_Lums >= MOD_LumGates[2]) {
@@ -1101,11 +1128,12 @@ void MOD_CheckVariables() {
 				}
 				if (changed) {
 					MOD_ShowScreenText("Fourth level set unlocked!");
+					reloadMapMonde = TRUE;
 				}
 			}
 			if (MOD_Lums >= MOD_LumGates[3]) {
 				ACP_tdxBool changed = FALSE;
-				for (int i = 0; i < 2; i++) {
+				for (int i = 0; i < 1; i++) {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
@@ -1114,8 +1142,21 @@ void MOD_CheckVariables() {
 				}
 				if (changed) {
 					MOD_ShowScreenText("Last level set unlocked!");
+					reloadMapMonde = TRUE;
 				}
 			}
+		}
+	
+		// Reload mapmonde if we have to!
+		if (reloadMapMonde && compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+			// Update the current exit first!
+			GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+			structure->ucExitIdToQuitPrevLevel = 0;
+			int lastLevelId = getLevelChainEntryId(MOD_LastHoveredLevel);
+			if (lastLevelId != -1) {
+				structure->ucPreviousLevel = lastLevelId;
+			}
+			GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 		}
 	}
 }
@@ -1320,15 +1361,6 @@ void MOD_ShowScreenText(char* text, ...) {
 		MOD_ShowScreenTextInternal(szBuffer);
 	}
 	va_end(args);
-}
-
-/** Returns whether the pirate ship is unlocked. */
-BOOL MOD_HasUnlockedPirateShip() {
-	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-	if (pGlobal) {
-		return AI_fn_bGetBooleanInArray(pGlobal, 42, PIRATE_SHIP_PORTAL);
-	}
-	return false;
 }
 
 /** Returns whether death link is currently enabled. */
@@ -1905,6 +1937,10 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 						}
 
 						if (chainId != -1) {
+							// Store which chain the player last hovered in the hall of doors so we can
+							// skip any cutscenes if you go to a later portal.
+							MOD_LastHoveredLevel = chainId;
+
 							pInfo->xSize = 7;
 							pInfo->bRightAlign = FALSE;
 							pInfo->X = 15;
@@ -1912,7 +1948,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 							long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
 							ACP_tdxBool isCompleted = AI_fn_bGetBooleanInArray(pGlobal, 42, nextLevelValue);
 
-							if (!isCompleted && !MOD_AccessiblePortals) {
+							if (!isCompleted) {
 								int lines = 1;
 								pInfo->Y = 450 - lines * lineHeight;
 								SPTXT_vPrintFmtLine("/o200:Unlock the next level");

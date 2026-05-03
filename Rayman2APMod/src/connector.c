@@ -179,22 +179,6 @@ void MOD_HandleMessage(int type, const char* data) {
         MOD_Print(data);
         break;
     }
-    case MESSAGE_TYPE_MASK_CHECK: {
-        // If we receive the final mask while in the hall of doors and you have
-        // unlocked the portal to the pirate ship we immediately warp you to
-        // the final level.
-        const char* szLevelName = GAM_fn_p_szGetLevelName();
-        if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && MOD_HasUnlockedPirateShip()) {
-            GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
-            structure->ucPreviousLevel = 240;
-            structure->ucExitIdToQuitPrevLevel = 1;
-            GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
-        }
-
-        // Inform the player that they can now access the final portal!
-        MOD_ShowScreenText("Final portal unlocked!");
-        break;
-    }
     default: {
         MOD_Print("[parent] Received type %d: %s", type, data);
         break;

@@ -409,6 +409,21 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 
 		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 		if (pGlobal) {
+			// Check if the connected portals (marshes, bayou, sanctuary) are present, if they
+			// are not you would be softlocked. We have to put your entrance id at 3 so you don't get stuck!
+			int requiredCheck = 960;
+			if (chainId == CHAIN_COBD) {
+				requiredCheck += 4;
+			} else if (chainId == CHAIN_WALK_LIFE) {
+				requiredCheck += 7;
+			} else if (chainId == CHAIN_WALK_POWER) {
+				requiredCheck += 30;
+			}
+			if (!AI_fn_bGetBooleanInArray(pGlobal, 42, requiredCheck)) {
+				entryLevelId = 3;
+				structure->ucPreviousLevel = 3;
+			}
+
 			// Update the portal the player comes out of when reloading the save!
 			if (entryLevelId != -1) {
 				int level = entryLevelId;

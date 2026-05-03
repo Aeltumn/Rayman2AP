@@ -240,12 +240,13 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 			// Actually enter the level!
 			GAM_fn_vAskToChangeLevel(levelName, TRUE);
 		}
+		return true;
 	}
 	return false;
 }
 
 BOOL MOD_ProgressLevelChain() {
-	MOD_ProgressLevelChainAndIncrement(1);
+	return MOD_ProgressLevelChainAndIncrement(1);
 }
 
 void MOD_EnterLevelChain(int chainId) {

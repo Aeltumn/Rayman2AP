@@ -1835,7 +1835,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 		}
 
 		// When hovering over a portal in mapmonde we show information on the level chain inside
-		if (inMapMonde) {
+		if (MOD_RoomRandomisation && inMapMonde) {
 			HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("YAM_Lums_I1");
 			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 			if (pLums && pGlobal) {

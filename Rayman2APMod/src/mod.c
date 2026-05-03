@@ -433,16 +433,6 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 	}
 }
 
-BOOL MOD_ReturnToPreviousChain(int ifChain) {
-	// If we're in a chain and it's the if chain then move into the then chain
-	// instead of progressing! This is used to cap off revisits.
-	if (MOD_InLevelChain && MOD_LevelChainCurrent == ifChain) {
-		MOD_ExitChain(TRUE);
-		return true;
-	}
-	return false;
-}
-
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// Fetch the base game strucure as we'll have to modify it
 	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
@@ -541,7 +531,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			
 			// Marhes of Awakening
 			if (compareStringCaseInsensitive(szLevelName, "Ski_10") == 0) {
-				if (MOD_ReturnToPreviousChain(CHAIN_COBD)) return;
+				if (MOD_ProgressLevelChain()) return;
 				MOD_EnterLevelChain(CHAIN_MARSHES);
 				return;
 			} else if (compareStringCaseInsensitive(szLevelName, "ski_60") == 0) {

@@ -60,7 +60,7 @@ void MOD_HandleMessage(int type, const char* data) {
             case 2: endGoal = atoi(token); break;
             case 3: lumsanity = atoi(token); break;
             case 4: roomRandomisation = atoi(token); break;
-            case 5: accessiblePortals = atoic(token); break;
+            case 5: accessiblePortals = atoi(token); break;
             case 6:
             case 7:
             case 8:

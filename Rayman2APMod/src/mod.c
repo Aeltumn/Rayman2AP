@@ -33,15 +33,15 @@ int CHAIN_WALK_POWER = 19;
 int CHAIN_WHALE = 20;
 
 // Track important portal ids
-int PIRATE_SHIP_PORTAL = 1002;
-int FINAL_LEVEL = 1005;
-
-// Store the base game lum amounts and super lum ids
-int* NO_LUM_GATE_LEVELS[4] = { 960, 961, 964, 967 };
+int* NO_LUM_GATE_LEVELS[3] = { 961, 964, 967 };
 int* LUM_GATE_ONE_LEVELS[4] = { 970, 972, 976, 979 };
 int* LUM_GATE_TWO_LEVELS[5] = { 981, 975, 985, 988, 990 };
 int* LUM_GATE_THREE_LEVELS[2] = { 993, 1007 };
 int* LUM_GATE_FOUR_LEVELS[2] = { 1000, 1002 };
+int PIRATE_SHIP_PORTAL = 1002;
+int FINAL_LEVEL = 1005;
+
+// Store the base game lum amounts and super lum ids
 int* BASE_GAME_LUMS[6] = { 100, 300, 475, 550, 60, 450 };
 int* SUPER_LUM_IDS[290] = { 1, 2, 3, 4, 5, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 51, 52, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 161, 162, 163, 164, 165, 172, 173, 174, 175, 176, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 292, 293, 294, 295, 296, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 491, 492, 493, 494, 495, 496, 497, 498, 499, 500, 556, 557, 558, 559, 560, 613, 614, 615, 616, 617, 618, 619, 620, 621, 622, 631, 632, 633, 634, 635, 636, 637, 638, 639, 640, 646, 647, 648, 649, 650, 661, 662, 663, 664, 665, 666, 667, 668, 669, 670, 671, 672, 673, 674, 675, 676, 677, 678, 679, 680, 681, 682, 683, 684, 685, 686, 687, 688, 689, 690, 721, 722, 723, 724, 725, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741, 742, 743, 744, 745, 746, 747, 748, 749, 750, 762, 763, 764, 765, 766, 776, 777, 778, 779, 780, 781, 782, 783, 784, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 1311, 1312, 1313, 1314, 1315, 1354, 1355, 1356, 1357, 1358, 1389, 1390, 1391, 1392, 1393 };
 
@@ -842,10 +842,11 @@ void setLumGateOverride(int lumGateId) {
 
 /** Checks if any lums/cages have been collected since last frame. */
 void MOD_CheckVariables() {
-	// Check at most thrice per second!
+	// Check at most twice per second!
 	MOD_VariableCheckTicks++;
-	if (MOD_VariableCheckTicks < 20) return;
+	if (MOD_VariableCheckTicks < 30) return;
 	MOD_VariableCheckTicks = 0;
+	MOD_Print("Updating!");
 
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
@@ -1050,27 +1051,67 @@ void MOD_CheckVariables() {
 
 		// In accessible portals mode we show all portals for which we have enough lums!
 		if (MOD_AccessiblePortals) {
-			for (int i = 0; i < 4; i++) {
-				AI_fn_bSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
+			bool changed = false;
+			for (int i = 0; i < 3; i++) {
+				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i]);
+				if (!dsg) {
+					AI_fn_vSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
+					changed = true;
+				}
+			}
+			if (changed) {
+				MOD_ShowScreenText("First level set unlocked!");
 			}
 			if (MOD_Lums >= MOD_LumGates[0]) {
+				changed = false;
 				for (int i = 0; i < 4; i++) {
-					AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i], TRUE);
+					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i]);
+					if (!dsg) {
+						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i], TRUE);
+						changed = true;
+					}
+				}
+				if (changed) {
+					MOD_ShowScreenText("Second level set unlocked!");
 				}
 			}
 			if (MOD_Lums >= MOD_LumGates[1]) {
+				changed = false;
 				for (int i = 0; i < 5; i++) {
-					AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i], TRUE);
+					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i]);
+					if (!dsg) {
+						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i], TRUE);
+						changed = true;
+					}
+				}
+				if (changed) {
+					MOD_ShowScreenText("Third level set unlocked!");
 				}
 			}
 			if (MOD_Lums >= MOD_LumGates[2]) {
+				changed = false;
 				for (int i = 0; i < 2; i++) {
-					AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i], TRUE);
+					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i]);
+					if (!dsg) {
+						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i], TRUE);
+						changed = true;
+					}
+				}
+				if (changed) {
+					MOD_ShowScreenText("Fourth level set unlocked!");
 				}
 			}
 			if (MOD_Lums >= MOD_LumGates[3]) {
+				changed = false;
 				for (int i = 0; i < 2; i++) {
-					AI_fn_bSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
+					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i]);
+					if (!dsg) {
+						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
+						changed = true;
+					}
+				}
+				if (changed) {
+					MOD_ShowScreenText("Last level set unlocked!");
 				}
 			}
 		}

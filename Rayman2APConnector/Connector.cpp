@@ -28,6 +28,7 @@ bool deathLink = false;
 int endGoal = 1;
 bool lumsanity = false;
 bool roomRandomisation = false;
+bool accessiblePortals = false;
 int lumGates[6] = {100, 300, 475, 550, 60, 450};
 std::unordered_map<std::string, std::vector<std::string>> levelChains;
 std::string lastIp;
@@ -216,6 +217,7 @@ void sendSettings(bool force) {
     oss << endGoal << ",";
     oss << lumsanity << ",";
     oss << roomRandomisation << ",";
+    oss << accessiblePortals << ",";
 
     for (int i = 0; i < 6; i++) {
         oss << lumGates[i] << ",";
@@ -258,6 +260,7 @@ void handleReset() {
     endGoal = 1;
     lumsanity = false;
     roomRandomisation = false;
+    accessiblePortals = false;
     lumGates[0] = 100;
     lumGates[1] = 300;
     lumGates[2] = 475;
@@ -412,6 +415,12 @@ void handleRoomRandomisation(std::string data) {
     sendSettings(false);
 }
 
+/** Handles information on whether the accessible portals setting is being used. */
+void handleAccessiblePortals(std::string data) {
+    accessiblePortals = std::stoi(data);
+    sendSettings(false);
+}
+
 /** Handles an incoming death link from other games. */
 void handleDeathLink() {
     instance->send(MESSAGE_TYPE_DEATH, "");
@@ -439,6 +448,7 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_RegisterSlotDataRawCallback("death_link", handleDeathLinkEnabled);
     AP_RegisterSlotDataRawCallback("end_goal", handleEndGoal);
     AP_RegisterSlotDataRawCallback("lumsanity", handleLumsanity);
+    AP_RegisterSlotDataRawCallback("accessible_portals", handleAccessiblePortals);
     AP_RegisterSlotDataRawCallback("room_randomisation", handleRoomRandomisation);
     AP_Start();
     return true;

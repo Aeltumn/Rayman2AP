@@ -36,6 +36,7 @@ void MOD_HandleMessage(int type, const char* data) {
         int endGoal = 1;
         BOOL lumsanity = FALSE;
         BOOL roomRandomisation = FALSE;
+        BOOL accessiblePortals = FALSE;
         int* lumGates[6];
 
         char* levelIds[LEVEL_COUNT];
@@ -59,18 +60,19 @@ void MOD_HandleMessage(int type, const char* data) {
             case 2: endGoal = atoi(token); break;
             case 3: lumsanity = atoi(token); break;
             case 4: roomRandomisation = atoi(token); break;
-            case 5:
+            case 5: accessiblePortals = atoic(token); break;
             case 6:
             case 7:
             case 8:
             case 9:
             case 10:
+            case 11:
                 lumGates[index - 5] = atoi(token);
                 break;
             }
 
             // When we reach the final index we switch processing!
-            if (index == 11) {
+            if (index == 12) {
                 int idx = 0;
                 int levelId = 0;
                 char* context1 = NULL;
@@ -111,7 +113,7 @@ void MOD_HandleMessage(int type, const char* data) {
         free(copy);
 
         // Send this data across to the main mod file
-        MOD_UpdateSettings(connected, deathLink, endGoal, lumsanity, roomRandomisation, lumGates, levelIds, chainLengths, chainContents);
+        MOD_UpdateSettings(connected, deathLink, endGoal, lumsanity, roomRandomisation, accessiblePortals, lumGates, levelIds, chainLengths, chainContents);
         break;
     }
     case MESSAGE_TYPE_STATE: {

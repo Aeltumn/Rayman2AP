@@ -846,7 +846,6 @@ void MOD_CheckVariables() {
 	MOD_VariableCheckTicks++;
 	if (MOD_VariableCheckTicks < 30) return;
 	MOD_VariableCheckTicks = 0;
-	MOD_Print("Updating!");
 
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
@@ -1051,24 +1050,27 @@ void MOD_CheckVariables() {
 
 		// In accessible portals mode we show all portals for which we have enough lums!
 		if (MOD_AccessiblePortals) {
-			bool changed = false;
-			for (int i = 0; i < 3; i++) {
-				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i]);
-				if (!dsg) {
-					AI_fn_vSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
-					changed = true;
+			{
+				ACP_tdxBool changed = FALSE;
+				for (int i = 0; i < 3; i++) {
+					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i]);
+					if (!dsg) {
+						AI_fn_vSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
+						changed = TRUE;
+					}
+				}
+				if (changed) {
+					MOD_ShowScreenText("First level set unlocked!");
 				}
 			}
-			if (changed) {
-				MOD_ShowScreenText("First level set unlocked!");
-			}
+
 			if (MOD_Lums >= MOD_LumGates[0]) {
-				changed = false;
+				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i], TRUE);
-						changed = true;
+						changed = TRUE;
 					}
 				}
 				if (changed) {
@@ -1076,12 +1078,12 @@ void MOD_CheckVariables() {
 				}
 			}
 			if (MOD_Lums >= MOD_LumGates[1]) {
-				changed = false;
+				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 5; i++) {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i], TRUE);
-						changed = true;
+						changed = TRUE;
 					}
 				}
 				if (changed) {
@@ -1089,12 +1091,12 @@ void MOD_CheckVariables() {
 				}
 			}
 			if (MOD_Lums >= MOD_LumGates[2]) {
-				changed = false;
+				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 2; i++) {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i], TRUE);
-						changed = true;
+						changed = TRUE;
 					}
 				}
 				if (changed) {
@@ -1102,12 +1104,12 @@ void MOD_CheckVariables() {
 				}
 			}
 			if (MOD_Lums >= MOD_LumGates[3]) {
-				changed = false;
+				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 2; i++) {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
-						changed = true;
+						changed = TRUE;
 					}
 				}
 				if (changed) {
@@ -1175,8 +1177,8 @@ void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsan
 	MOD_DeathLink = deathLink;
 	MOD_EndGoal = endGoal;
 	MOD_Lumsanity = lumsanity;
-	MOD_AccessiblePortals = accessiblePortals;
 	MOD_RoomRandomisation = roomRandomisation;
+	MOD_AccessiblePortals = accessiblePortals;
 	for (int i = 0; i < 6; i++) {
 		MOD_LumGates[i] = lumGates[i];
 	}

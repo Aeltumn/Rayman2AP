@@ -67,7 +67,7 @@ void MOD_HandleMessage(int type, const char* data) {
             case 9:
             case 10:
             case 11:
-                lumGates[index - 5] = atoi(token);
+                lumGates[index - 6] = atoi(token);
                 break;
             }
 

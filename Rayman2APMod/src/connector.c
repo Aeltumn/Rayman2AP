@@ -18,6 +18,8 @@ typedef struct {
 
 incomingMessage* incomingMessages;
 int incomingMessageCount = 0;
+int incomingMessageReadIndex = 0;
+int incomingMessageWriteIndex = 0;
 int incomingMessagesSize = 0;
 
 /** Handles a connector message. */
@@ -236,17 +238,34 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
         WaitForSingleObject(messageMutex, INFINITE);
 
         __try {
-            // Queue up the message for next tick
+            // Handle allocating more memory if we've caught up to the read index
             if (incomingMessageCount >= incomingMessagesSize) {
-                incomingMessagesSize = max(2, incomingMessagesSize * 2);
-                incomingMessage* reallocated = realloc(incomingMessages, incomingMessagesSize * sizeof(incomingMessage));
+                int oldSize = incomingMessagesSize;
+                incomingMessagesSize = max(128, incomingMessagesSize * 2);
+                incomingMessage* reallocated = malloc(incomingMessagesSize * sizeof(incomingMessage));
                 if (!reallocated) {
                     MOD_Print("Failed to extend array of incoming messages");
                     free(messageBuffer);
                     return;
                 }
+
+                // Copy over the old buffer but re-order elements to be 0-indexed again.
+                for (int i = 0; i < oldSize; i++) {
+                    int oldIndex = incomingMessageReadIndex + i;
+                    if (oldIndex >= oldSize) {
+                        oldIndex -= oldSize;
+                    }
+                    reallocated[i] = incomingMessages[oldIndex];
+                }
+
+                // Set the new variable
+                if (oldSize > 0) free(incomingMessages);
+                incomingMessageReadIndex = 0;
+                incomingMessageWriteIndex = oldSize;
                 incomingMessages = reallocated;
             }
+
+            // Queue up the message for the engine to process
             incomingMessage message = { 0 };
             message.type = type;
             message.text = messageBuffer;
@@ -260,7 +279,11 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
             }
         
             // Store the incoming message last
-            incomingMessages[incomingMessageCount++] = message;
+            incomingMessages[incomingMessageWriteIndex++] = message;
+            incomingMessageCount++;
+            if (incomingMessageWriteIndex >= incomingMessagesSize) {
+                incomingMessageWriteIndex = 0;
+            }
         }
         __finally {
             // Release the mutex
@@ -287,7 +310,7 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
 /** Handles all pending messages that were received since the last tick. */
 void MOD_RunPendingMessages() {
     // Ignore if there are no messages pending!
-    if (incomingMessageCount == 0) return;
+    if (incomingMessageCount <= 0) return;
 
     // Wait for mutex access, if it's taken, ignore it completely!
     DWORD result = WaitForSingleObject(messageMutex, 0);
@@ -296,15 +319,22 @@ void MOD_RunPendingMessages() {
     __try {
         // Limit the maximum amount of messages processed per tick!
         int toProcess = incomingMessageCount;
-        if (toProcess > MAX_MESSAGES_PROCESSED_PER_TICK) {
-            toProcess = MAX_MESSAGES_PROCESSED_PER_TICK;
+        if (toProcess > MAX_MESSAGES_PROCESSED_PER_FRAME) {
+            toProcess = MAX_MESSAGES_PROCESSED_PER_FRAME;
         }
-        for (int i = 0; i < toProcess; i++) {
-            incomingMessage entry = incomingMessages[i];
+        while (toProcess > 0) {
+            incomingMessage entry = incomingMessages[incomingMessageReadIndex];
             MOD_HandleMessage(entry.type, entry.text);
             free(entry.text);
+
+            // Increment the index and loop it around the circular buffer
+            incomingMessageReadIndex++;
+            if (incomingMessageReadIndex >= incomingMessagesSize) {
+                incomingMessageReadIndex = 0;
+            }
+            incomingMessageCount--;
+            toProcess--;
         }
-        incomingMessageCount -= toProcess;
     }
     __finally {
         // Release the mutex

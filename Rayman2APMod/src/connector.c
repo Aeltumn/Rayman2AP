@@ -233,7 +233,7 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
         }
 
         // Wait for mutex access
-        WaitForSingleObject(messageMutex, 50);
+        WaitForSingleObject(messageMutex, INFINITE);
 
         __try {
             // Queue up the message for next tick
@@ -289,16 +289,22 @@ void MOD_RunPendingMessages() {
     // Ignore if there are no messages pending!
     if (incomingMessageCount == 0) return;
 
-    // Wait for mutex access
-    WaitForSingleObject(messageMutex, 50);
+    // Wait for mutex access, if it's taken, ignore it completely!
+    DWORD result = WaitForSingleObject(messageMutex, 0);
+    if (result != WAIT_OBJECT_0) return;
 
     __try {
-        for (int i = 0; i < incomingMessageCount; i++) {
+        // Limit the maximum amount of messages processed per tick!
+        int toProcess = incomingMessageCount;
+        if (toProcess > MAX_MESSAGES_PROCESSED_PER_TICK) {
+            toProcess = MAX_MESSAGES_PROCESSED_PER_TICK;
+        }
+        for (int i = 0; i < toProcess; i++) {
             incomingMessage entry = incomingMessages[i];
             MOD_HandleMessage(entry.type, entry.text);
             free(entry.text);
         }
-        incomingMessageCount = 0;
+        incomingMessageCount -= toProcess;
     }
     __finally {
         // Release the mutex

@@ -98,13 +98,12 @@ int MOD_LevelChainsLengths[CHAIN_COUNT];
 BOOL MOD_InitLevelChains = FALSE;
 int* MOD_LevelChainContents[CHAIN_COUNT];
 
-BOOL MOD_IgnoreRedirect = FALSE;
 BOOL MOD_InLevelChain = FALSE;
 int MOD_LevelChainActive[CHAIN_COUNT];
 int MOD_LevelChainLast[CHAIN_COUNT];
 int MOD_LevelChainCurrent = -1;
-
 int MOD_LastHoveredLevel = -1;
+int MOD_LastLimitedLevel = -1;
 
 // Store whether dev mode is enabled
 BOOL MOD_DevMode = FALSE;
@@ -129,6 +128,10 @@ bool isSuperLum(int x) {
 // https://stackoverflow.com/questions/5820810/case-insensitive-string-comparison-in-c
 int compareStringCaseInsensitive(char const* a, char const* b) {
 	return _stricmp(a, b);
+}
+
+int compareStringCaseInsensitiveLimited(char const* a, char const* b) {
+	return _strnicmp(a, b, strlen(b));
 }
 
 // Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
@@ -195,10 +198,20 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 				// we send you with the right level id!
 				GAM_g_stEngineStructure->ucPreviousLevel = 10;
 			} else if (compareStringCaseInsensitive(levelName, "Learn_32") == 0) {
-				levelName = "Learn_31";
-
 				// 70 is cask_10 which makes it use the right entrance!
+				levelName = "Learn_31";
 				GAM_g_stEngineStructure->ucPreviousLevel = 70;
+			} else if (compareStringCaseInsensitive(levelName, "rodeo_40") == 0) {
+				// Ensure sending someone to a multi-stage level doesn't
+				// have them being sent to the next level just for entering
+				// one of the mid-level transitions.
+				MOD_LastLimitedLevel = 1;
+			} else if (compareStringCaseInsensitive(levelName, "plum_00") == 0) {
+				MOD_LastLimitedLevel = 2;
+			} else if (compareStringCaseInsensitive(levelName, "plum_10") == 0) {
+				MOD_LastLimitedLevel = 3;
+			} else if (compareStringCaseInsensitive(levelName, "morb_10") == 0) {
+				MOD_LastLimitedLevel = 4;
 			}
 
 			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
@@ -346,6 +359,7 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 	MOD_InLevelChain = FALSE;
 	MOD_LevelChainLast[chainId] = 0;
 	MOD_LevelChainActive[chainId] = 0;
+	MOD_LastLimitedLevel = -1;
 
 	// Determine if this chain was completed and we should unlock the next level!
 	auto completedChain = currentLevel >= chainLength - 1;
@@ -594,8 +608,8 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			if (compareStringCaseInsensitive(szLevelName, "rodeo_10") == 0) {
 				MOD_EnterLevelChain(CHAIN_MENHIR);
 				return;
-			} else if (compareStringCaseInsensitive(szLevelName, "rodeo_40") == 0 ||
-					   compareStringCaseInsensitive(szLevelName, "rodeo_40$01") == 0) {
+			} else if (compareStringCaseInsensitiveLimited(szLevelName, "rodeo_40") == 0 && MOD_LastLimitedLevel != 1) {
+				MOD_LastLimitedLevel = 1;
 				if (MOD_ProgressLevelChain()) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "rodeo_60") == 0) {
 				if (MOD_ProgressLevelChain()) return;
@@ -622,8 +636,8 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			}
 
 			// Sanctuary of Stone and Fire
-			if (compareStringCaseInsensitive(szLevelName, "plum_00") == 0 ||
-				compareStringCaseInsensitive(szLevelName, "plum_00$01$00") == 0) {
+			if (compareStringCaseInsensitiveLimited(szLevelName, "plum_00") == 0 && MOD_LastLimitedLevel != 2) {
+				MOD_LastLimitedLevel = 2;
 				if (MOD_ProgressLevelChain()) return;
 				MOD_EnterLevelChain(CHAIN_SANC_STONE);
 				return;
@@ -632,8 +646,8 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				// own chain, not progress through the chain!
 				MOD_EnterLevelChain(CHAIN_SIDE_TEMPLE);
 				return;
-			} else if (compareStringCaseInsensitive(szLevelName, "plum_10") == 0 ||
-					   compareStringCaseInsensitive(szLevelName, "plum_10$01$00") == 0) {
+			} else if (compareStringCaseInsensitiveLimited(szLevelName, "plum_10") == 0 && MOD_LastLimitedLevel != 3) {
+				MOD_LastLimitedLevel = 3;
 				if (MOD_ProgressLevelChain()) return;
 			}
 
@@ -689,8 +703,8 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			if (compareStringCaseInsensitive(szLevelName, "morb_00") == 0) {
 				MOD_EnterLevelChain(CHAIN_TOMB);
 				return;
-			} else if (compareStringCaseInsensitive(szLevelName, "morb_10") == 0 ||
-					   compareStringCaseInsensitive(szLevelName, "morb_10$01$00") == 0) {
+			} else if (compareStringCaseInsensitiveLimited(szLevelName, "morb_10") == 0 && MOD_LastLimitedLevel != 4) {
+				MOD_LastLimitedLevel = 4;
 				if (MOD_ProgressLevelChain()) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "morb_20") == 0) {
 				if (MOD_ProgressLevelChain()) return;
@@ -942,7 +956,7 @@ void MOD_CheckVariables() {
 
 		// If you are in the Menhir Hills 2 we have to fake you having the Elixir, otherwise
 		// we leave it default so we don't despawn Jano incorrectly.
-		if (compareStringCaseInsensitive(szLevelName, "Rodeo_40") == 0 || compareStringCaseInsensitive(szLevelName, "rodeo_40$01") == 0) {
+		if (compareStringCaseInsensitiveLimited(szLevelName, "Rodeo_40") == 0) {
 			if (!MOD_InMenhirHills) {
 				MOD_HadElixirPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1123);
 				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);

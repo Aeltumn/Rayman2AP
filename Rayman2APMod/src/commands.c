@@ -7,11 +7,13 @@ tdfnCommand fn_vDeathlinkCommand;
 tdfnCommand fn_vSayCommand;
 tdfnCommand fn_vDsgCommand;
 tdfnCommand fn_vProgress;
+tdfnCommand fn_vStuck;
 
 void MOD_InitCommands(void) {
 	fn_vRegisterCommand("ap", fn_vApCmd);
 	fn_vRegisterCommand("deathlink", fn_vDeathlinkCommand);
 	fn_vRegisterCommand("say", fn_vSayCommand);
+	fn_vRegisterCommand("stuck", fn_vStuck);
 
 	if (MOD_InDevMode()) {
 		fn_vRegisterCommand("dsg", fn_vDsgCommand);
@@ -125,9 +127,19 @@ void fn_vDsgCommand(int lNbArgs, char** d_szArgs) {
 	}
 }
 
-/** Sends you to the hall of doors. */
+/** Sends you to the next level in a chain. */
 void fn_vProgress(int lNbArgs, char** d_szArgs) {
 	if (MOD_CanProgressChain()) {
 		MOD_ProgressLevelChain();
 	}
+}
+
+/** Sends you to the hall of doors safely. */
+void fn_vStuck(int lNbArgs, char** d_szArgs) {
+	// Make sure we leave whatever chain we're in!
+	MOD_ExitChain(TRUE);
+
+	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+	structure->ucPreviousLevel = 3;
+	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 }

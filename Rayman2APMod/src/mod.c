@@ -201,10 +201,12 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 				// 70 is cask_10 which makes it use the right entrance!
 				levelName = "Learn_31";
 				GAM_g_stEngineStructure->ucPreviousLevel = 70;
-			} else if (compareStringCaseInsensitive(levelName, "rodeo_40") == 0) {
-				// Ensure sending someone to a multi-stage level doesn't
-				// have them being sent to the next level just for entering
-				// one of the mid-level transitions.
+			}
+
+			// Ensure sending someone to a multi-stage level doesn't
+			// have them being sent to the next level just for entering
+			// one of the mid-level transitions.
+			if (compareStringCaseInsensitive(levelName, "rodeo_40") == 0) {
 				MOD_LastLimitedLevel = 1;
 			} else if (compareStringCaseInsensitive(levelName, "plum_00") == 0) {
 				MOD_LastLimitedLevel = 2;
@@ -212,6 +214,8 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 				MOD_LastLimitedLevel = 3;
 			} else if (compareStringCaseInsensitive(levelName, "morb_10") == 0) {
 				MOD_LastLimitedLevel = 4;
+			} else {
+				MOD_LastLimitedLevel = 0;
 			}
 
 			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");

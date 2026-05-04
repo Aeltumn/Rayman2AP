@@ -16,6 +16,7 @@ int compareStringCaseInsensitive(char const* a, char const* b);
 
 void MOD_EngineTick();
 void MOD_Init();
+void MOD_Reset();
 
 void MOD_ClearLumGateOverrides();
 

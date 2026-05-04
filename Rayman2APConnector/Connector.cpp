@@ -454,6 +454,7 @@ bool Connector::disconnect() {
     AP_Shutdown();
     handleItemClear();
     handleReset();
+    instance->send(MESSAGE_TYPE_RESET, "");
     return true;
 }
 

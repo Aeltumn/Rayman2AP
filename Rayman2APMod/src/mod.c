@@ -92,12 +92,13 @@ BOOL MOD_HadFinishedCOBDPreviously = FALSE;
 BOOL MOD_InCanopy = FALSE;
 BOOL MOD_HasSavedGloboxPreviously = FALSE;
 
-// Level chain info
+// Level chain settings info
 char MOD_LevelIds[LEVEL_COUNT][MAX_LENGTH];
 int MOD_LevelChainsLengths[CHAIN_COUNT];
 BOOL MOD_InitLevelChains = FALSE;
 int* MOD_LevelChainContents[CHAIN_COUNT];
 
+// Level chain dynamic info
 BOOL MOD_InLevelChain = FALSE;
 int MOD_LevelChainActive[CHAIN_COUNT];
 int MOD_LevelChainLast[CHAIN_COUNT];
@@ -107,6 +108,23 @@ int MOD_LastLimitedLevel = -1;
 
 // Store whether dev mode is enabled
 BOOL MOD_DevMode = FALSE;
+
+/** Resets all data completely. */
+void MOD_Reset() {
+	MOD_InLevelChain = FALSE;
+	for (int i = 0; i < CHAIN_COUNT; i++) {
+		MOD_LevelChainActive[i] = 0;
+		MOD_LevelChainLast[i] = 0;
+	}
+	MOD_LevelChainCurrent = -1;
+	MOD_LastHoveredLevel = -1;
+	MOD_LastLimitedLevel = -1;
+
+	clearBitSet(&MOD_LastCollected);
+	clearBitSet(&MOD_DevCollected);
+
+	MOD_ClearLumGateOverrides();
+}
 
 /** Compares to integers in an array. */
 static int cmpInt(const void* a, const void* b) {
@@ -493,20 +511,31 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		if (MOD_InMarshes) {
 			MOD_InMarshes = FALSE;
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1120, MOD_HadFinishedCOBDPreviously);
+			MOD_HadFinishedCOBDPreviously = FALSE;
 		}
 		if (MOD_InCanopy) {
 			MOD_InCanopy = FALSE;
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 979, MOD_HasSavedGloboxPreviously);
+			MOD_HasSavedGloboxPreviously = FALSE;
 		}
 		if (MOD_InMenhirHills) {
 			MOD_InMenhirHills = FALSE;
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
+			MOD_HadElixirPreviously = FALSE;
 		}
 	}
 
 	// In dev mode print which locations we switch to
 	if (MOD_DevMode) {
 		MOD_PrintConsolePlusScreen("Changing level to %s while previous level is %d with exit %d", szLevelName, structure->ucPreviousLevel, structure->ucExitIdToQuitPrevLevel);
+	}
+
+	// If not connected, don't do anything else!
+	// We do run the earlier code to reset any state we may have changed
+	// while connected.
+	if (!MOD_Connected) {
+		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+		return;
 	}
 
 	// When entering the ending credits we check off winning!
@@ -1243,11 +1272,6 @@ void MOD_Init() {
 
 /** Updates the current archipelago settings. */
 void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int* lumGates, char** levelIds, int* chainLengths, int** chainContents) {
-	if (MOD_Connected != connected) {
-		// Clear the collection cache whenever we reconnect so we resend all the information!
-		clearBitSet(&MOD_LastCollected);
-	}
-
 	MOD_Connected = connected;
 	MOD_DeathLink = deathLink;
 	MOD_EndGoal = endGoal;
@@ -2024,8 +2048,8 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 }
 
 void MOD_Main(void) {
-	// Clear the collection bitset
-	clearBitSet(&MOD_LastCollected);
+	// Reset all data for a consistent clean slate
+	MOD_Reset();
 
 	// Initialize commands
 	MOD_InitCommands();

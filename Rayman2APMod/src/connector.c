@@ -181,6 +181,10 @@ void MOD_HandleMessage(int type, const char* data) {
         MOD_Print(data);
         break;
     }
+    case MESSAGE_TYPE_RESET: {
+        MOD_Reset();
+        break;
+    }
     default: {
         MOD_Print("[parent] Received type %d: %s", type, data);
         break;

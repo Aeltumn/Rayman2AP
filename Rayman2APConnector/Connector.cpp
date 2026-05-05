@@ -152,7 +152,7 @@ void Connector::handle(int type, std::string data) {
     case MESSAGE_TYPE_DISCONNECT: {
         // Disconnect from the Archipelago server.
         if (disconnect()) {
-            send(MESSAGE_TYPE_MESSAGE, "Succesfully disconnected from " + lastIp);
+            send(MESSAGE_TYPE_MESSAGE, "Successfully disconnected from " + lastIp);
         }
         else {
             send(MESSAGE_TYPE_MESSAGE, "You are not connected to any Archipelago server");
@@ -405,7 +405,7 @@ void handleRoomRandomisation(std::string data) {
     // Only now do we call it connected!
     if (!connected) {
         connected = true;
-        instance->send(MESSAGE_TYPE_MESSAGE, "Succesfully connected to Archipelago server!");
+        instance->send(MESSAGE_TYPE_MESSAGE, "Successfully connected to Archipelago server!");
     }
     sendSettings(false);
 }

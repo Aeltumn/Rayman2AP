@@ -21,6 +21,7 @@ void MOD_Reset();
 void MOD_ClearLumGateOverrides();
 
 BOOL MOD_InDevMode();
+void MOD_SetDevMode(BOOL state);
 
 BOOL MOD_CanProgressChain();
 BOOL MOD_ProgressLevelChainAndIncrement(int increment);

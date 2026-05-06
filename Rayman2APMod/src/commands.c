@@ -14,11 +14,8 @@ void MOD_InitCommands(void) {
 	fn_vRegisterCommand("deathlink", fn_vDeathlinkCommand);
 	fn_vRegisterCommand("say", fn_vSayCommand);
 	fn_vRegisterCommand("stuck", fn_vStuck);
-
-	if (MOD_InDevMode()) {
-		fn_vRegisterCommand("dsg", fn_vDsgCommand);
-		fn_vRegisterCommand("progress", fn_vProgress);
-	}
+	fn_vRegisterCommand("dsg", fn_vDsgCommand);
+	fn_vRegisterCommand("progress", fn_vProgress);
 }
 
 /** Reconstructs input arguments. */
@@ -53,6 +50,14 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 		MOD_SendMessageE(MESSAGE_TYPE_DISCONNECT);
 	} else if (_stricmp(command, "check") == 0) {
 		MOD_SendMessageE(MESSAGE_TYPE_CHECK);
+	} else if (_stricmp(command, "devmode") == 0) {
+		if (MOD_InDevMode()) {
+			MOD_SetDevMode(FALSE);
+			MOD_Print("Dev mode disabled!");
+		} else {
+			MOD_SetDevMode(TRUE);
+			MOD_Print("Dev mode enabled!");
+		}
 	} else {
 		MOD_Print("Usage: ap <connect|disconnect|check>");
 	}
@@ -88,6 +93,10 @@ void fn_vSayCommand(int lNbArgs, char** d_szArgs) {
 
 /** Allows editing DSG variables on the global object for testing. */
 void fn_vDsgCommand(int lNbArgs, char** d_szArgs) {
+	if (!MOD_InDevMode()) {
+		MOD_Print("This command is only available in dev mode!");
+		return;
+	}
 	if (lNbArgs < 1) {
 		MOD_Print("Usage: dsg <var> [value]");
 		return;
@@ -129,6 +138,10 @@ void fn_vDsgCommand(int lNbArgs, char** d_szArgs) {
 
 /** Sends you to the next level in a chain. */
 void fn_vProgress(int lNbArgs, char** d_szArgs) {
+	if (!MOD_InDevMode()) {
+		MOD_Print("This command is only available in dev mode!");
+		return;
+	}
 	if (MOD_CanProgressChain()) {
 		MOD_ProgressLevelChain();
 	}

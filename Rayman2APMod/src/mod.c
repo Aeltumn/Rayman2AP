@@ -170,6 +170,10 @@ long SPTXT_fn_lGetCharHeight(MTH_tdxReal xSize) {
 	return (long)height + TEXT_MARGIN + TEXT_MARGIN;
 }
 
+void MOD_SetDevMode(BOOL state) {
+	MOD_DevMode = state;
+}
+
 BOOL MOD_InDevMode() {
 	return MOD_DevMode;
 }
@@ -509,19 +513,19 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
 		if (MOD_InMarshes) {
-			MOD_InMarshes = FALSE;
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1120, MOD_HadFinishedCOBDPreviously);
 			MOD_HadFinishedCOBDPreviously = FALSE;
+			MOD_InMarshes = FALSE;
 		}
 		if (MOD_InCanopy) {
-			MOD_InCanopy = FALSE;
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 979, MOD_HasSavedGloboxPreviously);
 			MOD_HasSavedGloboxPreviously = FALSE;
+			MOD_InCanopy = FALSE;
 		}
 		if (MOD_InMenhirHills) {
-			MOD_InMenhirHills = FALSE;
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
 			MOD_HadElixirPreviously = FALSE;
+			MOD_InMenhirHills = FALSE;
 		}
 	}
 

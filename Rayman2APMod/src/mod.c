@@ -264,6 +264,14 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 						MOD_InCanopy = TRUE;
 					}
 				}
+				if (compareStringCaseInsensitiveLimited(levelName, "Rodeo_40") == 0) {
+					if (!MOD_InMenhirHills) {
+						// DSG 1123 stores whether you are in the cutscene.
+						MOD_HadElixirPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1123);
+						AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
+						MOD_InMenhirHills = TRUE;
+					}
+				}
 
 				// If we enter a walk level or COBD we spawn their portal which makes them
 				// accessible from the HOF and remove the lum check.
@@ -522,7 +530,9 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			MOD_HasSavedGloboxPreviously = FALSE;
 			MOD_InCanopy = FALSE;
 		}
-		if (MOD_InMenhirHills) {
+
+		// Don't undo the menhir hills changes if you internally move within Menhir Hills 2!
+		if (compareStringCaseInsensitiveLimited(szLevelName, "Rodeo_40") != 0 && MOD_InMenhirHills) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
 			MOD_HadElixirPreviously = FALSE;
 			MOD_InMenhirHills = FALSE;
@@ -991,15 +1001,8 @@ void MOD_CheckVariables() {
 		// When we exit the lum gate, restore the data again!
 		MOD_ClearLumGateOverrides();
 
-		// If you are in the Menhir Hills 2 we have to fake you having the Elixir, otherwise
-		// we leave it default so we don't despawn Jano incorrectly.
+		// If you are in the Menhir Hills 2 we check if you got the knowledge
 		if (compareStringCaseInsensitiveLimited(szLevelName, "Rodeo_40") == 0) {
-			if (!MOD_InMenhirHills) {
-				MOD_HadElixirPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1123);
-				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
-				MOD_InMenhirHills = TRUE;
-			}
-
 			// Walking over the cutscene trigger of the Clark cutscene we send out the check
 			// for knowing about the cave of bad dreams as there's no good checks available.
 			if (!MOD_SentKnowledgeOfCOBD) {

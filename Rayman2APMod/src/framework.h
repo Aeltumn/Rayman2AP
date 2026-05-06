@@ -9,6 +9,7 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
+#include <direct.h>
 
 #include <ACP_Ray2.h>
 #include <AI/AI_Array.h>

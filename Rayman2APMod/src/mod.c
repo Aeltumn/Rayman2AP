@@ -2062,3 +2062,93 @@ void MOD_Main(void) {
 	SPTXT_vInit();
 	SPTXT_vAddTextCallback(MOD_vTextCallback);
 }
+
+void MOD_BugReport() {
+	// Create a folder for bug reports
+	_mkdir("BugReports");
+
+	// Generate timestamp
+	char timestamp[64];
+	time_t now = time(NULL);
+	struct tm t;
+	localtime_s(&t, &now);
+	strftime(timestamp, sizeof(timestamp), "%Y-%m-%d_%H-%M-%S", &t);
+	
+	// Create the file path
+	char filepath[256];
+	snprintf(filepath, sizeof(filepath),
+			 "bugreports/report-%s.txt", timestamp);
+
+
+	// Create the file
+	FILE* f = fopen(filepath, "w");
+	if (!f) {
+		perror("fopen failed");
+		return 1;
+	}
+
+	// Write the contents of the report
+	fprintf(f, "Bug Report\n");
+	fprintf(f, "Timestamp: %s\n", timestamp);
+	fprintf(f, "\n");
+
+	fprintf(f, "Code Variables:\n");
+	const char* szLevelName = GAM_fn_p_szGetLevelName();
+	fprintf(f, "szLevelName: %s\n", szLevelName);
+	fprintf(f, "MOD_Lums: %d\n", MOD_Lums);
+	fprintf(f, "MOD_Cages: %d\n", MOD_Cages);
+	fprintf(f, "MOD_Masks: %d\n", MOD_Masks);
+	fprintf(f, "MOD_Upgrades: %d\n", MOD_Upgrades);
+	fprintf(f, "MOD_EndGoal: %d\n", MOD_EndGoal);
+	fprintf(f, "MOD_Elixir: %d\n", MOD_Elixir);
+	fprintf(f, "MOD_Knowledge: %d\n", MOD_Knowledge);
+	fprintf(f, "MOD_Connected: %d\n", MOD_Connected);
+	fprintf(f, "MOD_DeathLink: %d\n", MOD_DeathLink);
+	fprintf(f, "MOD_Lumsanity: %d\n", MOD_Lumsanity);
+	fprintf(f, "MOD_RoomRandomisation: %d\n", MOD_RoomRandomisation);
+	fprintf(f, "MOD_AccessiblePortals: %d\n", MOD_AccessiblePortals);
+	for (int i = 0; i < 6; i++) {
+		fprintf(f, "MOD_LumGates[%d]: %d\n", i, MOD_LumGates[i]);
+	}
+	fprintf(f, "MOD_DeathLinkOverride: %d\n", MOD_DeathLinkOverride);
+	fprintf(f, "MOD_IgnoreDeath: %d\n", MOD_IgnoreDeath);
+	fprintf(f, "MOD_TreasureComplete: %d\n", MOD_TreasureComplete);
+	fprintf(f, "MOD_InLumGate: %d\n", MOD_InLumGate);
+	fprintf(f, "MOD_CurrentLumGate: %d\n", MOD_CurrentLumGate);
+	fprintf(f, "MOD_LevelChainCurrent: %d\n", MOD_LevelChainCurrent);
+	fprintf(f, "MOD_LastHoveredLevel: %d\n", MOD_LastHoveredLevel);
+	fprintf(f, "MOD_LastLimitedLevel: %d\n", MOD_LastLimitedLevel);
+	fprintf(f, "MOD_DevMode: %d\n", MOD_DevMode);
+	fprintf(f, "MOD_HadElixirPreviously: %d\n", MOD_HadElixirPreviously);
+	fprintf(f, "MOD_SentKnowledgeOfCOBD: %d\n", MOD_SentKnowledgeOfCOBD);
+	fprintf(f, "MOD_InMarshes: %d\n", MOD_InMarshes);
+	fprintf(f, "MOD_HadFinishedCOBDPreviously: %d\n", MOD_HadFinishedCOBDPreviously);
+	fprintf(f, "MOD_InCanopy: %d\n", MOD_InCanopy);
+	fprintf(f, "MOD_HasSavedGloboxPreviously: %d\n", MOD_HasSavedGloboxPreviously);
+	fprintf(f, "\n");
+
+	if (MOD_InitLevelChains) {
+		fprintf(f, "Level Chains:\n");
+		for (int i = 0; i <= 20; i++) {
+			fprintf(f, "Chain #%d:\n", i);
+			int chainLength = MOD_LevelChainsLengths[i];
+			for (int j = 0; j < chainLength; j++) {
+				int levelId = MOD_LevelChainContents[i][j];
+				char* levelName = MOD_LevelIds[levelId];
+				fprintf(f, " - %s\n", levelName);
+			}
+		}
+		fprintf(f, "\n");
+	}
+
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+	if (pGlobal) {
+		fprintf(f, "DSG Variables:\n");
+		for (int i = 1; i <= 1400; i++) {
+			ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+			fprintf(f, "#%d: %d\n", i, dsg);
+		}
+	}
+	fclose(f);
+	MOD_Print("Successfully wrote new bug report to BugReports folder, please send the generated text file to the developer!");
+}

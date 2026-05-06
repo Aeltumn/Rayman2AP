@@ -8,6 +8,7 @@ tdfnCommand fn_vSayCommand;
 tdfnCommand fn_vDsgCommand;
 tdfnCommand fn_vProgress;
 tdfnCommand fn_vStuck;
+tdfnCommand fn_vBugReport;
 
 void MOD_InitCommands(void) {
 	fn_vRegisterCommand("ap", fn_vApCmd);
@@ -16,6 +17,7 @@ void MOD_InitCommands(void) {
 	fn_vRegisterCommand("stuck", fn_vStuck);
 	fn_vRegisterCommand("dsg", fn_vDsgCommand);
 	fn_vRegisterCommand("progress", fn_vProgress);
+	fn_vRegisterCommand("bugreport", fn_vBugReport);
 }
 
 /** Reconstructs input arguments. */
@@ -155,4 +157,9 @@ void fn_vStuck(int lNbArgs, char** d_szArgs) {
 	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 	structure->ucPreviousLevel = 3;
 	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
+}
+
+/** Prints bug report information. */
+void fn_vBugReport(int lNbArgs, char** d_szArgs) {
+	MOD_BugReport();
 }

@@ -2119,6 +2119,7 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_LastHoveredLevel: %d\n", MOD_LastHoveredLevel);
 	fprintf(f, "MOD_LastLimitedLevel: %d\n", MOD_LastLimitedLevel);
 	fprintf(f, "MOD_DevMode: %d\n", MOD_DevMode);
+	fprintf(f, "MOD_InMenhirHills: %d\n", MOD_InMenhirHills);
 	fprintf(f, "MOD_HadElixirPreviously: %d\n", MOD_HadElixirPreviously);
 	fprintf(f, "MOD_SentKnowledgeOfCOBD: %d\n", MOD_SentKnowledgeOfCOBD);
 	fprintf(f, "MOD_InMarshes: %d\n", MOD_InMarshes);

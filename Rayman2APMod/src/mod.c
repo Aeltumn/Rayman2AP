@@ -2092,6 +2092,7 @@ void MOD_BugReport() {
 
 	// Write the contents of the report
 	fprintf(f, "Bug Report\n");
+	fprintf(f, "Version: %s\n", CURRENT_VERSION);
 	fprintf(f, "Timestamp: %s\n", timestamp);
 	fprintf(f, "\n");
 

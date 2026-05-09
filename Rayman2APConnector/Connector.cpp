@@ -136,7 +136,7 @@ void Connector::handle(int type, std::string data) {
         // Process the input and start connecting
         if (result.size() < 2) {
             send(MESSAGE_TYPE_MESSAGE, "Usage: ap connect <ip> <slot> [password]");
-        } else if (!connect(result[0], result[1], result.size() >= 2 ? "" : result[2])) {
+        } else if (!connect(result[0], result[1], result.size() > 2 ? result[2] : "")) {
             send(MESSAGE_TYPE_MESSAGE, "You are already connected to an Archipelago server");
         }
         break;

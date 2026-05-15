@@ -1808,7 +1808,7 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 		strcpy(level->name, "The Prison Ship 3");
 		level->lumsMax = 15;
 		level->cagesMax = 0;
-		level->lums = CountCollectibleLums((int[]) { 1387, 1388, 1385, 1383, 1382, 1381, 18380, 1384, 1386, 1394 }, (int[]) { 1389 }, 1, level->lumsMax);
+		level->lums = CountCollectibleLums((int[]) { 1387, 1388, 1385, 1383, 1382, 1381, 1380, 1384, 1386, 1394 }, (int[]) { 1389 }, 1, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "astro_10") == 0) {
 		strcpy(level->name, "The Prison Ship 3");

@@ -1737,7 +1737,7 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 		level->lumsMax = 20;
 		level->cagesMax = 2;
 		level->lums = CountCollectibleLums((int[]) { 610, 611, 612, 643, 644, 645, 606, 601, 602, 607, 608, 609, 603, 604, 605 }, (int[]) { 646 }, 1, level->lumsMax);
-		level->cages = CountCollectibleCages((int[]) { 900, 901 }, level->cagesMax);
+		level->cages = CountCollectibleCages((int[]) { 907, 908 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "helic_20") == 0) {
 		strcpy(level->name, "Beneath the Sanctuary of Rock and Lava 2");
 		level->lumsMax = 30;

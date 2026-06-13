@@ -601,6 +601,10 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 		// Don't undo the menhir hills changes if you internally move within Menhir Hills 2!
 		if (compareStringCaseInsensitiveLimited(szLevelName, "Rodeo_40") != 0 && MOD_InMenhirHills) {
+			// Inform the user why they are being turned away if they are being sent to mapmonde without having an Elixir.
+			if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && !MOD_Elixir) {
+				MOD_PrintConsolePlusScreen("Return back with the Elixir of Life to proceed!");
+			}
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
 			MOD_HadElixirPreviously = FALSE;
 			MOD_InMenhirHills = FALSE;

@@ -62,6 +62,7 @@ BOOL MOD_AccessiblePortals = FALSE;
 int* MOD_LumGates[6];
 
 // Store tracking variables used at runtime
+BOOL MOD_Finished = FALSE;
 BOOL MOD_DeathLinkOverride = FALSE;
 BOOL MOD_IgnoreDeath = FALSE;
 BOOL MOD_TreasureComplete = FALSE;
@@ -123,6 +124,7 @@ void MOD_Reset() {
 	MOD_LevelChainCurrent = -1;
 	MOD_LastHoveredLevel = -1;
 	MOD_LastLimitedLevel = -1;
+	MOD_Finished = FALSE;
 
 	clearBitSet(&MOD_LastCollected);
 	clearBitSet(&MOD_DevCollected);
@@ -269,7 +271,7 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 
 		if (currentLevel < 0 || currentLevel >= chainLength) {
 			// If you finish the side temple or revisit we have to move you back to where you were!
-			MOD_ExitChain(TRUE);
+			MOD_ExitChain();
 		} else {
 			// Find which level ID this is
 			int levelId = MOD_LevelChainContents[chainId][currentLevel];
@@ -385,10 +387,10 @@ int getLevelChainEntryId(int chainId) {
 	return -1;
 }
 
-void MOD_ExitChain(ACP_tdxBool bSaveGame) {
+void MOD_ExitChain() {
 	// Ignore if we are not in a chain!
 	if (!MOD_InLevelChain) {
-		GAM_fn_vAskToChangeLevel("mapmonde", bSaveGame);
+		GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 		return;
 	}
 
@@ -512,7 +514,7 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 			}
 		}
 
-		GAM_fn_vAskToChangeLevel("mapmonde", bSaveGame);
+		GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 	} else {
 		// If there was a specifc chain we are exiting we make sure to
 		// set the level ID properly so the right exit is used!
@@ -536,6 +538,34 @@ void MOD_ExitChain(ACP_tdxBool bSaveGame) {
 
 		MOD_EnterLevelChain(lastChain);
 	}
+}
+
+ACP_tdxBool MOD_TriggerFinish() {
+	if (MOD_Finished) return FALSE;
+	MOD_Finished = TRUE;
+
+	if (MOD_EndGoal == 1) {
+		// If the goal is the crow's nest, you got it!
+		MOD_PrintConsolePlusScreen("Game completed!");
+		MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+	} else if (MOD_EndGoal == 3) {
+		// If the goal is 100% we also require having everything!
+		int hasEnoughLums = MOD_Lums >= 1000;
+		int hasEnoughCages = MOD_Cages >= 80;
+		if (!hasEnoughLums) {
+			MOD_PrintConsolePlusScreen("Game not complete, not enough lums!");
+			MOD_ExitChain();
+			return TRUE;
+		} else if (!hasEnoughCages) {
+			MOD_PrintConsolePlusScreen("Game not complete, not enough cages!");
+			MOD_ExitChain();
+			return TRUE;
+		} else {
+			MOD_PrintConsolePlusScreen("Game completed 100 percent!");
+			MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+		}
+	}
+	return FALSE;
 }
 
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
@@ -592,27 +622,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 	// When entering the ending credits we check off winning!
 	if (compareStringCaseInsensitive(szLevelName, "end_10") == 0) {
-		if (MOD_EndGoal == 1) {
-			// If the goal is the crow's nest, you got it!
-			MOD_PrintConsolePlusScreen("Game completed!");
-			MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
-		} else if (MOD_EndGoal == 3) {
-			// If the goal is 100% we also require having everything!
-			int hasEnoughLums = MOD_Lums >= 1000;
-			int hasEnoughCages = MOD_Cages >= 80;
-			if (!hasEnoughLums) {
-				MOD_PrintConsolePlusScreen("Game not complete, not enough lums!");
-				MOD_ExitChain(bSaveGame);
-				return;
-			} else if (!hasEnoughCages) {
-				MOD_PrintConsolePlusScreen("Game not complete, not enough cages!");
-				MOD_ExitChain(bSaveGame);
-				return;
-			} else {
-				MOD_PrintConsolePlusScreen("Game completed 100 percent!");
-				MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
-			}
-		}
+		if (MOD_TriggerFinish()) return;
 	}
 
 	// When you exit the Pirate Ship from the ending exit we put you back at the default exit unless you have enough masks.
@@ -620,6 +630,9 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		if (MOD_Masks < 4 && structure->ucPreviousLevel == 240) {
 			structure->ucPreviousLevel = 140;
 		}
+
+		// Reset finished state after returning to mapmonde!
+		MOD_Finished = FALSE;
 	}
 
 	// If we're using room randomisation, change the layout!
@@ -627,7 +640,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		// We ignore exit 99 as that's what is used when moving to the menu and back.
 		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && structure->ucExitIdToQuitPrevLevel != 99) {
 			// When entering the menu, update the previous level and exit to put you at the right spot!
-			MOD_ExitChain(bSaveGame);
+			MOD_ExitChain();
 			return;
 		} else {
 			// When entering a level we have to determine which chain to move you towards!
@@ -1135,6 +1148,17 @@ void MOD_CheckVariables() {
 			}
 		}
 
+		// When defeating Razorbeard we finish the game.
+		if (compareStringCaseInsensitive(szLevelName, "Rhop_10") == 0) {
+			HIE_tdstSuperObject* pRhop = HIE_fn_p_stFindObjectByName("SUN_Rhopars");
+			if (pRhop) {
+				HIE_tdstEngineObject* pActor = pRhop->hLinkedObject.p_stActor;
+				if (pActor->hStandardGame->ucHitPoints <= 0) {
+					MOD_TriggerFinish();
+				}
+			}
+		}
+
 		// Set the collected cages for health to the custom value so health is overridden,
 		// if the value would be 9 always make it 8 so it doesn't incorrectly give a health
 		// increase when a new cage is collected for one frame.
@@ -1186,7 +1210,7 @@ void MOD_CheckVariables() {
 
 		// If you're in the menu, quit any chains!
 		if (MOD_InLevelChain && compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
-			MOD_ExitChain(TRUE);
+			MOD_ExitChain();
 		}
 
 		// In accessible portals mode we show all portals for which we have enough lums!

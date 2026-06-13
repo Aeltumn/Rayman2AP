@@ -29,7 +29,7 @@ BOOL MOD_CanProgressChain();
 BOOL MOD_ProgressLevelChainAndIncrement(int increment);
 BOOL MOD_ProgressLevelChain();
 void MOD_EnterLevelChain(int chainId);
-void MOD_ExitChain(ACP_tdxBool bSaveGame);
+void MOD_ExitChain();
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame);
 
 void MOD_Print(char*, ...);

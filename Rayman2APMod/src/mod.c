@@ -2139,6 +2139,9 @@ void MOD_Main(void) {
 	// Initialize on-screen text
 	SPTXT_vInit();
 	SPTXT_vAddTextCallback(MOD_vTextCallback);
+
+	// Print a ready message
+	MOD_Print("Rayman2APMod v%s has started succesfully", CURRENT_VERSION);
 }
 
 void MOD_BugReport() {

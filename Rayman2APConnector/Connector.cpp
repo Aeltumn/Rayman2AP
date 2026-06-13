@@ -467,7 +467,7 @@ void Connector::init() {
     instance = this;
 
     // Send an initial message to inform the client
-    instance->send(MESSAGE_TYPE_MESSAGE, "Rayman2APConnector has started and is ready to use");
+    instance->send(MESSAGE_TYPE_MESSAGE, "Rayman2APConnector v" + std::string(CURRENT_VERSION) + " has started and is ready to use");
 
     // Immediately send a state update so lum gates are set on boot
     sendSettings(true);
@@ -489,7 +489,6 @@ void Connector::waitForInput() {
             
             if (!ReadFile(hStdIn, &indicator, 1, &bytesRead, NULL)) {
                 throw std::runtime_error("Failed to read message");
-                continue;
             }
             if (bytesRead == 0) continue;
 
@@ -500,7 +499,6 @@ void Connector::waitForInput() {
             char lengthChar[7];
             if (!ReadFile(hStdIn, lengthChar, 6, &bytesRead, NULL)) {
                 throw std::runtime_error("Failed to read message");
-                continue;
             }
             if (bytesRead == 0) continue;
             lengthChar[6] = '\0';
@@ -511,7 +509,6 @@ void Connector::waitForInput() {
             char typeChar;
             if (!ReadFile(hStdIn, &typeChar, 1, &bytesRead, NULL)) {
                 throw std::runtime_error("Failed to read message");
-                continue;
             }
             if (bytesRead == 0) continue;
             int type = typeChar - '0';
@@ -520,12 +517,10 @@ void Connector::waitForInput() {
             char* messageBuffer = static_cast<char*>(std::malloc(messageLength + 1));
             if (!messageBuffer) {
                 throw std::runtime_error("Failed to allocate memory for incoming message");
-                continue;
             }
             if (messageLength > 0) {
                 if (!ReadFile(hStdIn, messageBuffer, messageLength, &bytesRead, NULL)) {
                     throw std::runtime_error("Failed to read message");
-                    continue;
                 }
                 if (bytesRead == 0) {
                     free(messageBuffer);

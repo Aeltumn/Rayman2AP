@@ -159,10 +159,14 @@ void MOD_HandleMessage(int type, const char* data) {
         // Ignore a death if death link is currently not enabled
         if (!MOD_GetDeathLink(FALSE)) return;
 
-        // If we are in Morb_20 (Clark boss fight) we disable death
-        // link as it causes a soft lock
+        // If we are in a number of levels with known soft locks we ignore death links.
         const char* szLevelName = GAM_fn_p_szGetLevelName();
-        if (compareStringCaseInsensitive(szLevelName, "Morb_20") == 0) return;
+        if (// Dying during Clark fight causes complete softlock.
+            compareStringCaseInsensitive(szLevelName, "Morb_20") == 0 ||
+            // Dying during the fight with the pirate ship skips it.
+            compareStringCaseInsensitive(szLevelName, "glob_20") == 0 ||
+            // Dying during mini-Jano fight causes orb to softlock.
+            compareStringCaseInsensitive(szLevelName, "vulca_10") == 0) return;
 
         // Don't deathlink while in the menu!
         if (compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) return;

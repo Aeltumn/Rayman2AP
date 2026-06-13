@@ -86,7 +86,7 @@ BOOL MOD_SentKnowledgeOfCOBD = FALSE;
 
 // While in Beneath 2 store if you beat Foutch beforehand
 BOOL MOD_InBeneath2 = FALSE;
-BOOL MOD_DefeatedFouchPreviously = FALSE;
+BOOL MOD_DefeatedFoutchPreviously = FALSE;
 
 // While sending you back to Marshes we lie about having finshed COBD but we need to put things back in place after
 BOOL MOD_InMarshes = FALSE;
@@ -242,7 +242,7 @@ void MOD_LieBeforeLevelEntry(char* levelName) {
 					// DSG 1159 stores if you beat Foutch which spawns an exit portal instead
 					// of using the transition so we always want this to be false so the exit
 					// maps correctly.
-					MOD_DefeatedFouchPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1159);
+					MOD_DefeatedFoutchPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1159);
 					AI_fn_vSetBooleanInArray(pGlobal, 42, 1159, FALSE);
 					MOD_InBeneath2 = TRUE;
 				}
@@ -564,8 +564,8 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			MOD_InCanopy = FALSE;
 		}
 		if (MOD_InBeneath2) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1159, MOD_DefeatedFouchPreviously);
-			MOD_DefeatedFouchPreviously = FALSE;
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1159, MOD_DefeatedFoutchPreviously);
+			MOD_DefeatedFoutchPreviously = FALSE;
 			MOD_InBeneath2 = FALSE;
 		}
 
@@ -1170,6 +1170,12 @@ void MOD_CheckVariables() {
 			MOD_ShowScreenText("Final portal unlocked!");
 
 			// Reload the mapmonde so the portal shows up!
+			reloadMapMonde = TRUE;
+		}
+
+		// Remove final portal if it somehow spawned!
+		if (AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && MOD_Masks < 4) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, FALSE);
 			reloadMapMonde = TRUE;
 		}
 
@@ -2172,7 +2178,7 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_InCanopy: %d\n", MOD_InCanopy);
 	fprintf(f, "MOD_HasSavedGloboxPreviously: %d\n", MOD_HasSavedGloboxPreviously);
 	fprintf(f, "MOD_InBeneath2: %d\n", MOD_InBeneath2);
-	fprintf(f, "MOD_DefeatedFouchPreviously: %d\n", MOD_DefeatedFouchPreviously);
+	fprintf(f, "MOD_DefeatedFoutchPreviously: %d\n", MOD_DefeatedFoutchPreviously);
 	fprintf(f, "\n");
 
 	if (MOD_InitLevelChains) {

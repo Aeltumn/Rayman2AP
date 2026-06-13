@@ -364,12 +364,12 @@ void handleLevelChains(std::string data) {
 void handleLumGates(std::string data) {
     try {
         // Parse the lum gates from the archipelago input
-        if (data.length() < 3) return;
-        std::string inner = data.substr(1, data.length() - 2);
+        if (data.length() < 4) return;
+        std::string inner = data.substr(1, data.length() - 3);
         std::stringstream stream(inner);
         std::string token;
         int i = 0;
-        while (std::getline(stream, token, ',')) {
+        while (std::getline(stream, token, ',') && i < 6) {
             lumGates[i++] = std::stoi(token);
         }
     } catch (const std::exception& e) {
@@ -484,43 +484,57 @@ void Connector::waitForInput() {
 
         while (true) {
             // Start reading from the child process's stdout
-            char buffer[1];
+            char indicator;
             DWORD bytesRead;
-            while (ReadFile(hStdIn, buffer, 1, &bytesRead, NULL) && bytesRead > 0) {
-                // Ignore all input until we find our special character!
-                if (buffer[0] != (char)26) continue;
+            
+            if (!ReadFile(hStdIn, &indicator, 1, &bytesRead, NULL)) {
+                throw std::runtime_error("Failed to read message");
+                continue;
+            }
+            if (bytesRead == 0) continue;
 
-                // Read the length of the message that will follow
-                char lengthChar[7];
-                ReadFile(hStdIn, lengthChar, 6, &bytesRead, NULL);
-                if (bytesRead == 0) continue;
-                lengthChar[6] = '\0';
-                int messageLength = atoi(lengthChar);
-                if (messageLength < 0) continue;
+            // Ignore all input until we find our special character!
+            if (indicator != (char)26) continue;
 
-                // Determine the type of the message
-                char typeChar;
-                ReadFile(hStdIn, &typeChar, 1, &bytesRead, NULL);
-                if (bytesRead == 0) continue;
-                int type = typeChar - '0';
+            // Read the length of the message that will follow
+            char lengthChar[7];
+            if (!ReadFile(hStdIn, lengthChar, 6, &bytesRead, NULL)) {
+                throw std::runtime_error("Failed to read message");
+                continue;
+            }
+            if (bytesRead == 0) continue;
+            lengthChar[6] = '\0';
+            int messageLength = atoi(lengthChar);
+            if (messageLength < 0) continue;
 
-                // Read out the message
-                char* messageBuffer = static_cast<char*>(std::malloc(messageLength + 1));
-                if (!messageBuffer) {
-                    throw std::runtime_error("Failed to allocate memory for incoming message");
+            // Determine the type of the message
+            char typeChar;
+            if (!ReadFile(hStdIn, &typeChar, 1, &bytesRead, NULL)) {
+                throw std::runtime_error("Failed to read message");
+                continue;
+            }
+            if (bytesRead == 0) continue;
+            int type = typeChar - '0';
+
+            // Read out the message
+            char* messageBuffer = static_cast<char*>(std::malloc(messageLength + 1));
+            if (!messageBuffer) {
+                throw std::runtime_error("Failed to allocate memory for incoming message");
+                continue;
+            }
+            if (messageLength > 0) {
+                if (!ReadFile(hStdIn, messageBuffer, messageLength, &bytesRead, NULL)) {
+                    throw std::runtime_error("Failed to read message");
                     continue;
                 }
-                if (messageLength > 0) {
-                    ReadFile(hStdIn, messageBuffer, messageLength, &bytesRead, NULL);
-                    if (bytesRead == 0) {
-                        free(messageBuffer);
-                        continue;
-                    }
+                if (bytesRead == 0) {
+                    free(messageBuffer);
+                    continue;
                 }
-                messageBuffer[messageLength] = '\0';
-                handle(type, std::string(messageBuffer));
-                std::free(messageBuffer);
             }
+            messageBuffer[messageLength] = '\0';
+            handle(type, std::string(messageBuffer));
+            std::free(messageBuffer);
         }
     }
     catch (const std::exception& e) {

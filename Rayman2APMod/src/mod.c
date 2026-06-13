@@ -59,7 +59,7 @@ BOOL MOD_DeathLink = FALSE;
 BOOL MOD_Lumsanity = FALSE;
 BOOL MOD_RoomRandomisation = FALSE;
 BOOL MOD_AccessiblePortals = FALSE;
-int* MOD_LumGates[6];
+int MOD_LumGates[6];
 
 // Store tracking variables used at runtime
 BOOL MOD_Finished = FALSE;

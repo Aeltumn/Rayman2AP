@@ -40,7 +40,7 @@ void MOD_HandleMessage(int type, const char* data) {
         BOOL lumsanity = FALSE;
         BOOL roomRandomisation = FALSE;
         BOOL accessiblePortals = FALSE;
-        int* lumGates[6];
+        int lumGates[6];
 
         char* levelIds[LEVEL_COUNT];
         int chainLengths[CHAIN_COUNT];
@@ -197,19 +197,41 @@ void MOD_HandleMessage(int type, const char* data) {
     }
 }
 
+/** Handles a recent error from running [action]. */
+void MOD_HandleError(char* action) {
+    DWORD errorCode = GetLastError();
+    MOD_Print("Encountered error while %s, code %lu", action, errorCode);
+
+    // The child process must have gone missing!
+    if (errorCode == ERROR_BROKEN_PIPE) {
+        DWORD exitCode;
+        GetExitCodeProcess(pi.hProcess, &exitCode);
+        MOD_Print("Broken pipe occurred, child exit code %lu", exitCode);
+    }
+}
+
 /** Task run in a separate thread to handle incoming packets. */
 DWORD WINAPI MOD_ReadInput(LPVOID param) {
     // Start reading from the child process's stdout
     char buffer[1];
     BOOL ready = FALSE;
     DWORD bytesRead;
-    while (MOD_Running && ReadFile(hChildStdOutRead, buffer, 1, &bytesRead, NULL) && bytesRead > 0) {
+    while (MOD_Running) {
+        if (!ReadFile(hChildStdOutRead, buffer, 1, &bytesRead, NULL)) {
+            MOD_HandleError("reading message buffer");
+            continue;
+        }
+        if (bytesRead == 0) continue;
+
         // Ignore all input until we find our special character!
         if (buffer[0] != (char)26) continue;
 
         // Read the length of the message that will follow
         char lengthChar[7];
-        ReadFile(hChildStdOutRead, lengthChar, 6, &bytesRead, NULL);
+        if (!ReadFile(hChildStdOutRead, lengthChar, 6, &bytesRead, NULL)) {
+            MOD_HandleError("reading message buffer");
+            continue;
+        }
         if (bytesRead == 0) continue;
         lengthChar[6] = '\0';
         int messageLength = atoi(lengthChar);
@@ -217,7 +239,10 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
 
         // Determine the type of the message
         char typeChar[1];
-        ReadFile(hChildStdOutRead, typeChar, 1, &bytesRead, NULL);
+        if (!ReadFile(hChildStdOutRead, typeChar, 1, &bytesRead, NULL)) {
+            MOD_HandleError("reading message buffer");
+            continue;
+        }
         if (bytesRead == 0) continue;
         int type = typeChar[0] - '0';
 
@@ -228,7 +253,10 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
             return;
         }
         if (messageLength > 0) {
-            ReadFile(hChildStdOutRead, messageBuffer, messageLength, &bytesRead, NULL);
+            if (!ReadFile(hChildStdOutRead, messageBuffer, messageLength, &bytesRead, NULL)) {
+                MOD_HandleError("reading message buffer");
+                continue;
+            }
             if (bytesRead == 0) {
                 free(messageBuffer);
                 continue;
@@ -282,7 +310,7 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
             // Print all incoming messages to the output log
             FILE* pFile = fopen("ap_log_connector.txt", "a");
             if (pFile != NULL) {
-                fprintf(pFile, messageBuffer);
+                fprintf(pFile, "%s", messageBuffer);
                 fprintf(pFile, "\n");
                 fclose(pFile);
             }
@@ -360,7 +388,7 @@ int MOD_StartConnector() {
     // Set up the mutex for synchronization
     messageMutex = CreateMutexA(NULL, FALSE, NULL);
     if (!messageMutex) {
-        MOD_Print("Error creating message sync mutex, error code %lu", GetLastError());
+        MOD_HandleError("creating message sync mutex");
         return 1;
     }
 
@@ -374,11 +402,11 @@ int MOD_StartConnector() {
 
     // Create the pipes for communication
     if (!CreatePipe(&hChildStdOutRead, &hChildStdOutWrite, &saAttr, 0)) {
-        MOD_Print("Error creating stdout pipe, error code %lu", GetLastError());
+        MOD_HandleError("creating stdout pipe");
         return 1;
     }
     if (!CreatePipe(&hChildStdInRead, &hChildStdInWrite, &saAttr, 0)) {
-        MOD_Print("Error creating stdin pipe, error code %lu", GetLastError());
+        MOD_HandleError("creating stdin pipe");
         return 1;
     }
 
@@ -403,14 +431,14 @@ int MOD_StartConnector() {
     // Create the job to share with the child process so we can close it
     job = CreateJobObjectA(NULL, NULL);
     if (!job) {
-        MOD_Print("Error creating job object, error code %lu", GetLastError());
+        MOD_HandleError("creating job object");
         return 1;
     }
 
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
     jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
     if (SetInformationJobObject(job, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)) == 0) {
-        MOD_Print("Error configuring job object, error code %lu", GetLastError());
+        MOD_HandleError("configuring job object");
         return 1;
     }
 
@@ -430,7 +458,7 @@ int MOD_StartConnector() {
         &si,                 // Startup information
         &pi                  // Process information
     )) {
-        MOD_Print("Error creating process, error code %lu", GetLastError());
+        MOD_HandleError("creating process");
         return 1;
     }
 
@@ -450,7 +478,7 @@ int MOD_StartConnector() {
     );
 
     if (readyEvent == NULL) {
-        MOD_Print("Error creating event, error code %lu", GetLastError());
+        MOD_HandleError("creating event");
         return 1;
     }
 
@@ -463,7 +491,7 @@ int MOD_StartConnector() {
         &threadId            // Receives the thread ID
     );
     if (threadHandle == NULL) {
-        MOD_Print("Error creating thread, error code %lu", GetLastError());
+        MOD_HandleError("creating thread");
         return 1;
     }
 
@@ -506,7 +534,7 @@ void MOD_SendMessage(int type, const char* data) {
         memcpy(message + 8, data, length);
     }
     if (!WriteFile(hChildStdInWrite, message, length + 8, &bytesWritten, NULL)) {
-        MOD_Print("Encountered error while writing to connector %lu", GetLastError());
+        MOD_HandleError("writing to connector");
     }
     free(message);
 }

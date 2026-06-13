@@ -9,6 +9,7 @@ SECURITY_ATTRIBUTES saAttr;
 PROCESS_INFORMATION pi;
 DWORD threadId;
 BOOL MOD_Running;
+BOOL MOD_Shutdown;
 
 // Store messages that were received, we handle them the next tick
 typedef struct {
@@ -295,7 +296,11 @@ DWORD WINAPI MOD_ReadInput(LPVOID param) {
         }
     }
 
+    // Log when the connector is closed
+    MOD_Print("Closed internal AP client");
+
     // Clean up everything
+    MOD_Shutdown = TRUE;
     CloseHandle(threadHandle);
     CloseHandle(hChildStdOutRead);
     CloseHandle(hChildStdInWrite);
@@ -483,6 +488,10 @@ void MOD_SendMessageE(int type) {
 
 /** Sends out a connector message. */
 void MOD_SendMessage(int type, const char* data) {
+    if (MOD_Shutdown) {
+        MOD_Print("AP connector has shut down, please restart your game!");
+        return;
+    }
     DWORD bytesWritten;
     int length = strlen(data);
     char* message = malloc(length + 8);

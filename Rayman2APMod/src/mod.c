@@ -84,6 +84,10 @@ BOOL MOD_InMenhirHills = FALSE;
 BOOL MOD_HadElixirPreviously = FALSE;
 BOOL MOD_SentKnowledgeOfCOBD = FALSE;
 
+// While in Beneath 2 store if you beat Foutch beforehand
+BOOL MOD_InBeneath2 = FALSE;
+BOOL MOD_DefeatedFouchPreviously = FALSE;
+
 // While sending you back to Marshes we lie about having finshed COBD but we need to put things back in place after
 BOOL MOD_InMarshes = FALSE;
 BOOL MOD_HadFinishedCOBDPreviously = FALSE;
@@ -190,6 +194,63 @@ BOOL MOD_CanProgressChain() {
 	return false;
 }
 
+void MOD_LieBeforeLevelEntry(char* levelName) {
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+	if (pGlobal) {
+		if (compareStringCaseInsensitiveLimited(levelName, "Rodeo_40") == 0) {
+			if (!MOD_InMenhirHills) {
+				// DSG 1123 stores whether you are in the cutscene.
+				MOD_HadElixirPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1123);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
+				MOD_InMenhirHills = TRUE;
+			}
+		}
+		if (MOD_RoomRandomisation) {
+			// Before moving into The Canopy we need to ensure Globox is there!
+			// 979 is portal but also whether globox is present in the level
+			if (compareStringCaseInsensitive(levelName, "glob_10") == 0) {
+				if (!MOD_InCanopy) {
+					// DSG 957 stores if you opened the gate at the end of Canopy #2, if you
+					// have that you have beat this level before and we don't want to repeat the sequence.
+					MOD_HasSavedGloboxPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 979);
+					BOOL FinishedCanopy = AI_fn_bGetBooleanInArray(pGlobal, 42, 957);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
+					MOD_InCanopy = TRUE;
+				}
+			}
+			if (compareStringCaseInsensitive(levelName, "glob_20") == 0) {
+				if (!MOD_InCanopy) {
+					// DSG 873 stores if you freed the teensie at the end of the level, if you
+					// have that you have beat this level before and we don't want to repeat the sequence.
+					MOD_HasSavedGloboxPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 979);
+					BOOL FinishedCanopy = AI_fn_bGetBooleanInArray(pGlobal, 42, 873);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
+					MOD_InCanopy = TRUE;
+				}
+			}
+			if (compareStringCaseInsensitiveLimited(levelName, "Ski_10") == 0) {
+				if (!MOD_InMarshes) {
+					// DSG 1120 stores whether to show the cutscene. Ensure it does not show
+					// unless we explicitly set it.
+					MOD_HadFinishedCOBDPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1120);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 1120, FALSE);
+					MOD_InMarshes = TRUE;
+				}
+			}
+			if (compareStringCaseInsensitive(levelName, "helic_20") == 0) {
+				if (!MOD_InBeneath2) {
+					// DSG 1159 stores if you beat Foutch which spawns an exit portal instead
+					// of using the transition so we always want this to be false so the exit
+					// maps correctly.
+					MOD_DefeatedFouchPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1159);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 1159, FALSE);
+					MOD_InBeneath2 = TRUE;
+				}
+			}
+		}
+	}
+}
+
 BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 	// When we exit the lum gate, restore the data again!
 	MOD_ClearLumGateOverrides();
@@ -240,39 +301,11 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 				MOD_LastLimitedLevel = 0;
 			}
 
+			// Set up properly before entering this level
+			MOD_LieBeforeLevelEntry(levelName);
+
 			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 			if (pGlobal) {
-				// Before moving into The Canopy we need to ensure Globox is there!
-				// 979 is portal but also whether globox is present in the level
-				if (compareStringCaseInsensitive(levelName, "glob_10") == 0) {
-					if (!MOD_InCanopy) {
-						// DSG 957 stores if you opened the gate at the end of Canopy #2, if you
-						// have that you have beat this level before and we don't want to repeat the sequence.
-						MOD_HasSavedGloboxPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 979);
-						BOOL FinishedCanopy = AI_fn_bGetBooleanInArray(pGlobal, 42, 957);
-						AI_fn_vSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
-						MOD_InCanopy = TRUE;
-					}
-				}
-				if (compareStringCaseInsensitive(levelName, "glob_20") == 0) {
-					if (!MOD_InCanopy) {
-						// DSG 873 stores if you freed the teensie at the end of the level, if you
-						// have that you have beat this level before and we don't want to repeat the sequence.
-						MOD_HasSavedGloboxPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 979);
-						BOOL FinishedCanopy = AI_fn_bGetBooleanInArray(pGlobal, 42, 873);
-						AI_fn_vSetBooleanInArray(pGlobal, 42, 979, FinishedCanopy);
-						MOD_InCanopy = TRUE;
-					}
-				}
-				if (compareStringCaseInsensitiveLimited(levelName, "Rodeo_40") == 0) {
-					if (!MOD_InMenhirHills) {
-						// DSG 1123 stores whether you are in the cutscene.
-						MOD_HadElixirPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1123);
-						AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
-						MOD_InMenhirHills = TRUE;
-					}
-				}
-
 				// If we enter a walk level or COBD we spawn their portal which makes them
 				// accessible from the HOF and remove the lum check.
 				if (chainId == CHAIN_WALK_LIFE) {
@@ -529,6 +562,11 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 979, MOD_HasSavedGloboxPreviously);
 			MOD_HasSavedGloboxPreviously = FALSE;
 			MOD_InCanopy = FALSE;
+		}
+		if (MOD_InBeneath2) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1159, MOD_DefeatedFouchPreviously);
+			MOD_DefeatedFouchPreviously = FALSE;
+			MOD_InBeneath2 = FALSE;
 		}
 
 		// Don't undo the menhir hills changes if you internally move within Menhir Hills 2!
@@ -800,6 +838,9 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			}
 		}
 	}
+
+	// Set up properly before entering this level for Menhir non-room randomised
+	MOD_LieBeforeLevelEntry(szLevelName);
 
 	// Fall back to just the base game level change
 	GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
@@ -1811,7 +1852,7 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 		level->lums = CountCollectibleLums((int[]) { 1387, 1388, 1385, 1383, 1382, 1381, 1380, 1384, 1386, 1394 }, (int[]) { 1389 }, 1, level->lumsMax);
 		level->cages = CountCollectibleCages((int[]) { 0 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "astro_10") == 0) {
-		strcpy(level->name, "The Prison Ship 3");
+		strcpy(level->name, "The Prison Ship 4");
 		level->lumsMax = 15;
 		level->cagesMax = 0;
 		level->lums = CountCollectibleLums((int[]) { 1301, 1302, 1303, 1304, 1305, 1306, 1307, 1308, 1309, 1310 }, (int[]) { 1311 }, 1, level->lumsMax);
@@ -2130,6 +2171,8 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_HadFinishedCOBDPreviously: %d\n", MOD_HadFinishedCOBDPreviously);
 	fprintf(f, "MOD_InCanopy: %d\n", MOD_InCanopy);
 	fprintf(f, "MOD_HasSavedGloboxPreviously: %d\n", MOD_HasSavedGloboxPreviously);
+	fprintf(f, "MOD_InBeneath2: %d\n", MOD_InBeneath2);
+	fprintf(f, "MOD_DefeatedFouchPreviously: %d\n", MOD_DefeatedFouchPreviously);
 	fprintf(f, "\n");
 
 	if (MOD_InitLevelChains) {

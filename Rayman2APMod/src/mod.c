@@ -1835,9 +1835,9 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 	} else if (compareStringCaseInsensitive(levelName, "morb_10") == 0) {
 		strcpy(level->name, "Tomb of the Ancients 2");
 		level->lumsMax = 40;
-		level->cagesMax = 3;
+		level->cagesMax = 4;
 		level->lums = CountCollectibleLums((int[]) { 656, 655, 654, 657, 652, 653, 651, 658, 660, 659 }, (int[]) { 686, 681, 661, 666, 671, 676 }, 6, level->lumsMax);
-		level->cages = CountCollectibleCages((int[]) { 910, 909, 913 }, level->cagesMax);
+		level->cages = CountCollectibleCages((int[]) { 914, 912, 915, 913 }, level->cagesMax);
 	} else if (compareStringCaseInsensitive(levelName, "morb_20") == 0) {
 		strcpy(level->name, "Tomb of the Ancients 3");
 		level->lumsMax = 0;

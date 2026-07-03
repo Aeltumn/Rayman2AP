@@ -27,6 +27,7 @@
 		1091 for watching woods of light intro.
 		1097 for watching the Bayou cutscene.
 		1102 for completing Menhir Hills #2 cutscene.
+		1114 for watching the 2nd Polocus cutscene - changes ending of Beneath 2
 		1131 for watching the Precipice cutscene.
 		1132 for watching the Tomb cutscene.
 		1133 for watching woods of light teensie cutscene.

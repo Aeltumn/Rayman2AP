@@ -241,11 +241,11 @@ void MOD_LieBeforeLevelEntry(char* levelName) {
 			}
 			if (compareStringCaseInsensitive(levelName, "helic_20") == 0) {
 				if (!MOD_InBeneath2) {
-					// DSG 1159 stores if you beat Foutch which spawns an exit portal instead
+					// DSG 1114 stores if you beat Foutch which spawns an exit portal instead
 					// of using the transition so we always want this to be false so the exit
 					// maps correctly.
-					MOD_DefeatedFoutchPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1159);
-					AI_fn_vSetBooleanInArray(pGlobal, 42, 1159, FALSE);
+					MOD_DefeatedFoutchPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1114);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 1114, FALSE);
 					MOD_InBeneath2 = TRUE;
 				}
 			}
@@ -594,7 +594,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			MOD_InCanopy = FALSE;
 		}
 		if (MOD_InBeneath2) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1159, MOD_DefeatedFoutchPreviously);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1114, MOD_DefeatedFoutchPreviously);
 			MOD_DefeatedFoutchPreviously = FALSE;
 			MOD_InBeneath2 = FALSE;
 		}

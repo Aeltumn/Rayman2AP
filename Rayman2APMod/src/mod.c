@@ -97,6 +97,14 @@ BOOL MOD_HadFinishedCOBDPreviously = FALSE;
 BOOL MOD_InCanopy = FALSE;
 BOOL MOD_HasSavedGloboxPreviously = FALSE;
 
+// When playing The Whale Bay we have to make sure Carmen is there.
+BOOL MOD_InWhaleBay = FALSE;
+BOOL MOD_HasSavedCarmenPreviously = FALSE;
+
+// When playing Top of the World make sure the teensie is not yet saved.
+BOOL MOD_InTopOfTheWorld = FALSE;
+BOOL MOD_HasSavedThatOneTeensiePreviously = FALSE;
+
 // Level chain settings info
 char MOD_LevelIds[LEVEL_COUNT][MAX_LENGTH];
 int MOD_LevelChainsLengths[CHAIN_COUNT];
@@ -247,6 +255,23 @@ void MOD_LieBeforeLevelEntry(char* levelName) {
 					MOD_DefeatedFoutchPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1114);
 					AI_fn_vSetBooleanInArray(pGlobal, 42, 1114, FALSE);
 					MOD_InBeneath2 = TRUE;
+				}
+			}
+			if (compareStringCaseInsensitive(levelName, "whale_05") == 0) {
+				if (!MOD_InWhaleBay) {
+					// DSG 954 stores whether you saved Carmen.
+					MOD_HasSavedCarmenPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 954);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 954, FALSE);
+					MOD_InWhaleBay = TRUE;
+				}
+			}
+			if (compareStringCaseInsensitive(levelName, "seat_11") == 0) {
+				if (!MOD_InTopOfTheWorld) {
+					// DSG 990 stores whether the Sanctuary's portal is open or not, but it gets checked
+					// to see if the teensie needs saving. So we always have to set it to FALSE in the level.
+					MOD_HasSavedThatOneTeensiePreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 990);
+					AI_fn_vSetBooleanInArray(pGlobal, 42, 990, FALSE);
+					MOD_InTopOfTheWorld = TRUE;
 				}
 			}
 		}
@@ -597,6 +622,16 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1114, MOD_DefeatedFoutchPreviously);
 			MOD_DefeatedFoutchPreviously = FALSE;
 			MOD_InBeneath2 = FALSE;
+		}
+		if (MOD_InWhaleBay) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 954, MOD_HasSavedCarmenPreviously);
+			MOD_HasSavedCarmenPreviously = FALSE;
+			MOD_InWhaleBay = FALSE;
+		}
+		if (MOD_InTopOfTheWorld) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 990, MOD_HasSavedThatOneTeensiePreviously);
+			MOD_HasSavedThatOneTeensiePreviously = FALSE;
+			MOD_InTopOfTheWorld = FALSE;
 		}
 
 		// Don't undo the menhir hills changes if you internally move within Menhir Hills 2!
@@ -1234,7 +1269,9 @@ void MOD_CheckVariables() {
 				}
 			}
 
-			if (MOD_Lums >= MOD_LumGates[0]) {
+			// Don't open the gate after Canopy while in the Canopy as it makes
+			// Globox upset and leave.
+			if (MOD_Lums >= MOD_LumGates[0] && !MOD_InCanopy) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i]);
@@ -1248,7 +1285,10 @@ void MOD_CheckVariables() {
 					reloadMapMonde = TRUE;
 				}
 			}
-			if (MOD_Lums >= MOD_LumGates[1]) {
+
+			// Don't open the gate after Top of the World while in Top of the World
+			// as it breaks the teensie.
+			if (MOD_Lums >= MOD_LumGates[1] && !MOD_InTopOfTheWorld) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 5; i++) {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i]);
@@ -1262,6 +1302,7 @@ void MOD_CheckVariables() {
 					reloadMapMonde = TRUE;
 				}
 			}
+
 			if (MOD_Lums >= MOD_LumGates[2]) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 2; i++) {

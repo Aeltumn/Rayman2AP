@@ -78,6 +78,7 @@
 
 /** Attach detours hooks to game events. */
 void fn_vAttachHooks( void ) {
+	FHK_M_lCreateHook(&GAM_fn_WndProc, MOD_WndProc);
 	FHK_M_lCreateHook(&GAM_fn_vEngine, MOD_EngineTick);
 	FHK_M_lCreateHook(&GAM_fn_vChooseTheGoodInit, MOD_Init);
 	FHK_M_lCreateHook(&GAM_fn_vAskToChangeLevel, MOD_ChangeLevel);
@@ -85,6 +86,7 @@ void fn_vAttachHooks( void ) {
 
 /** Remove detours hooks from game events. */
 void fn_vDetachHooks( void ) {
+	FHK_M_lDestroyHook(&GAM_fn_WndProc, MOD_WndProc);
 	FHK_M_lDestroyHook(&GAM_fn_vEngine, MOD_EngineTick);
 	FHK_M_lDestroyHook(&GAM_fn_vChooseTheGoodInit, MOD_Init);
 	FHK_M_lDestroyHook(&GAM_fn_vAskToChangeLevel, MOD_ChangeLevel);

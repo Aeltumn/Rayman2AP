@@ -18,7 +18,7 @@
 #define MESSAGE_TYPE_SETTINGS 10
 #define MESSAGE_TYPE_RESET 11
 
-#define CURRENT_VERSION "0.1.5"
+#define CURRENT_VERSION "1.0.0"
 
 class Connector {
 public:

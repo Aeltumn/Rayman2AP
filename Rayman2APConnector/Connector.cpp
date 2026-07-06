@@ -29,6 +29,9 @@ int endGoal = 1;
 bool lumsanity = false;
 bool roomRandomisation = false;
 bool accessiblePortals = false;
+int deathLinkAmnesty = 1;
+bool betterLevelPortals = false;
+int lumBundleSize = 0;
 int lumGates[6] = {100, 300, 475, 550, 60, 450};
 std::unordered_map<std::string, std::vector<std::string>> levelChains;
 std::string lastIp;
@@ -218,6 +221,9 @@ void sendSettings(bool force) {
     oss << lumsanity << ",";
     oss << roomRandomisation << ",";
     oss << accessiblePortals << ",";
+    oss << deathLinkAmnesty << ",";
+    oss << betterLevelPortals << ",";
+    oss << lumBundleSize << ",";
 
     for (int i = 0; i < 6; i++) {
         oss << lumGates[i] << ",";
@@ -261,6 +267,9 @@ void handleReset() {
     lumsanity = false;
     roomRandomisation = false;
     accessiblePortals = false;
+    deathLinkAmnesty = 1;
+    betterLevelPortals = false;
+    lumBundleSize = 0;
     lumGates[0] = 100;
     lumGates[1] = 300;
     lumGates[2] = 475;
@@ -385,6 +394,24 @@ void handleDeathLinkEnabled(std::string data) {
     sendSettings(false);
 }
 
+/** Handles information on whether death link is enabled. */
+void handleDeathLinkAmnesty(std::string data) {
+    deathLinkAmnesty = std::stoi(data) == 1;
+    sendSettings(false);
+}
+
+/** Handles information on whether death link is enabled. */
+void handleBetterLevelPortals(std::string data) {
+    betterLevelPortals = std::stoi(data) == 1;
+    sendSettings(false);
+}
+
+/** Handles information on whether death link is enabled. */
+void handleLumBundleSize(std::string data) {
+    lumBundleSize = std::stoi(data);
+    sendSettings(false);
+}
+
 /** Handles information on the selected end goal. */
 void handleEndGoal(std::string data) {
     endGoal = std::stoi(data);
@@ -441,10 +468,13 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_RegisterSlotDataRawCallback("level_chains", handleLevelChains);
     AP_RegisterSlotDataRawCallback("lum_gates", handleLumGates);
     AP_RegisterSlotDataRawCallback("death_link", handleDeathLinkEnabled);
+    AP_RegisterSlotDataRawCallback("death_link_amnesty", handleDeathLinkAmnesty);
+    AP_RegisterSlotDataRawCallback("better_level_portals", handleBetterLevelPortals);
     AP_RegisterSlotDataRawCallback("end_goal", handleEndGoal);
-    AP_RegisterSlotDataRawCallback("lumsanity", handleLumsanity);
-    AP_RegisterSlotDataRawCallback("accessible_portals", handleAccessiblePortals);
     AP_RegisterSlotDataRawCallback("room_randomisation", handleRoomRandomisation);
+    AP_RegisterSlotDataRawCallback("accessible_portals", handleAccessiblePortals);
+    AP_RegisterSlotDataRawCallback("lumsanity", handleLumsanity);
+    AP_RegisterSlotDataRawCallback("lum_bundle_size", handleLumBundleSize);
     AP_Start();
     return true;
 }

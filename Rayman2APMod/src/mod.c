@@ -59,10 +59,14 @@ BOOL MOD_DeathLink = FALSE;
 BOOL MOD_Lumsanity = FALSE;
 BOOL MOD_RoomRandomisation = FALSE;
 BOOL MOD_AccessiblePortals = FALSE;
+int MOD_DeathLinkAmnesty = 1;
+BOOL MOD_BetterLevelPortals = FALSE;
+int MOD_LumBundleSize = 0;
 int MOD_LumGates[6];
 
 // Store tracking variables used at runtime
 BOOL MOD_Finished = FALSE;
+int MOD_StoredDeathLinks = 0;
 BOOL MOD_DeathLinkOverride = FALSE;
 BOOL MOD_IgnoreDeath = FALSE;
 BOOL MOD_TreasureComplete = FALSE;
@@ -117,7 +121,9 @@ int MOD_LevelChainActive[CHAIN_COUNT];
 int MOD_LevelChainLast[CHAIN_COUNT];
 int MOD_LevelChainCurrent = -1;
 int MOD_LastHoveredLevel = -1;
+int MOD_LastSubLevelIndex = 0;
 int MOD_LastLimitedLevel = -1;
+int MOD_LastEECLevel = -1;
 
 // Store whether dev mode is enabled
 BOOL MOD_DevMode = FALSE;
@@ -133,6 +139,7 @@ void MOD_Reset() {
 	MOD_LastHoveredLevel = -1;
 	MOD_LastLimitedLevel = -1;
 	MOD_Finished = FALSE;
+	MOD_StoredDeathLinks = 0;
 
 	clearBitSet(&MOD_LastCollected);
 	clearBitSet(&MOD_DevCollected);
@@ -205,6 +212,21 @@ BOOL MOD_CanProgressChain() {
 }
 
 void MOD_LieBeforeLevelEntry(char* levelName) {
+	// Ensure sending someone to a multi-stage level doesn't
+	// have them being sent to the next level just for entering
+	// one of the mid-level transitions.
+	if (compareStringCaseInsensitive(levelName, "rodeo_40") == 0) {
+		MOD_LastLimitedLevel = 1;
+	} else if (compareStringCaseInsensitive(levelName, "plum_00") == 0) {
+		MOD_LastLimitedLevel = 2;
+	} else if (compareStringCaseInsensitive(levelName, "plum_10") == 0) {
+		MOD_LastLimitedLevel = 3;
+	} else if (compareStringCaseInsensitive(levelName, "morb_10") == 0) {
+		MOD_LastLimitedLevel = 4;
+	} else {
+		MOD_LastLimitedLevel = 0;
+	}
+
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
 		if (compareStringCaseInsensitiveLimited(levelName, "Rodeo_40") == 0) {
@@ -291,6 +313,43 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 		int currentLevel = MOD_LevelChainActive[chainId] + increment;
 		int chainLength = MOD_LevelChainsLengths[chainId];
 
+		// If we selected a sub-level we jump there! We have to simulate
+		// various chain entries/exits to ensure we properly trace the
+		// path.
+		if (MOD_LastSubLevelIndex > 0) {
+			LevelInfo* levelInfo = NULL;
+			int length = 0;
+			MOD_CrawlLevelInfo(chainId, 0, &levelInfo, &length, 0);
+
+			int target = MOD_LastSubLevelIndex;
+			MOD_LastSubLevelIndex = 0;
+			MOD_LevelChainActive[chainId] = currentLevel;
+
+			for (int i = 0; i <= target; i++) {
+				LevelInfo level = levelInfo[i];
+				if (level.chainId != chainId) {
+					// Try to exit the last chain if we went back
+					int lastChain = MOD_LevelChainLast[chainId] - 1;
+					if (lastChain == level.chainId) {
+
+					} else {
+						// Go a chain deeper as this wasn't the last level
+						MOD_LevelChainLast[chainId] = MOD_LevelChainCurrent + 1;
+						chainId = level.chainId;
+						MOD_LevelChainCurrent = chainId;
+						currentLevel = MOD_LevelChainActive[chainId];
+					}
+				} else {
+					currentLevel++;
+				}
+				MOD_LevelChainActive[chainId] = currentLevel;
+			}
+
+			chainId = MOD_LevelChainCurrent;
+			currentLevel = MOD_LevelChainActive[chainId];
+			chainLength = MOD_LevelChainsLengths[chainId];
+		}
+
 		// Save the new index on this chain
 		MOD_LevelChainActive[chainId] = currentLevel;
 
@@ -307,25 +366,14 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 				// If you go to the normal second zone of fairy glade make sure
 				// we send you with the right level id!
 				GAM_g_stEngineStructure->ucPreviousLevel = 10;
+				MOD_LastEECLevel = 1;
 			} else if (compareStringCaseInsensitive(levelName, "Learn_32") == 0) {
 				// 70 is cask_10 which makes it use the right entrance!
 				levelName = "Learn_31";
 				GAM_g_stEngineStructure->ucPreviousLevel = 70;
-			}
-
-			// Ensure sending someone to a multi-stage level doesn't
-			// have them being sent to the next level just for entering
-			// one of the mid-level transitions.
-			if (compareStringCaseInsensitive(levelName, "rodeo_40") == 0) {
-				MOD_LastLimitedLevel = 1;
-			} else if (compareStringCaseInsensitive(levelName, "plum_00") == 0) {
-				MOD_LastLimitedLevel = 2;
-			} else if (compareStringCaseInsensitive(levelName, "plum_10") == 0) {
-				MOD_LastLimitedLevel = 3;
-			} else if (compareStringCaseInsensitive(levelName, "morb_10") == 0) {
-				MOD_LastLimitedLevel = 4;
+				MOD_LastEECLevel = 2;
 			} else {
-				MOD_LastLimitedLevel = 0;
+				MOD_LastEECLevel = -1;
 			}
 
 			// Set up properly before entering this level
@@ -350,6 +398,15 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 		return true;
 	}
 	return false;
+}
+
+BOOL MOD_ProgressLevelChainFromEEC(int expectedDirection) {
+	if (MOD_LastEECLevel != -1 && MOD_LastEECLevel != expectedDirection) {
+		// If we got here we were just in EEC and went the direction of the other level. We have to switch
+		// chains to the chain with the other half of EEC, wherever it may be even if it's nested.
+		// TODO how even
+	}
+	return MOD_ProgressLevelChainAndIncrement(1);
 }
 
 BOOL MOD_ProgressLevelChain() {
@@ -454,6 +511,7 @@ void MOD_ExitChain() {
 	MOD_LevelChainLast[chainId] = 0;
 	MOD_LevelChainActive[chainId] = 0;
 	MOD_LastLimitedLevel = -1;
+	MOD_LastEECLevel = -1;
 
 	// Determine if this chain was completed and we should unlock the next level!
 	auto completedChain = currentLevel >= chainLength - 1;
@@ -709,7 +767,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 					if (MOD_ProgressLevelChain()) return;
 				}
 			} else if (compareStringCaseInsensitive(szLevelName, "bast_20") == 0) {
-				if (MOD_ProgressLevelChain()) return;
+				if (MOD_ProgressLevelChainFromEEC(1)) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "bast_22") == 0) {
 				if (MOD_ProgressLevelChain()) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "learn_60") == 0) {
@@ -793,7 +851,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				MOD_EnterLevelChain(CHAIN_ECHOING);
 				return;
 			} else if (compareStringCaseInsensitive(szLevelName, "cask_10") == 0) {
-				if (MOD_ProgressLevelChain()) return;
+				if (MOD_ProgressLevelChainFromEEC(2)) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "cask_30") == 0) {
 				if (MOD_ProgressLevelChain()) return;
 			}
@@ -1347,6 +1405,42 @@ void MOD_CheckVariables() {
 	}
 }
 
+/** Handles user input for scrolling in the menu. */
+LRESULT CALLBACK MOD_WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	if (uMsg == WM_KEYDOWN && (wParam == 'K' || wParam == 'J')) {
+		if (MOD_Connected && MOD_BetterLevelPortals) {
+			const char* szLevelName = GAM_fn_p_szGetLevelName();
+			const auto inMapMonde = compareStringCaseInsensitive(szLevelName, "mapmonde") == 0;
+			if (MOD_RoomRandomisation && inMapMonde) {
+				HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("YAM_Lums_I1");
+				HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+				if (pLums && pGlobal) {
+					int* p_stInt;
+					AI_fn_bGetDsgVar(pLums, 19, NULL, &p_stInt);
+					if (*p_stInt == 255) {
+						int chainId = MOD_LastHoveredLevel;
+
+						LevelInfo* levelInfo = NULL;
+						int length = 0;
+						MOD_CrawlLevelInfo(chainId, 0, &levelInfo, &length, 0);
+
+						if (wParam == 'K') {
+							if (MOD_LastSubLevelIndex < length - 1) {
+								MOD_LastSubLevelIndex++;
+							}
+						} else {
+							if (MOD_LastSubLevelIndex > 0) {
+								MOD_LastSubLevelIndex--;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return GAM_fn_WndProc(hWnd, uMsg, wParam, lParam);
+}
+
 /** Ticked by the engine every frame, runs all messages received since last tick. */
 void MOD_EngineTick() {
 	MOD_RunPendingMessages();
@@ -1385,7 +1479,11 @@ void MOD_Init() {
 	// Test if the player has died, this gets triggered once on death
 	if (GAM_fn_ucGetEngineMode() == 7) {
 		if (MOD_GetDeathLink(FALSE) && !MOD_IgnoreDeath) {
-			MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
+			MOD_StoredDeathLinks++;
+			if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
+				MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
+				MOD_StoredDeathLinks = 0;
+			}
 		}
 		MOD_IgnoreDeath = FALSE;
 	}
@@ -1394,13 +1492,16 @@ void MOD_Init() {
 }
 
 /** Updates the current archipelago settings. */
-void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int* lumGates, char** levelIds, int* chainLengths, int** chainContents) {
+void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int deathLinkAmnesty, BOOL betterLevelPortals, int lumBundleSize, int* lumGates, char** levelIds, int* chainLengths, int** chainContents) {
 	MOD_Connected = connected;
 	MOD_DeathLink = deathLink;
 	MOD_EndGoal = endGoal;
 	MOD_Lumsanity = lumsanity;
 	MOD_RoomRandomisation = roomRandomisation;
 	MOD_AccessiblePortals = accessiblePortals;
+	MOD_DeathLinkAmnesty = deathLinkAmnesty;
+	MOD_BetterLevelPortals = betterLevelPortals;
+	MOD_LumBundleSize = lumBundleSize;
 	for (int i = 0; i < 6; i++) {
 		MOD_LumGates[i] = lumGates[i];
 	}
@@ -1564,7 +1665,7 @@ void MOD_ToggleDeathLink() {
 }
 
 /** Crawls through the level chains and appends to the output list. */
-void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length, int depth) {
+void MOD_CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length, int depth) {
 	// Determine the level to place here
 	int chainLength = MOD_LevelChainsLengths[chainId];
 	if (currentLevel < 0 || currentLevel >= chainLength) return;
@@ -1580,6 +1681,7 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 	memset(level, 0, sizeof(LevelInfo));
 
 	level->depth = depth;
+	level->chainId = chainId;
 
 	// Determine the level in this spot
 	int levelId = MOD_LevelChainContents[chainId][currentLevel];
@@ -1962,11 +2064,11 @@ void CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length
 	// Crawl for the next level, if this is Sanc of Stone and Fire or Echoing Caves we include the revisit area!
 	// The other three have their own portals which show their contents.
 	if (compareStringCaseInsensitive(levelName, "cask_10") == 0) {
-		CrawlLevelInfo(CHAIN_FAIRY_REVISIT, 0, info, length, depth + 1);
+		MOD_CrawlLevelInfo(CHAIN_FAIRY_REVISIT, 0, info, length, depth + 1);
 	} else if (compareStringCaseInsensitive(levelName, "plum_00") == 0) {
-		CrawlLevelInfo(CHAIN_SIDE_TEMPLE, 0, info, length, depth + 1);
+		MOD_CrawlLevelInfo(CHAIN_SIDE_TEMPLE, 0, info, length, depth + 1);
 	}
-	CrawlLevelInfo(chainId, currentLevel + 1, info, length, depth);
+	MOD_CrawlLevelInfo(chainId, currentLevel + 1, info, length, depth);
 }
 
 /** Draws text to the screen with the recent screen text and progression statistics. */
@@ -2120,6 +2222,9 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 						if (chainId != -1) {
 							// Store which chain the player last hovered in the hall of doors so we can
 							// skip any cutscenes if you go to a later portal.
+							if (MOD_LastHoveredLevel != chainId) {
+								MOD_LastSubLevelIndex = 0;
+							}
 							MOD_LastHoveredLevel = chainId;
 
 							pInfo->xSize = 7;
@@ -2138,7 +2243,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 								// Determine the level contents!
 								LevelInfo* levelInfo = NULL;
 								int length = 0;
-								CrawlLevelInfo(chainId, 0, &levelInfo, &length, 0);
+								MOD_CrawlLevelInfo(chainId, 0, &levelInfo, &length, 0);
 
 								// Draw the level info in a list, start with a header showing portal number and room count
 								long spacer = lineHeight - 2;
@@ -2151,7 +2256,11 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 								for (int i = 0; i < length; i++) {
 									LevelInfo info = levelInfo[i];
 									pInfo->X = 15 + info.depth * 10;
-									SPTXT_vPrintFmtLine("/o400:%s", info.name);
+									if (MOD_BetterLevelPortals && i == MOD_LastSubLevelIndex) {
+										SPTXT_vPrintFmtLine("/o200:- /o400:%s", info.name);
+									} else {
+										SPTXT_vPrintFmtLine("/o400:%s", info.name);
+									}
 									pInfo->X = 22 + info.depth * 10;
 									if (info.cagesMax == 0) {
 										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax);
@@ -2159,6 +2268,11 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Cages %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, info.cages >= info.cagesMax ? "/o200:" : "/o0:", info.cages, info.cagesMax);
 									}
 									pInfo->Y = pInfo->Y + spacer;
+								}
+
+								if (MOD_BetterLevelPortals) {
+									SPTXT_vPrintFmtLine("/o400:Press /o0:K /o400:to scroll to next sub-level");
+									SPTXT_vPrintFmtLine("/o400:Press /o0:J /o400:to scroll to previous sub-level");
 								}
 							}
 						}
@@ -2230,6 +2344,9 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_Lumsanity: %d\n", MOD_Lumsanity);
 	fprintf(f, "MOD_RoomRandomisation: %d\n", MOD_RoomRandomisation);
 	fprintf(f, "MOD_AccessiblePortals: %d\n", MOD_AccessiblePortals);
+	fprintf(f, "MOD_DeathLinkAmnesty: %d\n", MOD_DeathLinkAmnesty);
+	fprintf(f, "MOD_BetterLevelPortals: %d\n", MOD_BetterLevelPortals);
+	fprintf(f, "MOD_LumBundleSize: %d\n", MOD_LumBundleSize);
 	for (int i = 0; i < 6; i++) {
 		fprintf(f, "MOD_LumGates[%d]: %d\n", i, MOD_LumGates[i]);
 	}
@@ -2241,6 +2358,7 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_LevelChainCurrent: %d\n", MOD_LevelChainCurrent);
 	fprintf(f, "MOD_LastHoveredLevel: %d\n", MOD_LastHoveredLevel);
 	fprintf(f, "MOD_LastLimitedLevel: %d\n", MOD_LastLimitedLevel);
+	fprintf(f, "MOD_LastEECLevel: %d\n", MOD_LastEECLevel);
 	fprintf(f, "MOD_DevMode: %d\n", MOD_DevMode);
 	fprintf(f, "MOD_InMenhirHills: %d\n", MOD_InMenhirHills);
 	fprintf(f, "MOD_HadElixirPreviously: %d\n", MOD_HadElixirPreviously);

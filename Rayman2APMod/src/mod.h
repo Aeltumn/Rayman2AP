@@ -5,12 +5,12 @@
 
 typedef struct LevelInfo {
 	char name[MAX_LEVEL_NAME_LENGTH];
+	char levelName[MAX_LEVEL_NAME_LENGTH];
 	int lums;
 	int lumsMax;
 	int cages;
 	int cagesMax;
 	int depth;
-	int chainId;
 } LevelInfo;
 
 int compareStringCaseInsensitive(char const* a, char const* b);
@@ -27,11 +27,10 @@ void MOD_SetDevMode(BOOL state);
 
 void MOD_BugReport();
 
-BOOL MOD_CanProgressChain();
-BOOL MOD_ProgressLevelChainAndIncrement(int increment);
+BOOL MOD_SendToCurrentLevel();
 BOOL MOD_ProgressLevelChain();
-BOOL MOD_ProgressLevelChainFromEEC(int expectedDirection);
 void MOD_EnterLevelChain(int chainId);
+BOOL MOD_JumpToLevel(char* levelName);
 void MOD_ExitChain();
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame);
 

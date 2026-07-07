@@ -144,9 +144,7 @@ void fn_vProgress(int lNbArgs, char** d_szArgs) {
 		MOD_Print("This command is only available in dev mode!");
 		return;
 	}
-	if (MOD_CanProgressChain()) {
-		MOD_ProgressLevelChain();
-	}
+	MOD_ProgressLevelChain();
 }
 
 /** Sends you to the hall of doors safely. */

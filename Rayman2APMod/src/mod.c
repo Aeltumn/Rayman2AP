@@ -46,6 +46,7 @@ int* SUPER_LUM_IDS[290] = { 1, 2, 3, 4, 5, 13, 14, 15, 16, 17, 19, 20, 21, 22, 2
 
 // Store archipelago progression
 int MOD_Lums = 0;
+int MOD_CollectedLums = 0;
 int MOD_Cages = 0;
 int MOD_Masks = 0;
 int MOD_Upgrades = 0;
@@ -117,13 +118,11 @@ int* MOD_LevelChainContents[CHAIN_COUNT];
 
 // Level chain dynamic info
 BOOL MOD_InLevelChain = FALSE;
-int MOD_LevelChainActive[CHAIN_COUNT];
-int MOD_LevelChainLast[CHAIN_COUNT];
-int MOD_LevelChainCurrent = -1;
+int MOD_LevelCurrentChain = -1;
+int MOD_LevelCurrentIndex = -1;
 int MOD_LastHoveredLevel = -1;
 int MOD_LastSubLevelIndex = 0;
 int MOD_LastLimitedLevel = -1;
-int MOD_LastEECLevel = -1;
 
 // Store whether dev mode is enabled
 BOOL MOD_DevMode = FALSE;
@@ -131,11 +130,8 @@ BOOL MOD_DevMode = FALSE;
 /** Resets all data completely. */
 void MOD_Reset() {
 	MOD_InLevelChain = FALSE;
-	for (int i = 0; i < CHAIN_COUNT; i++) {
-		MOD_LevelChainActive[i] = 0;
-		MOD_LevelChainLast[i] = 0;
-	}
-	MOD_LevelChainCurrent = -1;
+	MOD_LevelCurrentChain = -1;
+	MOD_LevelCurrentIndex = -1;
 	MOD_LastHoveredLevel = -1;
 	MOD_LastLimitedLevel = -1;
 	MOD_Finished = FALSE;
@@ -199,18 +195,7 @@ BOOL MOD_InDevMode() {
 	return MOD_DevMode;
 }
 
-BOOL MOD_CanProgressChain() {
-	// Returns whether there is a next level in the chain to progress
-	// to, or if the level has to be manually exited.
-	if (MOD_InLevelChain) {
-		int chainId = MOD_LevelChainCurrent;
-		int currentLevel = MOD_LevelChainActive[chainId] + 1;
-		int chainLength = MOD_LevelChainsLengths[chainId];
-		return currentLevel > 0 && currentLevel < chainLength;
-	}
-	return false;
-}
-
+/** Sets up lies on the DSR list based on the level about to be entered. */
 void MOD_LieBeforeLevelEntry(char* levelName) {
 	// Ensure sending someone to a multi-stage level doesn't
 	// have them being sent to the next level just for entering
@@ -300,65 +285,21 @@ void MOD_LieBeforeLevelEntry(char* levelName) {
 	}
 }
 
-BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
+/** Warps to the currently selected level in its chain. */
+BOOL MOD_SendToCurrentLevel() {
 	// When we exit the lum gate, restore the data again!
 	MOD_ClearLumGateOverrides();
 
 	// If we're in a level chain, continue it!
 	if (MOD_InLevelChain) {
-		// Determine the current level chain
-		int chainId = MOD_LevelChainCurrent;
-
 		// Get the level we are meant to be in and load into it
-		int currentLevel = MOD_LevelChainActive[chainId] + increment;
-		int chainLength = MOD_LevelChainsLengths[chainId];
-
-		// If we selected a sub-level we jump there! We have to simulate
-		// various chain entries/exits to ensure we properly trace the
-		// path.
-		if (MOD_LastSubLevelIndex > 0) {
-			LevelInfo* levelInfo = NULL;
-			int length = 0;
-			MOD_CrawlLevelInfo(chainId, 0, &levelInfo, &length, 0);
-
-			int target = MOD_LastSubLevelIndex;
-			MOD_LastSubLevelIndex = 0;
-			MOD_LevelChainActive[chainId] = currentLevel;
-
-			for (int i = 0; i <= target; i++) {
-				LevelInfo level = levelInfo[i];
-				if (level.chainId != chainId) {
-					// Try to exit the last chain if we went back
-					int lastChain = MOD_LevelChainLast[chainId] - 1;
-					if (lastChain == level.chainId) {
-
-					} else {
-						// Go a chain deeper as this wasn't the last level
-						MOD_LevelChainLast[chainId] = MOD_LevelChainCurrent + 1;
-						chainId = level.chainId;
-						MOD_LevelChainCurrent = chainId;
-						currentLevel = MOD_LevelChainActive[chainId];
-					}
-				} else {
-					currentLevel++;
-				}
-				MOD_LevelChainActive[chainId] = currentLevel;
-			}
-
-			chainId = MOD_LevelChainCurrent;
-			currentLevel = MOD_LevelChainActive[chainId];
-			chainLength = MOD_LevelChainsLengths[chainId];
-		}
-
-		// Save the new index on this chain
-		MOD_LevelChainActive[chainId] = currentLevel;
-
-		if (currentLevel < 0 || currentLevel >= chainLength) {
-			// If you finish the side temple or revisit we have to move you back to where you were!
+		int chainLength = MOD_LevelChainsLengths[MOD_LevelCurrentChain];
+		if (MOD_LevelCurrentIndex < 0 || MOD_LevelCurrentIndex >= chainLength) {
+			// If we're outside of the index of the current chain, exit it!
 			MOD_ExitChain();
 		} else {
-			// Find which level ID this is
-			int levelId = MOD_LevelChainContents[chainId][currentLevel];
+			// Find which level ID we are meant to be in!
+			int levelId = MOD_LevelChainContents[MOD_LevelCurrentChain][MOD_LevelCurrentIndex];
 			char* levelName = MOD_LevelIds[levelId];
 
 			// Learn_32 is the internal ID for the fairy glade revisit!
@@ -366,14 +307,10 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 				// If you go to the normal second zone of fairy glade make sure
 				// we send you with the right level id!
 				GAM_g_stEngineStructure->ucPreviousLevel = 10;
-				MOD_LastEECLevel = 1;
 			} else if (compareStringCaseInsensitive(levelName, "Learn_32") == 0) {
 				// 70 is cask_10 which makes it use the right entrance!
 				levelName = "Learn_31";
 				GAM_g_stEngineStructure->ucPreviousLevel = 70;
-				MOD_LastEECLevel = 2;
-			} else {
-				MOD_LastEECLevel = -1;
 			}
 
 			// Set up properly before entering this level
@@ -383,11 +320,11 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 			if (pGlobal) {
 				// If we enter a walk level or COBD we spawn their portal which makes them
 				// accessible from the HOF and remove the lum check.
-				if (chainId == CHAIN_WALK_LIFE) {
+				if (MOD_LevelCurrentChain == CHAIN_WALK_LIFE) {
 					AI_fn_vSetBooleanInArray(pGlobal, 42, 969, TRUE);
-				} else if (chainId == CHAIN_WALK_POWER) {
+				} else if (MOD_LevelCurrentChain == CHAIN_WALK_POWER) {
 					AI_fn_vSetBooleanInArray(pGlobal, 42, 992, TRUE);
-				} else if (chainId == CHAIN_COBD) {
+				} else if (MOD_LevelCurrentChain == CHAIN_COBD) {
 					AI_fn_vSetBooleanInArray(pGlobal, 42, 966, TRUE);
 				}
 			}
@@ -400,29 +337,30 @@ BOOL MOD_ProgressLevelChainAndIncrement(int increment) {
 	return false;
 }
 
-BOOL MOD_ProgressLevelChainFromEEC(int expectedDirection) {
-	if (MOD_LastEECLevel != -1 && MOD_LastEECLevel != expectedDirection) {
-		// If we got here we were just in EEC and went the direction of the other level. We have to switch
-		// chains to the chain with the other half of EEC, wherever it may be even if it's nested.
-		// TODO how even
-	}
-	return MOD_ProgressLevelChainAndIncrement(1);
-}
-
+/** Progress the current level chain to the next step. */
 BOOL MOD_ProgressLevelChain() {
-	return MOD_ProgressLevelChainAndIncrement(1);
+	MOD_LevelCurrentIndex += 1;
+	return MOD_SendToCurrentLevel();
 }
 
+/** Enters the chain with the given [chainId]. */
 void MOD_EnterLevelChain(int chainId) {
-	if (MOD_InLevelChain) {
-		// Store on the new chain that we were previously in the previous one.
-		MOD_LevelChainLast[chainId] = MOD_LevelChainCurrent + 1;
+	// If we selected a sub-level we jump there immediately instead of entering!
+	if (MOD_LastSubLevelIndex > 0) {
+		LevelInfo* levelInfo = NULL;
+		int length = 0;
+		MOD_CrawlLevelInfo(MOD_LevelCurrentChain, 0, &levelInfo, &length, 0);
+		int target = MOD_LastSubLevelIndex;
+		MOD_LastSubLevelIndex = 0;
+		MOD_JumpToLevel(levelInfo[target].levelName);
+		return;
 	}
 
 	// Mark down that we've entered a level chain, then determine what the first level is in this chain!
 	MOD_InLevelChain = TRUE;
-	MOD_LevelChainCurrent = chainId;
-	MOD_ProgressLevelChainAndIncrement(0);
+	MOD_LevelCurrentChain = chainId;
+	MOD_LevelCurrentIndex = 0;
+	MOD_SendToCurrentLevel();
 }
 
 /** Returns the level id of the first level in the given chain. */
@@ -469,6 +407,33 @@ int getLevelChainEntryId(int chainId) {
 	return -1;
 }
 
+/** Jumps to the level with the given name. */
+BOOL MOD_JumpToLevel(char* levelName) {
+	int targetChain = -1;
+	int targetIndex = 0;
+	for (int i = 0; i <= 20; i++) {
+		int thisChainLength = MOD_LevelChainsLengths[i];
+		for (int j = 0; j < thisChainLength; j++) {
+			int chainLevelId = MOD_LevelChainContents[i][j];
+			char* chainLevelName = MOD_LevelIds[chainLevelId];
+			if (compareStringCaseInsensitive(chainLevelName, levelName) == 0) {
+				targetChain = i;
+				targetIndex = j;
+				break;
+			}
+		}
+		if (targetChain != -1) break;
+	}
+	if (targetChain != -1) {
+		MOD_InLevelChain = TRUE;
+		MOD_LevelCurrentChain = targetChain;
+		MOD_LevelCurrentIndex = targetIndex;
+		return true;
+	}
+	return false;
+}
+
+/** Exits the current level chain, returning to the previous chain if applicable. */
 void MOD_ExitChain() {
 	// Ignore if we are not in a chain!
 	if (!MOD_InLevelChain) {
@@ -479,131 +444,22 @@ void MOD_ExitChain() {
 	// When we exit the lum gate, restore the data again!
 	MOD_ClearLumGateOverrides();
 
-	// Read data and then immediately void it as we exit
-	int chainId = MOD_LevelChainCurrent;
-	int lastChain = MOD_LevelChainLast[chainId] - 1;
-	int currentLevel = MOD_LevelChainActive[chainId];
-	int chainLength = MOD_LevelChainsLengths[chainId];
-
-	// If we finish COBD we have to return to whichever chain contains Ski_10!
-	// We may have exited to menu from COBD to world in which case we lost the previous chain
-	// link.
-	if (chainId == CHAIN_COBD && lastChain == -1) {
-		for (int i = 0; i <= 20; i++) {
-			int thisChainLength = MOD_LevelChainsLengths[i];
-			for (int j = 0; j < thisChainLength; j++) {
-				int chainLevelId = MOD_LevelChainContents[i][j];
-				char* chainLevelName = MOD_LevelIds[chainLevelId];
-				if (compareStringCaseInsensitive(chainLevelName, "Ski_10") == 0) {
-					lastChain = i;
-
-					// Ensure we return to Ski_10!
-					MOD_LevelChainActive[i] = j;
-					break;
-				}
-			}
-			if (lastChain != -1) break;
-		}
-	}
-
-	MOD_LevelChainCurrent = -1;
-	MOD_InLevelChain = FALSE;
-	MOD_LevelChainLast[chainId] = 0;
-	MOD_LevelChainActive[chainId] = 0;
-	MOD_LastLimitedLevel = -1;
-	MOD_LastEECLevel = -1;
-
 	// Determine if this chain was completed and we should unlock the next level!
-	auto completedChain = currentLevel >= chainLength - 1;
+	int chainId = MOD_LevelCurrentChain;
+	int chainLength = MOD_LevelChainsLengths[chainId];
+	BOOL completedChain = MOD_LevelCurrentIndex >= chainLength - 1;
 
-	// If you didn't complete the chain, didn't have a last chain, or it's the walks you return to the hall of doors instead of
-	// your previous level you were in.
-	if (!completedChain || lastChain == -1 || chainId == CHAIN_WALK_LIFE || chainId == CHAIN_WALK_POWER) {
-		int entryLevelId = getLevelChainEntryId(chainId);
+	// Reset all data and leave the chain fully
+	MOD_InLevelChain = FALSE;
+	MOD_LevelCurrentChain = -1;
+	MOD_LevelCurrentIndex = -1;
 
-		// If there isn't a last change or the chain wasn't completed, let you go to the hall of doors with a specific exit!
+	// If we finish a revisit or sub-level we have to place you back where you entered!
+	if (completedChain) {
 		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
-		if (completedChain) {
-			// The ids of exit level are different if you completed a level!
-			// (These ids are in STH_teleport_GEN_STH.
-			structure->ucExitIdToQuitPrevLevel = 1;
-			if (chainId == CHAIN_FAIRY_GLADE) {
-				structure->ucPreviousLevel = 220;
-			} else if (chainId == CHAIN_MARSHES) {
-				structure->ucPreviousLevel = 30;
-			} else if (chainId == CHAIN_COBD) {
-				structure->ucPreviousLevel = 137;
-			} else if (chainId == CHAIN_BAYOU) {
-				structure->ucPreviousLevel = 18;
-			} else if (chainId == CHAIN_WALK_LIFE) {
-				structure->ucPreviousLevel = 20;
-			} else if (chainId == CHAIN_MENHIR) {
-				structure->ucPreviousLevel = 65;
-			} else if (chainId == CHAIN_SANC_WATER) {
-				structure->ucPreviousLevel = 165;
-			} else if (chainId == CHAIN_CANOPY) {
-				structure->ucPreviousLevel = 205;
-			} else if (chainId == CHAIN_WHALE) {
-				structure->ucPreviousLevel = 50;
-			} else if (chainId == CHAIN_SANC_STONE) {
-				structure->ucPreviousLevel = 90;
-			} else if (chainId == CHAIN_ECHOING) {
-				structure->ucPreviousLevel = 75;
-			} else if (chainId == CHAIN_PRECIPICE) {
-				structure->ucPreviousLevel = 85;
-			} else if (chainId == CHAIN_TOP) {
-				structure->ucPreviousLevel = 41;
-			} else if (chainId == CHAIN_SANC_ROCK) {
-				structure->ucPreviousLevel = 103;
-			} else if (chainId == CHAIN_WALK_POWER) { 
-				structure->ucPreviousLevel = 115;
-			} else if (chainId == CHAIN_BENEATH) {
-				structure->ucPreviousLevel = 110;
-			} else if (chainId == CHAIN_TOMB) {
-				structure->ucPreviousLevel = 215;
-			} else if (chainId == CHAIN_IRON_MOUNT) {
-				structure->ucPreviousLevel = 125;
-			} else if (chainId == CHAIN_PRISON) {
-				// Ensure you have enough masks otherwise never reveal the last level!
-				structure->ucPreviousLevel = MOD_Masks >= 4 ? 240 : 140;
-			}
-		} else {
-			if (entryLevelId != -1) {
-				structure->ucPreviousLevel = entryLevelId;
-			}
-		}
-
-		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-		if (pGlobal) {
-			// Check if the connected portals (marshes, bayou, sanctuary) are present, if they
-			// are not you would be softlocked. We have to put your entrance id at 3 so you don't get stuck!
-			int requiredCheck = 960;
-			if (chainId == CHAIN_COBD) {
-				requiredCheck += 4;
-			} else if (chainId == CHAIN_WALK_LIFE) {
-				requiredCheck += 7;
-			} else if (chainId == CHAIN_WALK_POWER) {
-				requiredCheck += 30;
-			}
-			if (!AI_fn_bGetBooleanInArray(pGlobal, 42, requiredCheck)) {
-				entryLevelId = 3;
-				structure->ucPreviousLevel = 3;
-			}
-
-			// Update the portal the player comes out of when reloading the save!
-			if (entryLevelId != -1) {
-				int level = entryLevelId;
-				AI_fn_bSetDsgVar(pGlobal, 67, &level);
-			}
-		}
-
-		GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
-	} else {
-		// If there was a specifc chain we are exiting we make sure to
-		// set the level ID properly so the right exit is used!
-		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
-		structure->ucExitIdToQuitPrevLevel = 1;
 		if (chainId == CHAIN_COBD) {
+			MOD_JumpToLevel("Ski_10");
+			structure->ucExitIdToQuitPrevLevel = 1;
 			structure->ucPreviousLevel = 137;
 
 			// This triggers the cutscene granting the Elixir of Life after re-entering Ski_10!
@@ -613,14 +469,102 @@ void MOD_ExitChain() {
 				AI_fn_vSetBooleanInArray(pGlobal, 42, 1120, TRUE);
 				MOD_InMarshes = TRUE;
 			}
+
+			MOD_SendToCurrentLevel();
+			return;
 		} else if (chainId == CHAIN_FAIRY_REVISIT) {
+			MOD_JumpToLevel("cask_10");
+			structure->ucExitIdToQuitPrevLevel = 1;
 			structure->ucPreviousLevel = 11;
+			MOD_SendToCurrentLevel();
+			return;
 		} else if (chainId == CHAIN_SIDE_TEMPLE) {
+			MOD_JumpToLevel("plum_00");
+			structure->ucExitIdToQuitPrevLevel = 1;
 			structure->ucPreviousLevel = 190;
+			MOD_SendToCurrentLevel();
+			return;
+		}
+	}
+
+	// Send the player back to the Hall of Doors!
+	int entryLevelId = getLevelChainEntryId(chainId);
+	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+	if (completedChain) {
+		// The ids of exit level are different if you completed a level!
+		// (These ids are in STH_teleport_GEN_STH.
+		structure->ucExitIdToQuitPrevLevel = 1;
+		if (chainId == CHAIN_FAIRY_GLADE) {
+			structure->ucPreviousLevel = 220;
+		} else if (chainId == CHAIN_MARSHES) {
+			structure->ucPreviousLevel = 30;
+		} else if (chainId == CHAIN_COBD) {
+			structure->ucPreviousLevel = 137;
+		} else if (chainId == CHAIN_BAYOU) {
+			structure->ucPreviousLevel = 18;
+		} else if (chainId == CHAIN_WALK_LIFE) {
+			structure->ucPreviousLevel = 20;
+		} else if (chainId == CHAIN_MENHIR) {
+			structure->ucPreviousLevel = 65;
+		} else if (chainId == CHAIN_SANC_WATER) {
+			structure->ucPreviousLevel = 165;
+		} else if (chainId == CHAIN_CANOPY) {
+			structure->ucPreviousLevel = 205;
+		} else if (chainId == CHAIN_WHALE) {
+			structure->ucPreviousLevel = 50;
+		} else if (chainId == CHAIN_SANC_STONE) {
+			structure->ucPreviousLevel = 90;
+		} else if (chainId == CHAIN_ECHOING) {
+			structure->ucPreviousLevel = 75;
+		} else if (chainId == CHAIN_PRECIPICE) {
+			structure->ucPreviousLevel = 85;
+		} else if (chainId == CHAIN_TOP) {
+			structure->ucPreviousLevel = 41;
+		} else if (chainId == CHAIN_SANC_ROCK) {
+			structure->ucPreviousLevel = 103;
+		} else if (chainId == CHAIN_WALK_POWER) {
+			structure->ucPreviousLevel = 115;
+		} else if (chainId == CHAIN_BENEATH) {
+			structure->ucPreviousLevel = 110;
+		} else if (chainId == CHAIN_TOMB) {
+			structure->ucPreviousLevel = 215;
+		} else if (chainId == CHAIN_IRON_MOUNT) {
+			structure->ucPreviousLevel = 125;
+		} else if (chainId == CHAIN_PRISON) {
+			// Ensure you have enough masks otherwise never reveal the last level!
+			structure->ucPreviousLevel = MOD_Masks >= 4 ? 240 : 140;
+		}
+	} else {
+		if (entryLevelId != -1) {
+			structure->ucPreviousLevel = entryLevelId;
+		}
+	}
+
+	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+	if (pGlobal) {
+		// Check if the connected portals (marshes, bayou, sanctuary) are present, if they
+		// are not you would be softlocked. We have to put your entrance id at 3 so you don't get stuck!
+		int requiredCheck = 960;
+		if (chainId == CHAIN_COBD) {
+			requiredCheck += 4;
+		} else if (chainId == CHAIN_WALK_LIFE) {
+			requiredCheck += 7;
+		} else if (chainId == CHAIN_WALK_POWER) {
+			requiredCheck += 30;
+		}
+		if (!AI_fn_bGetBooleanInArray(pGlobal, 42, requiredCheck)) {
+			entryLevelId = 3;
+			structure->ucPreviousLevel = 3;
 		}
 
-		MOD_EnterLevelChain(lastChain);
+		// Update the portal the player comes out of when reloading the save!
+		if (entryLevelId != -1) {
+			int level = entryLevelId;
+			AI_fn_bSetDsgVar(pGlobal, 67, &level);
+		}
 	}
+
+	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 }
 
 ACP_tdxBool MOD_TriggerFinish() {
@@ -767,7 +711,9 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 					if (MOD_ProgressLevelChain()) return;
 				}
 			} else if (compareStringCaseInsensitive(szLevelName, "bast_20") == 0) {
-				if (MOD_ProgressLevelChainFromEEC(1)) return;
+				// Ensure we are in Learn_31 before continuing to the next level!
+				MOD_JumpToLevel("learn_31");
+				if (MOD_ProgressLevelChain()) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "bast_22") == 0) {
 				if (MOD_ProgressLevelChain()) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "learn_60") == 0) {
@@ -851,7 +797,9 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				MOD_EnterLevelChain(CHAIN_ECHOING);
 				return;
 			} else if (compareStringCaseInsensitive(szLevelName, "cask_10") == 0) {
-				if (MOD_ProgressLevelChainFromEEC(2)) return;
+				// Ensure we are in Learn_32 before continuing to the next level!
+				MOD_JumpToLevel("Learn_32");
+				if (MOD_ProgressLevelChain()) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "cask_30") == 0) {
 				if (MOD_ProgressLevelChain()) return;
 			}
@@ -1188,8 +1136,17 @@ void MOD_CheckVariables() {
 				// Only if the item is now collected, send a check!
 				if (dsg) {
 					// When connected in non-lumsanity update the lum counter immediately for any non-super lums gathered!
-					if (MOD_Connected && !MOD_Lumsanity && isLumLike(i) && !isSuperLum(i)) {
-						MOD_Lums++;
+					if (MOD_Connected && isLumLike(i) && !isSuperLum(i)) {
+						if (!MOD_Lumsanity) {
+							// Outside lumsanity, add this to lums directly!
+							MOD_Lums++;
+						} else if (MOD_LumBundleSize > 1) {
+							// In lum bundle mode, send the new lum amount!
+							MOD_CollectedLums++;
+							char str[6];
+							sprintf(str, "%d", MOD_CollectedLums);
+							MOD_SendMessage(MESSAGE_TYPE_LUMS, str);
+						}
 					}
 
 					// Don't allow collecting the Elixir of Life while in Menhir Hills as that's 
@@ -1550,6 +1507,35 @@ void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, 
 				}
 			}
 		}
+	} else if (MOD_LumBundleSize > 1) {
+		// If we're in lum bundle mode we have to re-determinet he collected lums!
+		// Send an update if it changed.
+		int oldCollected = MOD_CollectedLums;
+		MOD_CollectedLums = 0;
+		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+		if (pGlobal) {
+			for (int i = 1; i <= 800; i++) {
+				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+				if (dsg) {
+					// Ignore any super lums!
+					if (isSuperLum(i)) continue;
+					MOD_CollectedLums++;
+				}
+			}
+			for (int i = 1201; i <= 1400; i++) {
+				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+				if (dsg) {
+					// Ignore any super lums!
+					if (isSuperLum(i)) continue;
+					MOD_CollectedLums++;
+				}
+			}
+		}
+		if (oldCollected != MOD_CollectedLums) {
+			char str[6];
+			sprintf(str, "%d", MOD_CollectedLums);
+			MOD_SendMessage(MESSAGE_TYPE_LUMS, str);
+		}
 	}
 }
 
@@ -1679,13 +1665,14 @@ void MOD_CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* le
 	// Prepare the level data for this level
 	LevelInfo* level = &(*info)[*length - 1];
 	memset(level, 0, sizeof(LevelInfo));
-
 	level->depth = depth;
-	level->chainId = chainId;
 
 	// Determine the level in this spot
 	int levelId = MOD_LevelChainContents[chainId][currentLevel];
 	char* levelName = MOD_LevelIds[levelId];
+
+	// Store the level name on the info
+	strcpy(level->levelName, levelName);
 
 	// Determine the lums/cages of this level
 	// Fairy Glade
@@ -2333,6 +2320,7 @@ void MOD_BugReport() {
 	const char* szLevelName = GAM_fn_p_szGetLevelName();
 	fprintf(f, "szLevelName: %s\n", szLevelName);
 	fprintf(f, "MOD_Lums: %d\n", MOD_Lums);
+	fprintf(f, "MOD_CollectedLums: %d\n", MOD_CollectedLums);
 	fprintf(f, "MOD_Cages: %d\n", MOD_Cages);
 	fprintf(f, "MOD_Masks: %d\n", MOD_Masks);
 	fprintf(f, "MOD_Upgrades: %d\n", MOD_Upgrades);
@@ -2355,10 +2343,10 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_TreasureComplete: %d\n", MOD_TreasureComplete);
 	fprintf(f, "MOD_InLumGate: %d\n", MOD_InLumGate);
 	fprintf(f, "MOD_CurrentLumGate: %d\n", MOD_CurrentLumGate);
-	fprintf(f, "MOD_LevelChainCurrent: %d\n", MOD_LevelChainCurrent);
+	fprintf(f, "MOD_LevelCurrentChain: %d\n", MOD_LevelCurrentChain);
+	fprintf(f, "MOD_LevelCurrentIndex: %d\n", MOD_LevelCurrentIndex);
 	fprintf(f, "MOD_LastHoveredLevel: %d\n", MOD_LastHoveredLevel);
 	fprintf(f, "MOD_LastLimitedLevel: %d\n", MOD_LastLimitedLevel);
-	fprintf(f, "MOD_LastEECLevel: %d\n", MOD_LastEECLevel);
 	fprintf(f, "MOD_DevMode: %d\n", MOD_DevMode);
 	fprintf(f, "MOD_InMenhirHills: %d\n", MOD_InMenhirHills);
 	fprintf(f, "MOD_HadElixirPreviously: %d\n", MOD_HadElixirPreviously);

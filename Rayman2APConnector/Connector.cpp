@@ -5,14 +5,6 @@
 #include <windows.h>
 #include <algorithm>
 
-// Stores the ids of all super lums.
-const int COBD_KNOWLEDGE_ID = 1101;
-const int ELIXIR_ID = 1123;
-const int MASK_IDS[] = { 1112, 1113, 1114, 1115 };
-const int SILVER_LUM_IDS[] = { 1095, 1143 };
-const int SUPER_LUM_IDS[] = { 762, 776, 781, 786, 791, 796, 1, 13, 19, 66, 81, 86, 91, 71, 61, 51, 96, 172, 161, 206, 201, 211, 292, 315, 333, 328, 310, 364, 359, 369, 380, 375, 406, 401, 416, 411, 491, 496, 556, 646, 618, 613, 631, 636, 686, 681, 661, 666, 671, 676, 721, 736, 731, 746, 741, 1354, 1389, 1311 };
-const int THOUSANDTH_LUM_ID = 1014;
-
 Connector *instance;
 
 // Current archipelago item state
@@ -32,6 +24,7 @@ bool accessiblePortals = false;
 int deathLinkAmnesty = 1;
 bool betterLevelPortals = false;
 int lumBundleSize = 0;
+int previousCommunicatedLumBundle = 0;
 int lumGates[6] = {100, 300, 475, 550, 60, 450};
 std::unordered_map<std::string, std::vector<std::string>> levelChains;
 std::string lastIp;
@@ -182,6 +175,25 @@ void Connector::handle(int type, std::string data) {
         }
         break;
     }
+    case MESSAGE_TYPE_LUMS: {
+        // Communicate up that we got a lum bundle if applicable.
+        if (isConnected() && lumBundleSize > 1) {
+            // Send back down that we received the data
+            int value = atoi(data.c_str());
+            int lumBundlesObtained = value / lumBundleSize;
+            if (value >= 710 && (value % lumBundleSize) != 0) {
+                // Send the leftover lum bundle!
+                AP_SendItem(1653615);
+            }
+
+            // Send any regular lum bundles!
+            while (lumBundlesObtained > previousCommunicatedLumBundle) {
+                AP_SendItem(1653616 + previousCommunicatedLumBundle);
+                previousCommunicatedLumBundle++;
+            }
+        }
+        break;
+    }
     case MESSAGE_TYPE_COMPLETE: {
         // The game is done; pass it on!
         if (isConnected()) {
@@ -255,6 +267,7 @@ void handleItemClear() {
     masks = 0;
     elixir = false;
     knowledge = false;
+    previousCommunicatedLumBundle = 0;
     sendStateUpdate(connected);
 }
 
@@ -282,41 +295,60 @@ void handleReset() {
 
 /** Handles an item being checked. */
 void handleItem(int64_t id, bool notify) {
-    // Archipelago increments all ids by 1651615, so we subtract that to get the ID used
-    // by Rayman 2.
-    int64_t r2Id = id - 1651615;
-
-    // Determine what type of item was collected
+    // Parse the custom item ids into the actual item types and handle them.
     const char* type;
-    if (r2Id == ELIXIR_ID) {
-        type = "Elixir of Life";
-        elixir = true;
-    } else if (std::find(std::begin(MASK_IDS), std::end(MASK_IDS), r2Id) != std::end(MASK_IDS)) {
-        type = "Mask";
-        masks++;
-    } else if (std::find(std::begin(SILVER_LUM_IDS), std::end(SILVER_LUM_IDS), r2Id) != std::end(SILVER_LUM_IDS)) {
-        type = "Silver Lum";
-        upgrades++;
-    } else if (r2Id >= 840 && r2Id <= 919) {
+    switch (id) {
+    case 1651615:
+        type = "Lum";
+        lums++;
+        break;
+    case 1651616:
+        type = "Super Lum";
+        lums += 5;
+        break;
+    case 1651617:
         type = "Cage";
         cages++;
-    } else if ((r2Id >= 1 && r2Id <= 800) || (r2Id >= 1201 && r2Id <= 1400)) {
-        if (std::find(std::begin(SUPER_LUM_IDS), std::end(SUPER_LUM_IDS), r2Id) != std::end(SUPER_LUM_IDS)) {
-            type = "Super Lum";
-            lums += 5;
-        } else {
-            type = "Lum";
-            lums++;
-        }
-    } else if (r2Id == COBD_KNOWLEDGE_ID) {
+        break;
+    case 1651618:
+        type = "Water Mask";
+        masks++;
+        break;
+    case 1651619:
+        type = "Earth Mask";
+        masks++;
+        break;
+    case 1651620:
+        type = "Fire Mask";
+        masks++;
+        break;
+    case 1651621:
+        type = "Air Mask";
+        masks++;
+        break;
+    case 1651622:
+        type = "Silver Lum";
+        upgrades++;
+        break;
+    case 1651623:
+        type = "Elixir of Life";
+        elixir = true;
+        break;
+    case 1651624:
         type = "Knowledge of the Cave of Bad Dreams";
         knowledge = true;
-    } else if (r2Id == THOUSANDTH_LUM_ID) {
-        type = "1000th Lum";
-        lums++;
-    } else {
+        break;
+    case 1651625:
+        type = "Lum Bundle";
+        lums += lumBundleSize;
+        break;
+    case 1651626:
+        type = "Leftover Lum Bundle";
+        lums += 710 % lumBundleSize;
+        break;
+    default:
         // The item type is invalid, send a debug log!
-        instance->send(MESSAGE_TYPE_MESSAGE, "Received invalid item: " + std::to_string(r2Id));
+        instance->send(MESSAGE_TYPE_MESSAGE, "Received invalid item: " + std::to_string(id));
         return;
     }
 

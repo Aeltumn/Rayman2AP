@@ -32,3 +32,22 @@ This guide only covers how to install and run the Rayman 2 mod, customizing the 
 9. In-game you can press `~` to open up the console. Use the `ap connect <ip> <slot> [password]` command to connect to an Archipelago room. You have to put the slot name in quotes ("") if it contains spaces. The console will show an error message if it could not connect to the room.
     - If you use a non-US keyboard the key may not be the same. It will use whatever `VK_OEM_3` is on your keyboard.
 10. Starting a new game after connecting to a room will use the configured random settings.
+
+How to use Archipelago
+---
+For users unfamiliar with [Archipelago](https://archipelago.gg/), you can follow the following steps to create an Archipelago room to connect to:
+
+1. Install [Archipelago](https://archipelago.gg/) using [this guide](https://archipelago.gg/tutorial/Archipelago/setup_en).
+2. Run the Archipelago Launcher.
+3. Download the [latest release](https://github.com/Aeltumn/Rayman2AP/releases) of this project and copy the `Rayman.2.yaml` and `rayman2.apworld` files to a folder of your choice.
+4. In the Archipelago Launcher, click `Install APWorld` and select the `rayman2.apworld` file downloaded from this project's GitHub.
+5. You now have to prepare a .yaml file which configures the game you want to play. There are two methods to do this:
+   - **Option A:** Modify the `Rayman.2.yaml` file using a text editor to configure the game to your liking.
+      - Set the `name` at the top of the file to something recognizable.
+      - Configure all the options, the value followed by 50 will be selected.
+   - **Option B:** In the Archipelago Launcher, use the `Options Creator` tool to create your options with a custom GUI. Hover over settings to read their descriptions.
+6. In the Archipelago Launcher, click `Browse Files` and place your .yaml file in the `Players` directory.
+   - You can combine as many games together as you want from the [hundreds of games supported by Archipelago](https://mk-404.github.io/Archipelago-Games-Library/). The vast majority of these games are not listed on Archipelago's own website, just like Rayman 2, as these are community developed and not merged into the main project. You can see all available games [on this community-made list](https://mk-404.github.io/Archipelago-Games-Library/). All .yaml files placed into the `Players` directory are combined into a single randomized multi-world.
+7. In the Archipelago Launcher, click `Generate` to generate a game, it will be placed in the `output` directory in the Archipelago files.
+8. Upload your generated game to the [Archipelago website](https://archipelago.gg/uploads) and create a room. The room will be hosted on Archipelago's servers and will automatically boot up whenever you visit the room page. You can host your own room on your own device as well if you prefer.
+9. You can now connect to your created room from Rayman 2, make sure to set the slot name to the name you picked in the .yaml!

@@ -563,6 +563,47 @@ void MOD_ExitChain() {
 			int level = entryLevelId;
 			AI_fn_bSetDsgVar(pGlobal, 67, &level);
 		}
+	
+		// Make exiting from a level spawn its portal so EEC works properly!
+		if (chainId == CHAIN_WALK_LIFE) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 969, TRUE);
+		} else if (chainId == CHAIN_WALK_POWER) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 992, TRUE);
+		} else if (chainId == CHAIN_COBD) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 966, TRUE);
+		} else if (chainId == CHAIN_FAIRY_GLADE) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 961, TRUE);
+		} else if (chainId == CHAIN_MARSHES) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 964, TRUE);
+		} else if (chainId == CHAIN_BAYOU) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 967, TRUE);
+		} else if (chainId == CHAIN_SANC_WATER) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 970, TRUE);
+		} else if (chainId == CHAIN_MENHIR) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 972, TRUE);
+		} else if (chainId == CHAIN_CANOPY) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 976, TRUE);
+		} else if (chainId == CHAIN_WHALE) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 979, TRUE);
+		} else if (chainId == CHAIN_SANC_STONE) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 981, TRUE);
+		} else if (chainId == CHAIN_ECHOING) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 975, TRUE);
+		} else if (chainId == CHAIN_PRECIPICE) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 985, TRUE);
+		} else if (chainId == CHAIN_TOP) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 988, TRUE);
+		} else if (chainId == CHAIN_SANC_ROCK) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 990, TRUE);
+		} else if (chainId == CHAIN_BENEATH) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 993, TRUE);
+		} else if (chainId == CHAIN_TOMB) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1007, TRUE);
+		} else if (chainId == CHAIN_IRON_MOUNT) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1000, TRUE);
+		} else if (chainId == CHAIN_PRISON) {
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1002, TRUE);
+		}
 	}
 
 	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);

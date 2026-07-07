@@ -349,10 +349,11 @@ void MOD_EnterLevelChain(int chainId) {
 	if (MOD_LastSubLevelIndex > 0) {
 		LevelInfo* levelInfo = NULL;
 		int length = 0;
-		MOD_CrawlLevelInfo(MOD_LevelCurrentChain, 0, &levelInfo, &length, 0);
+		MOD_CrawlLevelInfo(chainId, 0, &levelInfo, &length, 0);
 		int target = MOD_LastSubLevelIndex;
 		MOD_LastSubLevelIndex = 0;
 		MOD_JumpToLevel(levelInfo[target].levelName);
+		MOD_SendToCurrentLevel();
 		return;
 	}
 

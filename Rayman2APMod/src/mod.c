@@ -2268,6 +2268,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 								pInfo->Y = 450 - lines * lineHeight;
 								SPTXT_vPrintFmtLine("/o200:Unlock the next level");
 								SPTXT_vPrintFmtLine("/o200:to reveal rooms!");
+								MOD_LastSubLevelIndex = 0;
 							} else {
 								// Determine the level contents!
 								LevelInfo* levelInfo = NULL;

@@ -839,8 +839,11 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				MOD_EnterLevelChain(CHAIN_ECHOING);
 				return;
 			} else if (compareStringCaseInsensitive(szLevelName, "cask_10") == 0) {
-				// Ensure we are in Learn_32 before continuing to the next level!
-				MOD_JumpToLevel("Learn_32");
+				// Ensure we are in Learn_32's intended chain position before continuing
+				// to the next level if we just arrived from level 11 or learn_31.
+				if (GAM_g_stEngineStructure->ucPreviousLevel == 11) {
+					MOD_JumpToLevel("Learn_32");
+				}
 				if (MOD_ProgressLevelChain()) return;
 			} else if (compareStringCaseInsensitive(szLevelName, "cask_30") == 0) {
 				if (MOD_ProgressLevelChain()) return;

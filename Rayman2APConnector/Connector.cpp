@@ -67,7 +67,19 @@ void Connector::waitForAP() {
         while (true) {
             if (AP_IsInit() && AP_IsMessagePending()) {
                 AP_Message* message = AP_GetLatestMessage();
-                instance->send(MESSAGE_TYPE_MESSAGE, message->text);
+                if (message->type == AP_MessageType::Chat) {
+                    AP_ChatMessage* chatMessage = static_cast<AP_ChatMessage*>(message);
+                    std::string formattedMessage = "/o400:" + chatMessage->player + " /o0:- " + chatMessage->message;
+					instance->send(MESSAGE_TYPE_CHAT, formattedMessage);
+                }
+                else if (message->type == AP_MessageType::ServerChat) {
+                    AP_ChatMessage* chatMessage = static_cast<AP_ChatMessage*>(message);
+					std::string formattedMessage = "/o200:Server /o0:- " + chatMessage->message;
+                    instance->send(MESSAGE_TYPE_CHAT, formattedMessage);
+                }
+                else {
+                    instance->send(MESSAGE_TYPE_MESSAGE, message->text);
+                }
                 AP_ClearLatestMessage();
             }
             if (AP_IsInit() && !connected) {
@@ -99,7 +111,11 @@ void Connector::handle(int type, std::string data) {
         break;
     }
     case MESSAGE_TYPE_MESSAGE: {
-        // Send the message up to Archipelago server.
+        send(MESSAGE_TYPE_MESSAGE, data);
+		break;
+    }
+    case MESSAGE_TYPE_CHAT: {
+        // Send the chat message up to Archipelago server.
         AP_Say(data);
         break;
     }

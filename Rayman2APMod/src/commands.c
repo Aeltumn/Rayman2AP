@@ -89,7 +89,7 @@ void fn_vSayCommand(int lNbArgs, char** d_szArgs) {
 		}
 		strcat(result, d_szArgs[i]);
 	}
-	MOD_SendMessage(MESSAGE_TYPE_MESSAGE, result);
+	MOD_SendMessage(MESSAGE_TYPE_CHAT, result);
 	free(result);
 }
 

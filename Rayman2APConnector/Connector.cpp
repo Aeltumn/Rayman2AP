@@ -71,13 +71,11 @@ void Connector::waitForAP() {
                     AP_ChatMessage* chatMessage = static_cast<AP_ChatMessage*>(message);
                     std::string formattedMessage = "/o400:" + chatMessage->player + " /o0:- " + chatMessage->message;
 					instance->send(MESSAGE_TYPE_CHAT, formattedMessage);
-                }
-                else if (message->type == AP_MessageType::ServerChat) {
-                    AP_ChatMessage* chatMessage = static_cast<AP_ChatMessage*>(message);
-					std::string formattedMessage = "/o200:Server /o0:- " + chatMessage->message;
+                } else if (message->type == AP_MessageType::ServerChat) {
+                    AP_ServerChatMessage* serverChatMessage = static_cast<AP_ServerChatMessage*>(message);
+					std::string formattedMessage = "/o200:Server /o0:- " + serverChatMessage->message;
                     instance->send(MESSAGE_TYPE_CHAT, formattedMessage);
-                }
-                else {
+                } else {
                     instance->send(MESSAGE_TYPE_MESSAGE, message->text);
                 }
                 AP_ClearLatestMessage();

@@ -53,10 +53,15 @@ int MOD_Upgrades = 0;
 int MOD_EndGoal = 1;
 BOOL MOD_Elixir = FALSE;
 BOOL MOD_Knowledge = FALSE;
+BOOL MOD_Hover = TRUE;
+BOOL MOD_LedgeGrab = TRUE;
+BOOL MOD_Swim = TRUE;
+BOOL MOD_LavaHover = TRUE;
 
 // Store archipelago settings
 BOOL MOD_Connected = FALSE;
 BOOL MOD_DeathLink = FALSE;
+BOOL MOD_DamageLink = FALSE;
 BOOL MOD_Lumsanity = FALSE;
 BOOL MOD_RoomRandomisation = FALSE;
 BOOL MOD_AccessiblePortals = FALSE;
@@ -69,10 +74,13 @@ int MOD_LumGates[6];
 BOOL MOD_Finished = FALSE;
 int MOD_StoredDeathLinks = 0;
 BOOL MOD_DeathLinkOverride = FALSE;
+BOOL MOD_TriggeredDeathAnimation = FALSE;
 BOOL MOD_IgnoreDeath = FALSE;
 BOOL MOD_PendingDeathLink = FALSE;
 BOOL MOD_TreasureComplete = FALSE;
 BOOL MOD_InLumGate = FALSE;
+int MOD_CurrentHealth = 0;
+int MOD_LastHealth = 0;
 int MOD_CurrentLumGate = -1;
 
 // Store variables for the screen text system
@@ -1092,6 +1100,63 @@ void setLumGateOverride(int lumGateId) {
 
 /** Checks if any lums/cages have been collected since last frame. */
 void MOD_CheckVariables() {
+	// Store current health for damage link
+	HIE_tdstEngineObject* pRayEngine = HIE_M_hSuperObjectGetActor(HIE_M_hGetMainActor());
+	MOD_CurrentHealth = pRayEngine->hStandardGame->ucHitPoints;
+
+	// Check for movement every frame!
+	HIE_tdstSuperObject* pRayman = HIE_fn_p_stFindObjectByName("Rayman");
+	if (pRayman) {
+		// Prevent swimming!
+		if (!MOD_Swim) {
+			unsigned char* etat;
+			AI_fn_bGetDsgVar(pRayman, 9, NULL, &etat);
+			if (*etat == 25 && !MOD_TriggeredDeathAnimation && GAM_fn_ucGetEngineMode() != 7) {
+				// Kill the player!
+				if (pRayEngine) {
+					MOD_TriggeredDeathAnimation = TRUE;
+					pRayEngine->hCollSet->stColliderInfo.ucColliderType = 52;
+					pRayEngine->hCollSet->stColliderInfo.ucColliderPriority = 255;
+					pRayEngine->hStandardGame->ucHitPoints--;
+					MOD_ShowScreenText("Rayman can't swim!");
+					return;
+				}
+			}
+		}
+
+		// Prevent being on a ledge!
+		if (!MOD_LedgeGrab) {
+			// Set can grab to false every frame.
+			ACP_tdxBool canGrab = FALSE;
+			AI_fn_bSetDsgVar(pRayman, 44, &canGrab);
+
+			// Set the last jump time to 7 constantly as when it's above 80
+			// 44 is automatically set to true.
+			int lastJumpTime = 7;
+			AI_fn_bSetDsgVar(pRayman, 24, &lastJumpTime);
+		}
+
+		// Prevent being on a ledge!
+		if (!MOD_Hover) {
+			// Force prevent hovering every frame.
+			ACP_tdxBool cantHover = TRUE;
+			AI_fn_bSetDsgVar(pRayman, 92, &cantHover);
+		}
+	}
+
+	// Check for damage link
+	if (!MOD_IgnoreDeath) {
+		if (MOD_GetDeathLink(FALSE) && MOD_CurrentHealth < MOD_LastHealth) {
+			MOD_StoredDeathLinks++;
+			if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
+				MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman took damage");
+				MOD_StoredDeathLinks = 0;
+			}
+		}
+		MOD_IgnoreDeath = FALSE;
+	}
+	MOD_LastHealth = MOD_CurrentHealth;
+
 	// Check at most twice per second!
 	MOD_VariableCheckTicks++;
 	if (MOD_VariableCheckTicks < 30) return;
@@ -1293,6 +1358,12 @@ void MOD_CheckVariables() {
 		} else {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, TRUE);
+		}
+
+		// Give lava hover ability
+		if (pRayman) {
+			ACP_tdxBool lavaHover = MOD_LavaHover;
+			AI_fn_bSetDsgVar(pRayman, 1, &lavaHover);
 		}
 
 		// Set whether you have knowledge of the cave of bad dreams always
@@ -1500,7 +1571,7 @@ void MOD_EngineTick() {
 /** Handles the player dying and triggers a death link. */
 void MOD_Init() {
 	// Test if the player has died, this gets triggered once on death
-	if (GAM_fn_ucGetEngineMode() == 7) {
+	if (GAM_fn_ucGetEngineMode() == 7 && !MOD_DamageLink) {
 		if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
 			MOD_StoredDeathLinks++;
 			if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
@@ -1511,6 +1582,7 @@ void MOD_Init() {
 		MOD_IgnoreDeath = FALSE;
 	}
 
+	MOD_TriggeredDeathAnimation = FALSE;
 	GAM_fn_vChooseTheGoodInit();
 }
 
@@ -1518,6 +1590,7 @@ void MOD_Init() {
 void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int deathLinkAmnesty, BOOL betterLevelPortals, int lumBundleSize, int* lumGates, char** levelIds, int* chainLengths, int** chainContents) {
 	MOD_Connected = connected;
 	MOD_DeathLink = deathLink;
+	MOD_DamageLink = FALSE;
 	MOD_EndGoal = endGoal;
 	MOD_Lumsanity = lumsanity;
 	MOD_RoomRandomisation = roomRandomisation;
@@ -1551,6 +1624,10 @@ void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, 
 	MOD_Upgrades = upgrades;
 	MOD_Elixir = elixir;
 	MOD_Knowledge = knowledge;
+	MOD_Hover = TRUE;
+	MOD_LedgeGrab = TRUE;
+	MOD_Swim = TRUE;
+	MOD_LavaHover = TRUE;
 
 	// If we're not on lumsanity we need to include any non-super lums collected locally!
 	if (!MOD_Lumsanity) {
@@ -2422,8 +2499,14 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_EndGoal: %d\n", MOD_EndGoal);
 	fprintf(f, "MOD_Elixir: %d\n", MOD_Elixir);
 	fprintf(f, "MOD_Knowledge: %d\n", MOD_Knowledge);
+	fprintf(f, "MOD_Hover: %d\n", MOD_Hover);
+	fprintf(f, "MOD_LedgeGrab: %d\n", MOD_LedgeGrab);
+	fprintf(f, "MOD_Swim: %d\n", MOD_Swim);
+	fprintf(f, "MOD_LavaHover: %d\n", MOD_LavaHover);
+	fprintf(f, "\n");
 	fprintf(f, "MOD_Connected: %d\n", MOD_Connected);
 	fprintf(f, "MOD_DeathLink: %d\n", MOD_DeathLink);
+	fprintf(f, "MOD_DamageLink: %d\n", MOD_DamageLink);
 	fprintf(f, "MOD_Lumsanity: %d\n", MOD_Lumsanity);
 	fprintf(f, "MOD_FinishedWinCondition: %d\n", MOD_FinishedWinCondition());
 	fprintf(f, "MOD_RoomRandomisation: %d\n", MOD_RoomRandomisation);
@@ -2436,6 +2519,9 @@ void MOD_BugReport() {
 	}
 	fprintf(f, "MOD_PendingDeathLink: %d\n", MOD_PendingDeathLink);
 	fprintf(f, "MOD_DeathLinkOverride: %d\n", MOD_DeathLinkOverride);
+	fprintf(f, "MOD_TriggeredDeath: %d\n", MOD_TriggeredDeathAnimation);
+	fprintf(f, "MOD_CurrentHealth: %d\n", MOD_CurrentHealth);
+	fprintf(f, "MOD_LastHealth: %d\n", MOD_LastHealth);
 	fprintf(f, "MOD_IgnoreDeath: %d\n", MOD_IgnoreDeath);
 	fprintf(f, "MOD_TreasureComplete: %d\n", MOD_TreasureComplete);
 	fprintf(f, "MOD_InLumGate: %d\n", MOD_InLumGate);

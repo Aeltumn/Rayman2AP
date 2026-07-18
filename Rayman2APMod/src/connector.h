@@ -21,7 +21,7 @@
 #define MAX_LENGTH 32
 #define CHAIN_COUNT 21
 
-#define CURRENT_VERSION "1.0.1"
+#define CURRENT_VERSION "1.1.0"
 
 int MOD_StartConnector();
 void MOD_StopConnector();

@@ -31,6 +31,7 @@ int CHAIN_TOP = 17;
 int CHAIN_WALK_LIFE = 18;
 int CHAIN_WALK_POWER = 19;
 int CHAIN_WHALE = 20;
+int CHAIN_WOODS = 21;
 
 // Track important portal ids
 int* NO_LUM_GATE_LEVELS[4] = { 961, 964, 967, 970 };
@@ -49,6 +50,7 @@ int MOD_Lums = 0;
 int MOD_CollectedLums = 0;
 int MOD_Cages = 0;
 int MOD_Masks = 0;
+BOOL MOD_FragmentedUpgrades = FALSE;
 int MOD_Upgrades = 0;
 int MOD_EndGoal = 1;
 BOOL MOD_Elixir = FALSE;
@@ -93,6 +95,9 @@ BitSet MOD_LastCollected;
 BitSet MOD_DevCollected;
 BitSet MOD_RealCollected;
 int MOD_VariableCheckTicks = 0;
+
+// While in Woods we fake the cutscene completion
+BOOL MOD_InWoods = FALSE;
 
 // While in the Menhir Hills store if you had the elixir beforehand
 BOOL MOD_InMenhirHills = FALSE;
@@ -240,6 +245,15 @@ void MOD_LieBeforeLevelEntry(char* levelName) {
 
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
+		if (compareStringCaseInsensitive(levelName, "Learn_10") == 0) {
+			if (!MOD_InWoods) {
+				// Check the final cage in Woods as it directly triggers the cutscene
+				// so we can safely skip this if you have it.
+				BOOL FinishedWoods = AI_fn_bGetBooleanInArray(pGlobal, 42, 841);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1133, FinishedWoods);
+				MOD_InWoods = TRUE;
+			}
+		}
 		if (compareStringCaseInsensitiveLimited(levelName, "Rodeo_40") == 0) {
 			if (!MOD_InMenhirHills) {
 				// DSG 1123 stores whether you are in the cutscene.
@@ -393,6 +407,35 @@ void MOD_EnterLevelChain(int chainId) {
 	MOD_SendToCurrentLevel();
 }
 
+/** Returns the upgrade level id for each level. */
+int MOD_GetUpgradeLevelId(char* levelName) {
+	if (compareStringCaseInsensitive(levelName, "learn_31") == 0 ||
+		compareStringCaseInsensitive(levelName, "learn_32") == 0) {
+		return 1;
+	}
+	if (compareStringCaseInsensitive(levelName, "vulca_10") == 0) return 2;
+	if (compareStringCaseInsensitive(levelName, "vulca_20") == 0) return 4;
+	if (compareStringCaseInsensitive(levelName, "plum_20") == 0) return 8;
+	if (compareStringCaseInsensitive(levelName, "bast_22") == 0) return 16;
+	if (compareStringCaseInsensitive(levelName, "learn_60") == 0) return 32;
+	if (compareStringCaseInsensitive(levelName, "chase_10") == 0) return 64;
+	if (compareStringCaseInsensitive(levelName, "chase_22") == 0) return 128;
+	if (compareStringCaseInsensitive(levelName, "water_20") == 0) return 256;
+	if (compareStringCaseInsensitive(levelName, "rodeo_40") == 0) return 512;
+	if (compareStringCaseInsensitive(levelName, "rodeo_60") == 0) return 1024;
+	if (compareStringCaseInsensitive(levelName, "glob_20") == 0) return 2048;
+	if (compareStringCaseInsensitive(levelName, "whale_00") == 0) return 4096;
+	if (compareStringCaseInsensitive(levelName, "plum_00") == 0) return 8192;
+	if (compareStringCaseInsensitive(levelName, "plum_10") == 0) return 16384;
+	if (compareStringCaseInsensitive(levelName, "nave_10") == 0) return 32768;
+	if (compareStringCaseInsensitive(levelName, "earth_10") == 0) return 65536;
+	if (compareStringCaseInsensitive(levelName, "helic_30") == 0) return 131072;
+	if (compareStringCaseInsensitive(levelName, "morb_10") == 0) return 262144;
+	if (compareStringCaseInsensitive(levelName, "learn_40") == 0) return 524288;
+	if (compareStringCaseInsensitive(levelName, "mine_10") == 0) return 1048576;
+	return 0;
+}
+
 /** Returns the level id of the first level in the given chain. */
 int getLevelChainEntryId(int chainId) {
 	if (chainId == CHAIN_FAIRY_GLADE) {
@@ -433,6 +476,8 @@ int getLevelChainEntryId(int chainId) {
 		return 12;
 	} else if (chainId == CHAIN_PRISON) {
 		return 140;
+	} else if (chainId == CHAIN_WOODS) {
+		return 3;
 	}
 	return -1;
 }
@@ -563,6 +608,8 @@ void MOD_ExitChain() {
 			structure->ucPreviousLevel = 215;
 		} else if (chainId == CHAIN_IRON_MOUNT) {
 			structure->ucPreviousLevel = 125;
+		} else if (chainId == CHAIN_WOODS) {
+			structure->ucPreviousLevel = 3;
 		} else if (chainId == CHAIN_PRISON) {
 			// Ensure you have enough masks otherwise never reveal the last level!
 			structure->ucPreviousLevel = MOD_FinishedWinCondition() ? 240 : 140;
@@ -597,44 +644,53 @@ void MOD_ExitChain() {
 		}
 	
 		// Make exiting from a level spawn its portal so EEC works properly!
+		int id = 0;
 		if (chainId == CHAIN_WALK_LIFE) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 969, TRUE);
+			id = 969;
 		} else if (chainId == CHAIN_WALK_POWER) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 992, TRUE);
+			id = 992;
 		} else if (chainId == CHAIN_COBD) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 966, TRUE);
+			id = 966;
 		} else if (chainId == CHAIN_FAIRY_GLADE) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 961, TRUE);
+			id = 961;
 		} else if (chainId == CHAIN_MARSHES) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 964, TRUE);
+			id = 964;
 		} else if (chainId == CHAIN_BAYOU) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 967, TRUE);
+			id = 967;
 		} else if (chainId == CHAIN_SANC_WATER) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 970, TRUE);
+			id = 970;
 		} else if (chainId == CHAIN_MENHIR) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 972, TRUE);
+			id = 972;
 		} else if (chainId == CHAIN_CANOPY) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 976, TRUE);
+			id = 976;
 		} else if (chainId == CHAIN_WHALE) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 979, TRUE);
+			id = 979;
 		} else if (chainId == CHAIN_SANC_STONE) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 981, TRUE);
+			id = 981;
 		} else if (chainId == CHAIN_ECHOING) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 975, TRUE);
+			id = 975;
 		} else if (chainId == CHAIN_PRECIPICE) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 985, TRUE);
+			id = 985;
 		} else if (chainId == CHAIN_TOP) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 988, TRUE);
+			id = 988;
 		} else if (chainId == CHAIN_SANC_ROCK) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 990, TRUE);
+			id = 990;
 		} else if (chainId == CHAIN_BENEATH) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 993, TRUE);
+			id = 993;
 		} else if (chainId == CHAIN_TOMB) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1007, TRUE);
+			id = 1007;
 		} else if (chainId == CHAIN_IRON_MOUNT) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1000, TRUE);
+			id = 1000;
 		} else if (chainId == CHAIN_PRISON) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1002, TRUE);
+			id = 1002;
+		} else if (chainId == CHAIN_WOODS) {
+			id = 960;
+		}
+		if (id > 0) {
+			char str[6];
+			sprintf(str, "%d", id);
+			MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, id, TRUE);
 		}
 	}
 
@@ -675,6 +731,13 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// to last for just one level!
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
+		// Look for being connected, not being in Woods!
+		if (MOD_Connected) {
+			// Always ensure we are sent to the Hall of Doors not the Woods of Light
+			// when loading a new save file!
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1133, TRUE);
+			MOD_InWoods = FALSE;
+		}
 		if (MOD_InMarshes) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1120, MOD_HadFinishedCOBDPreviously);
 			MOD_HadFinishedCOBDPreviously = FALSE;
@@ -761,6 +824,12 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 					AI_fn_vSetBooleanInArray(pGlobal, 42, 1097, TRUE);
 					AI_fn_vSetBooleanInArray(pGlobal, 42, 1131, TRUE);
 				}
+			}
+
+			// Woods of Light
+			if (compareStringCaseInsensitive(szLevelName, "Learn_10") == 0) {
+				MOD_EnterLevelChain(CHAIN_WOODS);
+				return;
 			}
 
 			// Fairy Glade
@@ -1296,6 +1365,9 @@ void MOD_CheckVariables() {
 						i = 1143;
 					}
 
+					// Don't send portal unlocks here in room random, we send it in the portal logic so it's safer
+					if (MOD_RoomRandomisation && i >= 960 && i <= 1002) continue;
+
 					// Send up the id of the item directly
 					char str[6];
 					sprintf(str, "%d", i);
@@ -1349,20 +1421,38 @@ void MOD_CheckVariables() {
 		AI_fn_bSetDsgVar(pGlobal, 46, &cages);
 
 		// Set the silver lum states based on the amount of upgrades
-		if (MOD_Upgrades == 0) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, FALSE);
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, FALSE);
-		} else if (MOD_Upgrades == 1) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, FALSE);
+		if (MOD_FragmentedUpgrades) {
+			// Determine the level id in the upgrades value to check based on the id!
+			int levelId = MOD_GetUpgradeLevelId(szLevelName);
+			if (levelId == 0 || (MOD_Upgrades & levelId) > 1) {
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, (MOD_Upgrades & 2097152) > 1);
+			}
 		} else {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, TRUE);
+			if (MOD_Upgrades == 0) {
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, FALSE);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, FALSE);
+			} else if (MOD_Upgrades == 1) {
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, FALSE);
+			} else {
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, TRUE);
+			}
 		}
 
 		// Give lava hover ability
 		if (pRayman) {
-			ACP_tdxBool lavaHover = MOD_LavaHover;
+			ACP_tdxBool lavaHover = FALSE;
+			if (MOD_LavaHover) {
+				// In Revo the lava hover works on all lava but only when above lava,
+				// on PC lava hover just always works so you could fly away in any map
+				// that isn't made to have roofs, so we only let you have this in helic.
+				if (compareStringCaseInsensitive(szLevelName, "helic_10") == 0 ||
+					compareStringCaseInsensitive(szLevelName, "helic_20") == 0) {
+					lavaHover = TRUE;
+				}
+			}
 			AI_fn_bSetDsgVar(pRayman, 1, &lavaHover);
 		}
 
@@ -1624,6 +1714,7 @@ void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, 
 	MOD_Upgrades = upgrades;
 	MOD_Elixir = elixir;
 	MOD_Knowledge = knowledge;
+	MOD_FragmentedUpgrades = TRUE;
 	MOD_Hover = TRUE;
 	MOD_LedgeGrab = TRUE;
 	MOD_Swim = TRUE;
@@ -2267,11 +2358,27 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 			long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
 
 			pInfo->X = 995;
-			pInfo->Y = 990 - 4 * lineHeight;
+			pInfo->Y = 990 - 6 * lineHeight;
 			SPTXT_vPrintFmtLine("/o200:Archipelago Received");
 			SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_Lums, MOD_Cages);
-			SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Power /o0:%d of 2", MOD_Masks, MOD_Upgrades);
+			int upgrades = 0;
+			int totalPower = 2;
+			if (MOD_FragmentedUpgrades) {
+				int j = 1;
+				for (int i = 0; i < 22; i++) {
+					if ((MOD_Upgrades & j) > 0) {
+						upgrades++;
+					}
+					j = j << 1;
+				}
+				totalPower = 22;
+			} else {
+				upgrades = MOD_Upgrades;
+			}
+			SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Power /o0:%d of %d", MOD_Masks, upgrades, totalPower);
 			SPTXT_vPrintFmtLine("/o400:Elixir %s/o400:, Knowledge %s", MOD_Elixir ? "/o0:Yes" : "/o200:No", MOD_Knowledge ? "/o0:Yes" : "/o200:No");
+			SPTXT_vPrintFmtLine("/o400:Hover %s/o400:, Lava Hover %s", MOD_Hover ? "/o0:Yes" : "/o200:No", MOD_LavaHover ? "/o0:Yes" : "/o200:No");
+			SPTXT_vPrintFmtLine("/o400:Ledge Grab %s/o400:, Swim %s", MOD_LedgeGrab ? "/o0:Yes" : "/o200:No", MOD_Swim ? "/o0:Yes" : "/o200:No");
 		}
 
 		// When hovering over a portal in mapmonde we show information on the level chain inside
@@ -2375,6 +2482,10 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 							chainId = CHAIN_PRISON;
 							nextLevelValue += 0; // Prison Ship is always visible because we have no reliable checks and it's the last level anyway so you can process of elimination it.
 							portal = 19;
+						} else if (*p_stLevelId == 0) {
+							chainId = CHAIN_WOODS;
+							nextLevelValue += 1;
+							portal = 0;
 						}
 
 						if (chainId != -1) {
@@ -2407,7 +2518,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 								// Draw the level info in a list, start with a header showing portal number and room count
 								long spacer = lineHeight - 2;
 								pInfo->Y = 320;
-								SPTXT_vPrintFmtLine("/o200:Portal nr. %d", portal);
+								SPTXT_vPrintFmtLine("/o200:Portal nr. %d", portal + 1);
 								pInfo->X = 22;
 								SPTXT_vPrintFmtLine("/o0:%d rooms", length);
 								pInfo->Y = pInfo->Y + spacer;
@@ -2421,10 +2532,19 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 										SPTXT_vPrintFmtLine("/o400:%s", info.name);
 									}
 									pInfo->X = 22 + info.depth * 10;
-									if (info.cagesMax == 0) {
-										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax);
+									int levelId = MOD_GetUpgradeLevelId(info.levelName);
+									if (levelId > 0 && MOD_FragmentedUpgrades) {
+										if (info.cagesMax == 0) {
+											SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Swings %s", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, ((MOD_Upgrades & levelId) > 0) ? "/o0:Yes" : "/o200:No");
+										} else {
+											SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Cages %s%d of %d/o400:, Swings %s", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, info.cages >= info.cagesMax ? "/o200:" : "/o0:", info.cages, info.cagesMax, ((MOD_Upgrades & levelId) > 0) ? "/o0:Yes" : "/o200:No");
+										}
 									} else {
-										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Cages %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, info.cages >= info.cagesMax ? "/o200:" : "/o0:", info.cages, info.cagesMax);
+										if (info.cagesMax == 0) {
+											SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax);
+										} else {
+											SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Cages %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, info.cages >= info.cagesMax ? "/o200:" : "/o0:", info.cages, info.cagesMax);
+										}
 									}
 									pInfo->Y = pInfo->Y + spacer;
 								}
@@ -2496,6 +2616,7 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_Cages: %d\n", MOD_Cages);
 	fprintf(f, "MOD_Masks: %d\n", MOD_Masks);
 	fprintf(f, "MOD_Upgrades: %d\n", MOD_Upgrades);
+	fprintf(f, "MOD_FragmentedUpgrades: %d\n", MOD_FragmentedUpgrades);
 	fprintf(f, "MOD_EndGoal: %d\n", MOD_EndGoal);
 	fprintf(f, "MOD_Elixir: %d\n", MOD_Elixir);
 	fprintf(f, "MOD_Knowledge: %d\n", MOD_Knowledge);
@@ -2531,6 +2652,7 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_LastHoveredLevel: %d\n", MOD_LastHoveredLevel);
 	fprintf(f, "MOD_LastLimitedLevel: %d\n", MOD_LastLimitedLevel);
 	fprintf(f, "MOD_DevMode: %d\n", MOD_DevMode);
+	fprintf(f, "MOD_InWoods: %d\n", MOD_InWoods);
 	fprintf(f, "MOD_InMenhirHills: %d\n", MOD_InMenhirHills);
 	fprintf(f, "MOD_HadElixirPreviously: %d\n", MOD_HadElixirPreviously);
 	fprintf(f, "MOD_SentKnowledgeOfCOBD: %d\n", MOD_SentKnowledgeOfCOBD);

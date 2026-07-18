@@ -20,7 +20,7 @@
 #define MESSAGE_TYPE_LUMS 12
 #define MESSAGE_TYPE_CHAT 13
 
-#define CURRENT_VERSION "1.0.1"
+#define CURRENT_VERSION "1.1.0"
 
 class Connector {
 public:

@@ -28,10 +28,13 @@
 		1097 for watching the Bayou cutscene.
 		1102 for completing Menhir Hills #2 cutscene.
 		1114 for watching the 2nd Polocus cutscene - changes ending of Beneath 2
+		1125 for talking to Ly in Beneath
 		1131 for watching the Precipice cutscene.
 		1132 for watching the Tomb cutscene.
-		1133 for watching woods of light teensie cutscene.
-		1159 for deating Foutch
+		1133 for watching woods of light teensie cutscene and whether we go to mapmonde or jail.
+		1159 for deating Foutch 
+		1176 for talking to Murfy in the Woods of Light
+		1175 for talking to Murfy in the Woods of Light again
 
 		1171 for Clark destroying the first wall in Menhir Hills #2
 		1172 for Clark destroying the second wall in Menhir Hills #2
@@ -74,6 +77,32 @@
 	The actual entrance opens up whenever 992 is set to 1 on the global array.
 
 	Woods of Light lets you through the cutscene if 43 is 0, aka all lums collected that are available.
+
+	Silver Lum progression is determined as either:
+	2x Silver Lum
+	OR
+	1 Fairy Glade Revisit Swing
+	2 Cave of Bad Dreams 1 Swings
+	4 Cave of Bad Dreams 2 Swings
+	8 Sanctuary of Stone and Fire - Side Temple Swing
+	16 Fairy Glade 4 Swing
+	32 Fairy Glade 5 Swing
+	64 Bayou 1 Swings
+	128 Bayou 2 Swing
+	256 Sanctuary of Water and Ice 2 Swings
+	512 Menhir Hills 2 Swings
+	1024 Menhir Hills 3 Swing
+	2048 Canopy 3 Swing
+	4096 Whale Bay 1 Swing
+	8192 Sanctuary of Stone and Fire 1 Swings
+	16384 Sanctuary of Stone and Fire 2 Swings
+	32768 Precipice 1 Swings
+	65536 Sanctuary of Rock and Lava 1 Swing
+	131072 Beneath the Sanctuary of Rock and Lava 3 Swing
+	262144 Tomb of the Ancients 2 Swings
+	524288 Iron Mountains 1 Swings
+	1048576 Iron Mountains 3 Swings
+	2097152 Powered Shots
 */
 
 /** Attach detours hooks to game events. */

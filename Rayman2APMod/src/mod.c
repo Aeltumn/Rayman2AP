@@ -2602,7 +2602,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 
 void MOD_Main(void) {
 	// Load preferences for screen text
-	uint8_t preferences = 0;
+	uint8_t preferences = 15;
 	FILE* f = fopen("ap_settings.conf", "rb");
 	if (f) {
 		fread(&preferences, sizeof(preferences), 1, f);

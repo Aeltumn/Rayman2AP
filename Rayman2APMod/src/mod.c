@@ -147,10 +147,13 @@ BOOL MOD_DevMode = FALSE;
 
 /** Returns whether the win condition is done. */
 bool MOD_FinishedWinCondition() {
+	if (MOD_EndGoal == 2) {
+		return false;
+	}
 	if (MOD_EndGoal == 1) {
 		return MOD_Masks >= 4;
 	}
-	if (MOD_EndGoal == 2 || MOD_EndGoal == 4) {
+	if (MOD_EndGoal == 4) {
 		return true;
 	}
 	if (MOD_EndGoal == 3) {
@@ -705,9 +708,6 @@ void MOD_ExitChain() {
 ACP_tdxBool MOD_TriggerFinish() {
 	if (MOD_Finished) return FALSE;
 	MOD_Finished = TRUE;
-
-	// When in Treasure% ignore this!
-	if (MOD_EndGoal == 2) return FALSE;
 
 	if (MOD_FinishedWinCondition()) {
 		MOD_ShowScreenText(3, "Game completed!");

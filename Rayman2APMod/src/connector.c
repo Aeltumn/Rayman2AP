@@ -45,6 +45,7 @@ void MOD_HandleMessage(int type, const char* data) {
 
         BOOL connected = FALSE;
         BOOL deathLink = FALSE;
+        BOOL damageLink = FALSE;
         int endGoal = 1;
         BOOL lumsanity = FALSE;
         BOOL roomRandomisation = FALSE;
@@ -79,18 +80,19 @@ void MOD_HandleMessage(int type, const char* data) {
             case 6: deathLinkAmnesty = atoi(token); break;
             case 7: betterLevelPortals = atoi(token); break;
             case 8: lumBundleSize = atoi(token); break;
-            case 9:
+            case 9: damageLink = atoi(token); break;
             case 10:
             case 11:
             case 12:
             case 13:
             case 14:
-                lumGates[index - 9] = atoi(token);
+            case 15:
+                lumGates[index - 10] = atoi(token);
                 break;
             }
 
             // When we reach the final index we switch processing!
-            if (index == 15) {
+            if (index == 16) {
                 int idx = 0;
                 int levelId = 0;
                 char* context1 = NULL;
@@ -131,7 +133,7 @@ void MOD_HandleMessage(int type, const char* data) {
         free(copy);
 
         // Send this data across to the main mod file
-        MOD_UpdateSettings(connected, deathLink, endGoal, lumsanity, roomRandomisation, accessiblePortals, deathLinkAmnesty, betterLevelPortals, lumBundleSize, lumGates, levelIds, chainLengths, chainContents);
+        MOD_UpdateSettings(connected, deathLink, damageLink, endGoal, lumsanity, roomRandomisation, accessiblePortals, deathLinkAmnesty, betterLevelPortals, lumBundleSize, lumGates, levelIds, chainLengths, chainContents);
         break;
     }
     case MESSAGE_TYPE_STATE: {
@@ -149,6 +151,11 @@ void MOD_HandleMessage(int type, const char* data) {
         int upgrades = 0;
         BOOL elixir = FALSE;
         BOOL knowledge = FALSE;
+        BOOL fragmented = FALSE;
+        BOOL hover = FALSE;
+        BOOL ledge = FALSE;
+        BOOL swim = FALSE;
+        BOOL lavaHover = FALSE;
 
         token = strtok(copy, ",");
         while (token) {
@@ -159,6 +166,11 @@ void MOD_HandleMessage(int type, const char* data) {
             case 3: upgrades = atoi(token); break;
             case 4: elixir = atoi(token); break;
             case 5: knowledge = atoi(token); break;
+            case 6: fragmented = atoi(token); break;
+            case 7: hover = atoi(token); break;
+            case 8: ledge = atoi(token); break;
+            case 9: swim = atoi(token); break;
+            case 10: lavaHover = atoi(token); break;
             }
 
             index++;
@@ -167,7 +179,7 @@ void MOD_HandleMessage(int type, const char* data) {
         free(copy);
 
         // Send this data across to the main mod file
-        MOD_UpdateState(lums, cages, masks, upgrades, elixir, knowledge);
+        MOD_UpdateState(lums, cages, masks, upgrades, elixir, knowledge, fragmented, hover, ledge, swim, lavaHover);
         break;
     }
     case MESSAGE_TYPE_DEATH: {

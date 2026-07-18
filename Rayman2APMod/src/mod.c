@@ -1677,10 +1677,10 @@ void MOD_Init() {
 }
 
 /** Updates the current archipelago settings. */
-void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int deathLinkAmnesty, BOOL betterLevelPortals, int lumBundleSize, int* lumGates, char** levelIds, int* chainLengths, int** chainContents) {
+void MOD_UpdateSettings(BOOL connected, BOOL deathLink, BOOL damageLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int deathLinkAmnesty, BOOL betterLevelPortals, int lumBundleSize, int* lumGates, char** levelIds, int* chainLengths, int** chainContents) {
 	MOD_Connected = connected;
 	MOD_DeathLink = deathLink;
-	MOD_DamageLink = FALSE;
+	MOD_DamageLink = damageLink;
 	MOD_EndGoal = endGoal;
 	MOD_Lumsanity = lumsanity;
 	MOD_RoomRandomisation = roomRandomisation;
@@ -1707,18 +1707,18 @@ void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsan
 }
 
 /** Updates the current progression state. */
-void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, BOOL knowledge) {
+void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, BOOL knowledge, BOOL fragmented, BOOL hover, BOOL ledge, BOOL swim, BOOL lavaHover) {
 	MOD_Lums = lums;
 	MOD_Cages = cages;
 	MOD_Masks = masks;
 	MOD_Upgrades = upgrades;
 	MOD_Elixir = elixir;
 	MOD_Knowledge = knowledge;
-	MOD_FragmentedUpgrades = TRUE;
-	MOD_Hover = TRUE;
-	MOD_LedgeGrab = TRUE;
-	MOD_Swim = TRUE;
-	MOD_LavaHover = TRUE;
+	MOD_FragmentedUpgrades = fragmented;
+	MOD_Hover = hover;
+	MOD_LedgeGrab = ledge;
+	MOD_Swim = swim;
+	MOD_LavaHover = lavaHover;
 
 	// If we're not on lumsanity we need to include any non-super lums collected locally!
 	if (!MOD_Lumsanity) {

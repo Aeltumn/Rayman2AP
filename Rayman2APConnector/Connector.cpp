@@ -14,6 +14,11 @@ int masks = 0;
 int upgrades = 0;
 bool elixir = false;
 bool knowledge = false;
+bool fragmented = false;
+bool hover = true;
+bool ledge = true;
+bool swim = true;
+bool lavaHover = true;
 
 // Current archipelago settings
 bool deathLink = false;
@@ -24,6 +29,7 @@ bool accessiblePortals = false;
 int deathLinkAmnesty = 1;
 bool betterLevelPortals = false;
 int lumBundleSize = 0;
+bool damageLink = false;
 int previousCommunicatedLumBundle = 0;
 int lumGates[6] = {100, 300, 475, 550, 60, 450};
 std::unordered_map<std::string, std::vector<std::string>> levelChains;
@@ -233,6 +239,11 @@ void sendStateUpdate(bool force) {
     oss << upgrades << ",";
     oss << elixir << ",";
     oss << knowledge << ",";
+    oss << fragmented << ",";
+    oss << hover << ",";
+    oss << ledge << ",";
+    oss << swim << ",";
+    oss << lavaHover << ",";
     instance->send(MESSAGE_TYPE_STATE, oss.str());
 }
 
@@ -250,6 +261,7 @@ void sendSettings(bool force) {
     oss << deathLinkAmnesty << ",";
     oss << betterLevelPortals << ",";
     oss << lumBundleSize << ",";
+    oss << damageLink << ",";
 
     for (int i = 0; i < 6; i++) {
         oss << lumGates[i] << ",";
@@ -281,6 +293,11 @@ void handleItemClear() {
     masks = 0;
     elixir = false;
     knowledge = false;
+    fragmented = false;
+    hover = true;
+    ledge = true;
+    swim = true;
+    lavaHover = true;
     previousCommunicatedLumBundle = 0;
     sendStateUpdate(connected);
 }
@@ -290,6 +307,7 @@ void handleReset() {
     bool wasConnected = connected;
     connected = false;
     deathLink = false;
+    damageLink = false;
     endGoal = 1;
     lumsanity = false;
     roomRandomisation = false;
@@ -359,6 +377,110 @@ void handleItem(int64_t id, bool notify) {
     case 1651626:
         type = "Leftover Lum Bundle";
         lums += 710 % lumBundleSize;
+        break;
+    case 1651627:
+        type = "Hover";
+        hover = true;
+        break;
+    case 1651628:
+        type = "Ledge Grab";
+        ledge = true;
+        break;
+    case 1651629:
+        type = "Swim";
+        swim = true;
+        break;
+    case 1651630:
+        type = "Lava Hover";
+        lavaHover = true;
+        break;
+    case 1651631:
+        type = "Fairy Glade Revisit Swing";
+        upgrades &= 1;
+        break;
+    case 1651632:
+        type = "Cave of Bad Dreams 1 Swings";
+        upgrades &= 2;
+        break;
+    case 1651633:
+        type = "Cave of Bad Dreams 2 Swings";
+        upgrades &= 4;
+        break;
+    case 1651634:
+        type = "Stone and Fire Side Temple Swing";
+        upgrades &= 8;
+        break;
+    case 1651635:
+        type = "Fairy Glade 4 Swing";
+        upgrades &= 16;
+        break;
+    case 1651636:
+        type = "Fairy Glade 5 Swing";
+        upgrades &= 32;
+        break;
+    case 1651637:
+        type = "Bayou 1 Swings";
+        upgrades &= 64;
+        break;
+    case 1651638:
+        type = "Bayou 2 Swing";
+        upgrades &= 128;
+        break;
+    case 1651639:
+        type = "Water and Ice 2 Swings";
+        upgrades &= 256;
+        break;
+    case 1651640:
+        type = "Menhir Hills 2 Swings";
+        upgrades &= 512;
+        break;
+    case 1651641:
+        type = "Menhir Hills 3 Swing";
+        upgrades &= 1024;
+        break;
+    case 1651642:
+        type = "Canopy 3 Swing";
+        upgrades &= 2048;
+        break;
+    case 1651643:
+        type = "Whale Bay 1 Swing";
+        upgrades &= 4096;
+        break;
+    case 1651644:
+        type = "Stone and Fire 1 Swings";
+        upgrades &= 8192;
+        break;
+    case 1651645:
+        type = "Stone and Fire 2 Swings";
+        upgrades &= 16384;
+        break;
+    case 1651646:
+        type = "Precipice 1 Swings";
+        upgrades &= 32768;
+        break;
+    case 1651647:
+        type = "Rock and Lava 1 Swing";
+        upgrades &= 65536;
+        break;
+    case 1651648:
+        type = "Beneath Rock and Lava 3 Swing";
+        upgrades &= 131072;
+        break;
+    case 1651649:
+        type = "Tomb of the Ancients 2 Swings";
+        upgrades &= 262144;
+        break;
+    case 1651650:
+        type = "Iron Mountains 1 Swings";
+        upgrades &= 524288;
+        break;
+    case 1651651:
+        type = "Iron Mountains 3 Swings";
+        upgrades &= 1048576;
+        break;
+    case 1651652:
+        type = "Powered Shots";
+        upgrades &= 2097152;
         break;
     default:
         // The item type is invalid, send a debug log!
@@ -434,44 +556,40 @@ void handleLumGates(std::string data) {
     }
 }
 
-/** Handles information on whether death link is enabled. */
+/** Handles slot information ingestion. */
 void handleDeathLinkEnabled(std::string data) {
     deathLink = std::stoi(data) == 1;
     sendSettings(false);
 }
-
-/** Handles information on whether death link is enabled. */
+void handleDamageLink(std::string data) {
+    damageLink = std::stoi(data) == 1;
+    sendSettings(false);
+}
 void handleDeathLinkAmnesty(std::string data) {
     deathLinkAmnesty = std::stoi(data) == 1;
     sendSettings(false);
 }
-
-/** Handles information on whether death link is enabled. */
 void handleBetterLevelPortals(std::string data) {
     betterLevelPortals = std::stoi(data) == 1;
     sendSettings(false);
 }
-
-/** Handles information on whether death link is enabled. */
 void handleLumBundleSize(std::string data) {
     lumBundleSize = std::stoi(data);
     sendSettings(false);
 }
-
-/** Handles information on the selected end goal. */
 void handleEndGoal(std::string data) {
     endGoal = std::stoi(data);
     sendSettings(false);
 }
-
-/** Handles information on whether lumsanity is being used. */
 void handleLumsanity(std::string data) {
     lumsanity = std::stoi(data);
     sendSettings(false);
     sendStateUpdate(false);
 }
-
-/** Handles information on whether room randomisation is on. */
+void handleAccessiblePortals(std::string data) {
+    accessiblePortals = std::stoi(data);
+    sendSettings(false);
+}
 void handleRoomRandomisation(std::string data) {
     roomRandomisation = std::stoi(data);
 
@@ -480,12 +598,6 @@ void handleRoomRandomisation(std::string data) {
         connected = true;
         instance->send(MESSAGE_TYPE_MESSAGE, "Successfully connected to Archipelago server!");
     }
-    sendSettings(false);
-}
-
-/** Handles information on whether the accessible portals setting is being used. */
-void handleAccessiblePortals(std::string data) {
-    accessiblePortals = std::stoi(data);
     sendSettings(false);
 }
 
@@ -521,6 +633,7 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_RegisterSlotDataRawCallback("accessible_portals", handleAccessiblePortals);
     AP_RegisterSlotDataRawCallback("lumsanity", handleLumsanity);
     AP_RegisterSlotDataRawCallback("lum_bundle_size", handleLumBundleSize);
+    AP_RegisterSlotDataRawCallback("damage_link", handleDamageLink);
     AP_Start();
     return true;
 }

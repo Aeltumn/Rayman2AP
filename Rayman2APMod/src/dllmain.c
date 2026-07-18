@@ -84,21 +84,21 @@
 	1 Fairy Glade Revisit Swing
 	2 Cave of Bad Dreams 1 Swings
 	4 Cave of Bad Dreams 2 Swings
-	8 Sanctuary of Stone and Fire - Side Temple Swing
+	8 Stone and Fire Side Temple Swing
 	16 Fairy Glade 4 Swing
 	32 Fairy Glade 5 Swing
 	64 Bayou 1 Swings
 	128 Bayou 2 Swing
-	256 Sanctuary of Water and Ice 2 Swings
+	256 Water and Ice 2 Swings
 	512 Menhir Hills 2 Swings
 	1024 Menhir Hills 3 Swing
 	2048 Canopy 3 Swing
 	4096 Whale Bay 1 Swing
-	8192 Sanctuary of Stone and Fire 1 Swings
-	16384 Sanctuary of Stone and Fire 2 Swings
+	8192 Stone and Fire 1 Swings
+	16384 Stone and Fire 2 Swings
 	32768 Precipice 1 Swings
-	65536 Sanctuary of Rock and Lava 1 Swing
-	131072 Beneath the Sanctuary of Rock and Lava 3 Swing
+	65536 Rock and Lava 1 Swing
+	131072 Beneath Rock and Lava 3 Swing
 	262144 Tomb of the Ancients 2 Swings
 	524288 Iron Mountains 1 Swings
 	1048576 Iron Mountains 3 Swings

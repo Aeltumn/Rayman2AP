@@ -3,6 +3,15 @@
 #include <windows.h>
 #include <stdio.h>
 
+void removeSubstring(char const* string, char const* substring) {
+    char* _substr = strstr(string, substring);
+    while (_substr != NULL && strcmp(substring, "") != 0) {
+        sprintf(_substr, "%s%s", "", _substr + strlen(substring));
+        _substr = strstr(string, substring);
+    }
+    return _substr;
+}
+
 // Store information for the connector itself
 HANDLE hChildStdOutRead, hChildStdOutWrite, hChildStdInRead, hChildStdInWrite, threadHandle, readyEvent, job, messageMutex;
 SECURITY_ATTRIBUTES saAttr;
@@ -197,8 +206,13 @@ void MOD_HandleMessage(int type, const char* data) {
         break;
     }
     case MESSAGE_TYPE_CHAT: {
-        MOD_Print(data);
         MOD_ShowScreenText(data);
+        
+        // Filter color codes out of text before printing!
+        removeSubstring(data, "/o400:");
+        removeSubstring(data, "/o200:");
+        removeSubstring(data, "/o0:");
+        MOD_Print(data);
         break;
 	}
     default: {

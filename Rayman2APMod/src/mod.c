@@ -1426,10 +1426,8 @@ void MOD_CheckVariables() {
 		if (MOD_FragmentedUpgrades) {
 			// Determine the level id in the upgrades value to check based on the id!
 			int levelId = MOD_GetUpgradeLevelId(szLevelName);
-			if (levelId == 0 || (MOD_Upgrades & levelId) > 1) {
-				AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
-				AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, (MOD_Upgrades & 2097152) > 1);
-			}
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, levelId == 0 || (MOD_Upgrades & levelId) > 1);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, (MOD_Upgrades & 2097152) > 1);
 		} else {
 			if (MOD_Upgrades == 0) {
 				AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, FALSE);

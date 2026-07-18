@@ -127,6 +127,23 @@ int MOD_LastLimitedLevel = -1;
 // Store whether dev mode is enabled
 BOOL MOD_DevMode = FALSE;
 
+/** Returns whether the win condition is done. */
+bool MOD_FinishedWinCondition() {
+	if (MOD_EndGoal == 1) {
+		return MOD_Masks >= 4;
+	}
+	if (MOD_EndGoal == 2 || MOD_EndGoal == 4) {
+		return true;
+	}
+	if (MOD_EndGoal == 3) {
+		return MOD_Masks >= 4 && MOD_Lums >= 1000 && MOD_Cages >= 80;
+	}
+	if (MOD_EndGoal == 5) {
+		return MOD_Masks >= 4 && MOD_Cages >= 80;
+	}
+	return false;
+}
+
 /** Resets all data completely. */
 void MOD_Reset() {
 	MOD_InLevelChain = FALSE;
@@ -533,7 +550,7 @@ void MOD_ExitChain() {
 			structure->ucPreviousLevel = 125;
 		} else if (chainId == CHAIN_PRISON) {
 			// Ensure you have enough masks otherwise never reveal the last level!
-			structure->ucPreviousLevel = MOD_Masks >= 4 ? 240 : 140;
+			structure->ucPreviousLevel = MOD_FinishedWinCondition() ? 240 : 140;
 		}
 	} else {
 		if (entryLevelId != -1) {
@@ -609,32 +626,23 @@ void MOD_ExitChain() {
 	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 }
 
+/** Tries to trigger the finishing of the AP world. */
 ACP_tdxBool MOD_TriggerFinish() {
 	if (MOD_Finished) return FALSE;
 	MOD_Finished = TRUE;
 
-	if (MOD_EndGoal == 1) {
-		// If the goal is the crow's nest, you got it!
+	// When in Treasure% ignore this!
+	if (MOD_EndGoal == 2) return FALSE;
+
+	if (MOD_FinishedWinCondition()) {
 		MOD_PrintConsolePlusScreen("Game completed!");
 		MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
-	} else if (MOD_EndGoal == 3) {
-		// If the goal is 100% we also require having everything!
-		int hasEnoughLums = MOD_Lums >= 1000;
-		int hasEnoughCages = MOD_Cages >= 80;
-		if (!hasEnoughLums) {
-			MOD_PrintConsolePlusScreen("Game not complete, not enough lums!");
-			MOD_ExitChain();
-			return TRUE;
-		} else if (!hasEnoughCages) {
-			MOD_PrintConsolePlusScreen("Game not complete, not enough cages!");
-			MOD_ExitChain();
-			return TRUE;
-		} else {
-			MOD_PrintConsolePlusScreen("Game completed 100 percent!");
-			MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
-		}
+		return FALSE;
+	} else {
+		MOD_PrintConsolePlusScreen("Game not complete!");
+		MOD_ExitChain();
+		return TRUE;
 	}
-	return FALSE;
 }
 
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
@@ -710,7 +718,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 	// When you exit the Pirate Ship from the ending exit we put you back at the default exit unless you have enough masks.
 	if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
-		if (MOD_Masks < 4 && structure->ucPreviousLevel == 240) {
+		if (!MOD_FinishedWinCondition() && structure->ucPreviousLevel == 240) {
 			structure->ucPreviousLevel = 140;
 		}
 
@@ -1285,7 +1293,8 @@ void MOD_CheckVariables() {
 
 		// Show the final portal if and only if you have enough masks!
 		ACP_tdxBool reloadMapMonde = FALSE;
-		if (!AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && MOD_Masks >= 4) {
+		bool finished = MOD_FinishedWinCondition();
+		if (!AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && finished) {
 			// Open up the portal!
 			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, TRUE);
 
@@ -1297,7 +1306,7 @@ void MOD_CheckVariables() {
 		}
 
 		// Remove final portal if it somehow spawned!
-		if (AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && MOD_Masks < 4) {
+		if (AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && !finished) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, FALSE);
 			reloadMapMonde = TRUE;
 		}
@@ -2376,6 +2385,7 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_Connected: %d\n", MOD_Connected);
 	fprintf(f, "MOD_DeathLink: %d\n", MOD_DeathLink);
 	fprintf(f, "MOD_Lumsanity: %d\n", MOD_Lumsanity);
+	fprintf(f, "MOD_FinishedWinCondition: %d\n", MOD_FinishedWinCondition());
 	fprintf(f, "MOD_RoomRandomisation: %d\n", MOD_RoomRandomisation);
 	fprintf(f, "MOD_AccessiblePortals: %d\n", MOD_AccessiblePortals);
 	fprintf(f, "MOD_DeathLinkAmnesty: %d\n", MOD_DeathLinkAmnesty);

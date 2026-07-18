@@ -196,6 +196,11 @@ void MOD_HandleMessage(int type, const char* data) {
         MOD_Reset();
         break;
     }
+    case MESSAGE_TYPE_CHAT: {
+        MOD_Print(data);
+        MOD_ShowScreenText(data);
+        break;
+	}
     default: {
         MOD_Print("[parent] Received type %d: %s", type, data);
         break;

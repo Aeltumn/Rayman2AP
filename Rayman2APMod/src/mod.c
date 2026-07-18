@@ -2711,6 +2711,10 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_HasSavedGloboxPreviously: %d\n", MOD_HasSavedGloboxPreviously);
 	fprintf(f, "MOD_InBeneath2: %d\n", MOD_InBeneath2);
 	fprintf(f, "MOD_DefeatedFoutchPreviously: %d\n", MOD_DefeatedFoutchPreviously);
+	fprintf(f, "MOD_ShowScreenChat: %d\n", MOD_ShowScreenChat);
+	fprintf(f, "MOD_ShowScreenDeathLinks: %d\n", MOD_ShowScreenDeathLinks);
+	fprintf(f, "MOD_ShowScreenItems: %d\n", MOD_ShowScreenItems);
+	fprintf(f, "MOD_ShowScreenNotifications: %d\n", MOD_ShowScreenNotifications);
 	fprintf(f, "\n");
 
 	if (MOD_InitLevelChains) {

@@ -565,6 +565,10 @@ void handleDamageLink(std::string data) {
     damageLink = std::stoi(data) == 1;
     sendSettings(false);
 }
+void handleFragmentedLums(std::string data) {
+    fragmented = std::stoi(data) == 1;
+    sendStateUpdate(false);
+}
 void handleDeathLinkAmnesty(std::string data) {
     deathLinkAmnesty = std::stoi(data) == 1;
     sendSettings(false);
@@ -634,6 +638,7 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_RegisterSlotDataRawCallback("lumsanity", handleLumsanity);
     AP_RegisterSlotDataRawCallback("lum_bundle_size", handleLumBundleSize);
     AP_RegisterSlotDataRawCallback("damage_link", handleDamageLink);
+    AP_RegisterSlotDataRawCallback("fragmented_lums", handleFragmentedLums);
     AP_Start();
     return true;
 }

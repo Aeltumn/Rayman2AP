@@ -6,7 +6,7 @@
 #define MOD_PrintConsolePlusScreen(txt, ...)              \
     do {                                 \
         MOD_Print((txt), __VA_ARGS__); \
-        MOD_ShowScreenText((txt), __VA_ARGS__); \
+        MOD_ShowScreenText(4, (txt), __VA_ARGS__); \
     } while (0)
 
 // Define the indices of every level chain
@@ -89,6 +89,10 @@ int MOD_CurrentLumGate = -1;
 char MOD_ScreenText[10][128];
 time_t MOD_ScreenTextStart[10];
 int MOD_ScreenTextLatest = -1;
+BOOL MOD_ShowScreenNotifications = TRUE;
+BOOL MOD_ShowScreenDeathLinks = TRUE;
+BOOL MOD_ShowScreenChat = TRUE;
+BOOL MOD_ShowScreenItems = TRUE;
 
 // Store sets with collected objects for comparison
 BitSet MOD_LastCollected;
@@ -706,11 +710,11 @@ ACP_tdxBool MOD_TriggerFinish() {
 	if (MOD_EndGoal == 2) return FALSE;
 
 	if (MOD_FinishedWinCondition()) {
-		MOD_PrintConsolePlusScreen("Game completed!");
+		MOD_ShowScreenText(3, "Game completed!");
 		MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
 		return FALSE;
 	} else {
-		MOD_PrintConsolePlusScreen("Game not complete!");
+		MOD_ShowScreenText(3, "Game not complete!");
 		MOD_ExitChain();
 		return TRUE;
 	}
@@ -768,7 +772,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		if (compareStringCaseInsensitiveLimited(szLevelName, "Rodeo_40") != 0 && MOD_InMenhirHills) {
 			// Inform the user why they are being turned away if they are being sent to mapmonde without having an Elixir.
 			if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && !MOD_Elixir) {
-				MOD_PrintConsolePlusScreen("Return back with the Elixir of Life to proceed!");
+				MOD_ShowScreenText(3, "Return back with the Elixir of Life to proceed!");
 			}
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
 			MOD_HadElixirPreviously = FALSE;
@@ -777,9 +781,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	}
 
 	// In dev mode print which locations we switch to
-	if (MOD_DevMode) {
-		MOD_PrintConsolePlusScreen("Changing level to %s while previous level is %d with exit %d", szLevelName, structure->ucPreviousLevel, structure->ucExitIdToQuitPrevLevel);
-	}
+	if (MOD_DevMode) MOD_PrintConsolePlusScreen("Changing level to %s while previous level is %d with exit %d", szLevelName, structure->ucPreviousLevel, structure->ucExitIdToQuitPrevLevel);
 
 	// If not connected, don't do anything else!
 	// We do run the earlier code to reset any state we may have changed
@@ -1187,7 +1189,7 @@ void MOD_CheckVariables() {
 					pRayEngine->hCollSet->stColliderInfo.ucColliderType = 52;
 					pRayEngine->hCollSet->stColliderInfo.ucColliderPriority = 255;
 					pRayEngine->hStandardGame->ucHitPoints--;
-					MOD_ShowScreenText("Rayman can't swim!");
+					MOD_ShowScreenText(3, "Rayman can't swim!");
 					return;
 				}
 			}
@@ -1392,7 +1394,7 @@ void MOD_CheckVariables() {
 
 					if (dx <= 10 && dy <= 10 && dz <= 10) {
 						MOD_TreasureComplete = TRUE;
-						MOD_PrintConsolePlusScreen("Treasure ending complete!");
+						MOD_ShowScreenText(3, "Treasure ending complete!");
 						MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
 					}
 				}
@@ -1467,7 +1469,7 @@ void MOD_CheckVariables() {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, TRUE);
 
 			// Inform the player that they can now access the final portal!
-			MOD_ShowScreenText("Final portal unlocked!");
+			MOD_ShowScreenText(3, "Final portal unlocked!");
 
 			// Reload the mapmonde so the portal shows up!
 			reloadMapMonde = TRUE;
@@ -1501,7 +1503,7 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText("First level set unlocked!");
+					MOD_ShowScreenText(3, "First level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1518,7 +1520,7 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText("Second level set unlocked!");
+					MOD_ShowScreenText(3, "Second level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1535,7 +1537,7 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText("Third level set unlocked!");
+					MOD_ShowScreenText(3, "Third level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1550,7 +1552,7 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText("Fourth level set unlocked!");
+					MOD_ShowScreenText(3, "Fourth level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1564,7 +1566,7 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText("Last level set unlocked!");
+					MOD_ShowScreenText(3, "Last level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1808,7 +1810,7 @@ void MOD_TriggerDeath(char* data) {
 	if (!MOD_GetDeathLink(FALSE)) return;
 
 	// Trigger a death for the player
-	MOD_ShowScreenText(data);
+	MOD_ShowScreenText(1, data);
 
 	// Queue up a death link
 	MOD_PendingDeathLink = TRUE;
@@ -1880,8 +1882,43 @@ void MOD_ShowScreenTextInternal(char* text) {
 	screen[size] = 0;
 }
 
+/** Sets whether screen chat of a certain type is shown. */
+void MOD_SetScreenTextShown(int type, BOOL value) {
+	if (type == 0) {
+		MOD_ShowScreenChat = value;
+	} else if (type == 1) {
+		MOD_ShowScreenDeathLinks = value;
+	} else if (type == 2) {
+		MOD_ShowScreenItems = value;
+	} else if (type == 3) {
+		MOD_ShowScreenNotifications = value;
+	}
+
+	// Save to disk
+	uint8_t data = 0;
+	data |= MOD_ShowScreenChat << 0;
+	data |= MOD_ShowScreenDeathLinks << 1;
+	data |= MOD_ShowScreenItems << 2;
+	data |= MOD_ShowScreenNotifications << 3;
+	FILE* f = fopen("ap_settings.conf", "wb");
+	if (f) {
+		fwrite(&data, sizeof(data), 1, f);
+		fclose(f);
+	}
+}
+
 /** Prints a message to the console. */
-void MOD_ShowScreenText(char* text, ...) {
+void MOD_ShowScreenText(int type, char* text, ...) {
+	if (type == 0) {
+		if (!MOD_ShowScreenChat) return;
+	} else if (type == 1) {
+		if (!MOD_ShowScreenDeathLinks) return;
+	} else if (type == 2) {
+		if (!MOD_ShowScreenItems) return;
+	} else if (type == 3) {
+		if (!MOD_ShowScreenNotifications) return;
+	}
+
 	va_list args;
 	va_start(args, text);
 	long lSize = SPTXT_fn_lGetFmtStringLength(text, args);
@@ -2564,6 +2601,18 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 }
 
 void MOD_Main(void) {
+	// Load preferences for screen text
+	uint8_t preferences = 0;
+	FILE* f = fopen("ap_settings.conf", "rb");
+	if (f) {
+		fread(&preferences, sizeof(preferences), 1, f);
+		fclose(f);
+	}
+	MOD_ShowScreenChat = (preferences & 1) > 0;
+	MOD_ShowScreenDeathLinks = (preferences & 2) > 0;
+	MOD_ShowScreenItems = (preferences & 4) > 0;
+	MOD_ShowScreenNotifications = (preferences & 8) > 0;
+
 	// Reset all data for a consistent clean slate
 	MOD_Reset();
 

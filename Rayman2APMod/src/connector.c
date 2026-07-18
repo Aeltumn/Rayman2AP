@@ -189,7 +189,7 @@ void MOD_HandleMessage(int type, const char* data) {
     case MESSAGE_TYPE_COLLECTED: {
         // If we receive collected from another source it means another
         // player obtained something we should be informed about on the screen
-        MOD_ShowScreenText(data);
+        MOD_ShowScreenText(2, data);
         break;
     }
     case MESSAGE_TYPE_MESSAGE: {
@@ -201,7 +201,7 @@ void MOD_HandleMessage(int type, const char* data) {
         break;
     }
     case MESSAGE_TYPE_CHAT: {
-        MOD_ShowScreenText(data);
+        MOD_ShowScreenText(0, data);
         
         // Filter color codes out of text before printing!
         removeSubstring(data, "/o400:");

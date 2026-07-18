@@ -35,12 +35,14 @@ void MOD_ExitChain();
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame);
 
 void MOD_Print(char*, ...);
-void MOD_ShowScreenText(char*, ...);
+void MOD_ShowScreenText(int type, char*, ...);
 void MOD_Main();
 void MOD_UpdateSettings(BOOL connected, BOOL deathLink, BOOL damageLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int deathLinkAmnesty, BOOL betterLevelPortals, int lumBundleSize, int* lumGates, char** levelIds, int* chainLengths, int** chainContents);
 void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, BOOL knowledge, BOOL fragmented, BOOL hover, BOOL ledge, BOOL swim, BOOL lavaHover);
 void MOD_TriggerDeath(char* data);
 void MOD_TestDeathLink();
+
+void MOD_SetScreenTextShown(int type, BOOL value);
 
 void MOD_CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length, int depth);
 

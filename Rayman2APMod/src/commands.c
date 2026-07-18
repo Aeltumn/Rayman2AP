@@ -10,6 +10,7 @@ tdfnCommand fn_vProgress;
 tdfnCommand fn_vStuck;
 tdfnCommand fn_vBugReport;
 tdfnCommand fn_vChainTp;
+tdfnCommand fn_vScreenText;
 
 void MOD_InitCommands(void) {
 	fn_vRegisterCommand("ap", fn_vApCmd);
@@ -20,6 +21,7 @@ void MOD_InitCommands(void) {
 	fn_vRegisterCommand("progress", fn_vProgress);
 	fn_vRegisterCommand("chaintp", fn_vChainTp);
 	fn_vRegisterCommand("bugreport", fn_vBugReport);
+	fn_vRegisterCommand("screentext", fn_vScreenText);
 }
 
 /** Reconstructs input arguments. */
@@ -176,4 +178,30 @@ void fn_vChainTp(int lNbArgs, char** d_szArgs) {
 	}
 	MOD_JumpToLevel(d_szArgs[0]);
 	MOD_SendToCurrentLevel();
+}
+
+/** Configures what text is visible on screen. */
+void fn_vScreenText(int lNbArgs, char** d_szArgs) {
+	if (lNbArgs >= 2) {
+		int type = -1;
+		if (strcmp(d_szArgs[0], "chat") == 0) {
+			type = 0;
+		} else if (strcmp(d_szArgs[0], "deathlink") == 0) {
+			type = 1;
+		} else if (strcmp(d_szArgs[0], "items") == 0) {
+			type = 2;
+		}
+
+		BOOL value = FALSE;
+		if (strcmp(d_szArgs[1], "on") == 0) {
+			value = TRUE;
+		}
+
+		if (type != -1) {
+			MOD_SetScreenTextShown(type, value);
+			MOD_Print("Screen text category '%s' is now %s", d_szArgs[0], value ? "shown" : "hidden");
+			return;
+		}
+	}
+	MOD_Print("Usage: screentext <chat|deathlink|items> <on|off>");
 }

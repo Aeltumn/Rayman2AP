@@ -39,7 +39,8 @@ void MOD_ShowScreenText(char*, ...);
 void MOD_Main();
 void MOD_UpdateSettings(BOOL connected, BOOL deathLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int deathLinkAmnesty, BOOL betterLevelPortals, int lumBundleSize, int* lumGates, char** levelIds, int* chainLengths, int** chainContents);
 void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, BOOL knowledge);
-void MOD_TriggerDeath();
+void MOD_TriggerDeath(char* data);
+void MOD_TestDeathLink();
 
 void MOD_CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length, int depth);
 

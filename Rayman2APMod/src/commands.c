@@ -9,6 +9,7 @@ tdfnCommand fn_vDsgCommand;
 tdfnCommand fn_vProgress;
 tdfnCommand fn_vStuck;
 tdfnCommand fn_vBugReport;
+tdfnCommand fn_vChainTp;
 
 void MOD_InitCommands(void) {
 	fn_vRegisterCommand("ap", fn_vApCmd);
@@ -17,6 +18,7 @@ void MOD_InitCommands(void) {
 	fn_vRegisterCommand("stuck", fn_vStuck);
 	fn_vRegisterCommand("dsg", fn_vDsgCommand);
 	fn_vRegisterCommand("progress", fn_vProgress);
+	fn_vRegisterCommand("chaintp", fn_vChainTp);
 	fn_vRegisterCommand("bugreport", fn_vBugReport);
 }
 
@@ -160,4 +162,18 @@ void fn_vStuck(int lNbArgs, char** d_szArgs) {
 /** Prints bug report information. */
 void fn_vBugReport(int lNbArgs, char** d_szArgs) {
 	MOD_BugReport();
+}
+
+/** Teleports to a selected level. */
+void fn_vChainTp(int lNbArgs, char** d_szArgs) {
+	if (!MOD_InDevMode()) {
+		MOD_Print("This command is only available in dev mode!");
+		return;
+	}
+	if (lNbArgs < 1) {
+		MOD_Print("Usage: chaintp <level>");
+		return;
+	}
+	MOD_JumpToLevel(d_szArgs[0]);
+	MOD_SendToCurrentLevel();
 }

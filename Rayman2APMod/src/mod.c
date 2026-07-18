@@ -70,6 +70,7 @@ BOOL MOD_Finished = FALSE;
 int MOD_StoredDeathLinks = 0;
 BOOL MOD_DeathLinkOverride = FALSE;
 BOOL MOD_IgnoreDeath = FALSE;
+BOOL MOD_PendingDeathLink = FALSE;
 BOOL MOD_TreasureComplete = FALSE;
 BOOL MOD_InLumGate = FALSE;
 int MOD_CurrentLumGate = -1;
@@ -217,13 +218,13 @@ void MOD_LieBeforeLevelEntry(char* levelName) {
 	// Ensure sending someone to a multi-stage level doesn't
 	// have them being sent to the next level just for entering
 	// one of the mid-level transitions.
-	if (compareStringCaseInsensitive(levelName, "rodeo_40") == 0) {
+	if (compareStringCaseInsensitiveLimited(levelName, "rodeo_40") == 0) {
 		MOD_LastLimitedLevel = 1;
-	} else if (compareStringCaseInsensitive(levelName, "plum_00") == 0) {
+	} else if (compareStringCaseInsensitiveLimited(levelName, "plum_00") == 0) {
 		MOD_LastLimitedLevel = 2;
-	} else if (compareStringCaseInsensitive(levelName, "plum_10") == 0) {
+	} else if (compareStringCaseInsensitiveLimited(levelName, "plum_10") == 0) {
 		MOD_LastLimitedLevel = 3;
-	} else if (compareStringCaseInsensitive(levelName, "morb_10") == 0) {
+	} else if (compareStringCaseInsensitiveLimited(levelName, "morb_10") == 0) {
 		MOD_LastLimitedLevel = 4;
 	} else {
 		MOD_LastLimitedLevel = 0;
@@ -311,6 +312,8 @@ BOOL MOD_SendToCurrentLevel() {
 	if (MOD_InLevelChain) {
 		// Get the level we are meant to be in and load into it
 		int chainLength = MOD_LevelChainsLengths[MOD_LevelCurrentChain];
+		if (MOD_DevMode) MOD_Print("Sending to level in chain %d at index %d and length %d", MOD_LevelCurrentChain, MOD_LevelCurrentIndex, chainLength);
+		
 		if (MOD_LevelCurrentIndex < 0 || MOD_LevelCurrentIndex >= chainLength) {
 			// If we're outside of the index of the current chain, exit it!
 			MOD_ExitChain();
@@ -318,6 +321,7 @@ BOOL MOD_SendToCurrentLevel() {
 			// Find which level ID we are meant to be in!
 			int levelId = MOD_LevelChainContents[MOD_LevelCurrentChain][MOD_LevelCurrentIndex];
 			char* levelName = MOD_LevelIds[levelId];
+			if (MOD_DevMode) MOD_Print("Target is level %s", levelName);
 
 			// Learn_32 is the internal ID for the fairy glade revisit!
 			if (compareStringCaseInsensitive(levelName, "Learn_31") == 0) {
@@ -446,6 +450,7 @@ BOOL MOD_JumpToLevel(char* levelName) {
 		MOD_InLevelChain = TRUE;
 		MOD_LevelCurrentChain = targetChain;
 		MOD_LevelCurrentIndex = targetIndex;
+		if (MOD_DevMode) MOD_Print("Jumping to level %s which is at chain %d level %d", levelName, targetChain, targetIndex);
 		return true;
 	}
 	return false;
@@ -466,11 +471,13 @@ void MOD_ExitChain() {
 	int chainId = MOD_LevelCurrentChain;
 	int chainLength = MOD_LevelChainsLengths[chainId];
 	BOOL completedChain = MOD_LevelCurrentIndex >= chainLength - 1;
+	if (MOD_DevMode) MOD_Print("Exiting chain %d as we are in %d which exceeds length %d, completed? %s", chainId, MOD_LevelCurrentIndex, chainLength, completedChain ? "TRUE" : "FALSE");
 
 	// Reset all data and leave the chain fully
 	MOD_InLevelChain = FALSE;
 	MOD_LevelCurrentChain = -1;
 	MOD_LevelCurrentIndex = -1;
+	
 
 	// If we finish a revisit or sub-level we have to place you back where you entered!
 	if (completedChain) {
@@ -1413,6 +1420,11 @@ void MOD_CheckVariables() {
 			}
 			GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 		}
+
+		// Trigger death link if we can
+		if (MOD_PendingDeathLink) {
+			MOD_TestDeathLink();
+		}
 	}
 }
 
@@ -1489,7 +1501,7 @@ void MOD_EngineTick() {
 void MOD_Init() {
 	// Test if the player has died, this gets triggered once on death
 	if (GAM_fn_ucGetEngineMode() == 7) {
-		if (MOD_GetDeathLink(FALSE) && !MOD_IgnoreDeath) {
+		if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
 			MOD_StoredDeathLinks++;
 			if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
 				MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
@@ -1593,11 +1605,26 @@ void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, 
 	}
 }
 
-/** Triggers the player to die. */
-void MOD_TriggerDeath() {
+/** Tests if a death link can be triggered. */
+void MOD_TestDeathLink() {
+	// If we are in a number of levels with known soft locks we ignore death links.
+	const char* szLevelName = GAM_fn_p_szGetLevelName();
+	if (// Dying during Clark fight causes complete softlock.
+		compareStringCaseInsensitive(szLevelName, "Morb_20") == 0 ||
+		// Dying during the fight with the pirate ship skips it.
+		compareStringCaseInsensitive(szLevelName, "glob_20") == 0 ||
+		// Dying during mini-Jano fight causes orb to softlock.
+		compareStringCaseInsensitive(szLevelName, "vulca_10") == 0) {
+		return;
+	}
+
+	// Don't deathlink while in the menu!
+	if (compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) return;
+
 	// Ignore deaths until the next time the player is alive
 	// so we don't trigger a death from this death.
 	MOD_IgnoreDeath = TRUE;
+	MOD_PendingDeathLink = FALSE;
 
 	HIE_tdstEngineObject* pRayman = HIE_M_hSuperObjectGetActor(HIE_M_hGetMainActor());
 	if (pRayman) {
@@ -1605,6 +1632,19 @@ void MOD_TriggerDeath() {
 		pRayman->hCollSet->stColliderInfo.ucColliderPriority = 255;
 		pRayman->hStandardGame->ucHitPoints--;
 	}
+}
+
+/** Triggers the player to die. */
+void MOD_TriggerDeath(char* data) {
+	// Ignore a death if death link is currently not enabled
+	if (!MOD_GetDeathLink(FALSE)) return;
+
+	// Trigger a death for the player
+	MOD_ShowScreenText(data);
+
+	// Queue up a death link
+	MOD_PendingDeathLink = TRUE;
+	MOD_TestDeathLink();
 }
 
 /** Prints a message to the console. */
@@ -2394,6 +2434,7 @@ void MOD_BugReport() {
 	for (int i = 0; i < 6; i++) {
 		fprintf(f, "MOD_LumGates[%d]: %d\n", i, MOD_LumGates[i]);
 	}
+	fprintf(f, "MOD_PendingDeathLink: %d\n", MOD_PendingDeathLink);
 	fprintf(f, "MOD_DeathLinkOverride: %d\n", MOD_DeathLinkOverride);
 	fprintf(f, "MOD_IgnoreDeath: %d\n", MOD_IgnoreDeath);
 	fprintf(f, "MOD_TreasureComplete: %d\n", MOD_TreasureComplete);

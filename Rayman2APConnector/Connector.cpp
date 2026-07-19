@@ -565,6 +565,14 @@ void handleDamageLink(std::string data) {
     damageLink = std::stoi(data) == 1;
     sendSettings(false);
 }
+void handleAutomaticMovement(std::string data) {
+    auto value = std::stoi(data);
+    if ((value & 1) > 1) hover = true;
+    if ((value & 2) > 1) swim = true;
+    if ((value & 4) > 1) ledge = true;
+    if ((value & 8) > 1) lavaHover = true;
+    sendStateUpdate(false);
+}
 void handleFragmentedLums(std::string data) {
     fragmented = std::stoi(data) == 1;
     sendStateUpdate(false);
@@ -639,6 +647,7 @@ bool Connector::connect(std::string ip, std::string slot, std::string password) 
     AP_RegisterSlotDataRawCallback("lum_bundle_size", handleLumBundleSize);
     AP_RegisterSlotDataRawCallback("damage_link", handleDamageLink);
     AP_RegisterSlotDataRawCallback("fragmented_lums", handleFragmentedLums);
+    AP_RegisterSlotDataRawCallback("automatic_movement", handleAutomaticMovement);
     AP_Start();
     return true;
 }

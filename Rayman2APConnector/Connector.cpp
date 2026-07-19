@@ -567,10 +567,10 @@ void handleDamageLink(std::string data) {
 }
 void handleAutomaticMovement(std::string data) {
     auto value = std::stoi(data);
-    if ((value & 1) > 1) hover = true;
-    if ((value & 2) > 1) swim = true;
-    if ((value & 4) > 1) ledge = true;
-    if ((value & 8) > 1) lavaHover = true;
+    if ((value & 1) > 1) hover = false;
+    if ((value & 2) > 1) swim = false;
+    if ((value & 4) > 1) ledge = false;
+    if ((value & 8) > 1) lavaHover = false;
     sendStateUpdate(false);
 }
 void handleFragmentedLums(std::string data) {

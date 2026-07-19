@@ -396,91 +396,91 @@ void handleItem(int64_t id, bool notify) {
         break;
     case 1651631:
         type = "Fairy Glade Revisit Swing";
-        upgrades &= 1;
+        upgrades |= 1;
         break;
     case 1651632:
         type = "Cave of Bad Dreams 1 Swings";
-        upgrades &= 2;
+        upgrades |= 2;
         break;
     case 1651633:
         type = "Cave of Bad Dreams 2 Swings";
-        upgrades &= 4;
+        upgrades |= 4;
         break;
     case 1651634:
         type = "Stone and Fire Side Temple Swing";
-        upgrades &= 8;
+        upgrades |= 8;
         break;
     case 1651635:
         type = "Fairy Glade 4 Swing";
-        upgrades &= 16;
+        upgrades |= 16;
         break;
     case 1651636:
         type = "Fairy Glade 5 Swing";
-        upgrades &= 32;
+        upgrades |= 32;
         break;
     case 1651637:
         type = "Bayou 1 Swings";
-        upgrades &= 64;
+        upgrades |= 64;
         break;
     case 1651638:
         type = "Bayou 2 Swing";
-        upgrades &= 128;
+        upgrades |= 128;
         break;
     case 1651639:
         type = "Water and Ice 2 Swings";
-        upgrades &= 256;
+        upgrades |= 256;
         break;
     case 1651640:
         type = "Menhir Hills 2 Swings";
-        upgrades &= 512;
+        upgrades |= 512;
         break;
     case 1651641:
         type = "Menhir Hills 3 Swing";
-        upgrades &= 1024;
+        upgrades |= 1024;
         break;
     case 1651642:
         type = "Canopy 3 Swing";
-        upgrades &= 2048;
+        upgrades |= 2048;
         break;
     case 1651643:
         type = "Whale Bay 1 Swing";
-        upgrades &= 4096;
+        upgrades |= 4096;
         break;
     case 1651644:
         type = "Stone and Fire 1 Swings";
-        upgrades &= 8192;
+        upgrades |= 8192;
         break;
     case 1651645:
         type = "Stone and Fire 2 Swings";
-        upgrades &= 16384;
+        upgrades |= 16384;
         break;
     case 1651646:
         type = "Precipice 1 Swings";
-        upgrades &= 32768;
+        upgrades |= 32768;
         break;
     case 1651647:
         type = "Rock and Lava 1 Swing";
-        upgrades &= 65536;
+        upgrades |= 65536;
         break;
     case 1651648:
         type = "Beneath Rock and Lava 3 Swing";
-        upgrades &= 131072;
+        upgrades |= 131072;
         break;
     case 1651649:
         type = "Tomb of the Ancients 2 Swings";
-        upgrades &= 262144;
+        upgrades |= 262144;
         break;
     case 1651650:
         type = "Iron Mountains 1 Swings";
-        upgrades &= 524288;
+        upgrades |= 524288;
         break;
     case 1651651:
         type = "Iron Mountains 3 Swings";
-        upgrades &= 1048576;
+        upgrades |= 1048576;
         break;
     case 1651652:
         type = "Powered Shots";
-        upgrades &= 2097152;
+        upgrades |= 2097152;
         break;
     default:
         // The item type is invalid, send a debug log!

@@ -694,10 +694,14 @@ void MOD_ExitChain() {
 			id = 960;
 		}
 		if (id > 0) {
-			char str[6];
-			sprintf(str, "%d", id);
-			MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
 			AI_fn_vSetBooleanInArray(pGlobal, 42, id, TRUE);
+
+			// Only send the check for completing the chain!
+			if (completedChain) {
+				char str[6];
+				sprintf(str, "%d", id);
+				MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
+			}
 		}
 	}
 
@@ -1202,9 +1206,25 @@ void MOD_CheckVariables() {
 			AI_fn_bSetDsgVar(pRayman, 44, &canGrab);
 
 			// Set the last jump time to 7 constantly as when it's above 80
-			// 44 is automatically set to true.
-			int lastJumpTime = 7;
-			AI_fn_bSetDsgVar(pRayman, 24, &lastJumpTime);
+			// 44 is automatically set to true. Only do this when in the methods
+			// that interact with ledge grabbing!
+			int activeComport = -1;
+			AI_tdstMind* mind = pRayEngine->hBrain->p_stMind;
+			AI_tdstAIModel* model = mind->p_stAIModel;
+			AI_tdstScriptAI* scriptAI = model->a_stScriptAIIntel;
+			AI_tdstIntelligence* intelligence = mind->p_stIntelligence;
+			for (int i = 0; i < scriptAI->ulNbComport; i++) {
+				if (intelligence->p_stCurrentComport == &scriptAI->a_stComport[i]) {
+					activeComport = i;
+					break;
+				}
+			}
+			if (activeComport == 4 || // YLT_Helico
+				activeComport == 2 // YLT_SautReception
+			) {
+				int lastJumpTime = 7;
+				AI_fn_bSetDsgVar(pRayman, 24, &lastJumpTime);
+			}
 		}
 
 		// Prevent being on a ledge!

@@ -1,6 +1,6 @@
 #include "framework.h"
+#include "ap_connect.h"
 #include "mod.h"
-#include "connector.h"
 
 tdfnCommand fn_vApCmd;
 tdfnCommand fn_vDeathlinkCommand;
@@ -51,11 +51,11 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 	char* command = d_szArgs[0];
 	if (_stricmp(command, "connect") == 0) {
 		char* combined = reconstructArgs(lNbArgs, d_szArgs);
-		MOD_SendMessage(MESSAGE_TYPE_CONNECT, combined);
+		AP_Connect(combined);
 	} else if (_stricmp(command, "disconnect") == 0) {
-		MOD_SendMessageE(MESSAGE_TYPE_DISCONNECT);
+		AP_Disconnect();
 	} else if (_stricmp(command, "check") == 0) {
-		MOD_SendMessageE(MESSAGE_TYPE_CHECK);
+		AP_PrintConnectionStatus();
 	} else if (_stricmp(command, "devmode") == 0) {
 		if (MOD_InDevMode()) {
 			MOD_SetDevMode(FALSE);
@@ -93,7 +93,7 @@ void fn_vSayCommand(int lNbArgs, char** d_szArgs) {
 		}
 		strcat(result, d_szArgs[i]);
 	}
-	MOD_SendMessage(MESSAGE_TYPE_CHAT, result);
+	AP_SendChat(result);
 	free(result);
 }
 

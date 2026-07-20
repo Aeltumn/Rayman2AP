@@ -1,6 +1,7 @@
 #pragma once
+
+#include "mod_ext.h"
 #include "framework.h"
-#include "connector.h"
 #include "bitset.h"
 
 typedef struct LevelInfo {
@@ -13,19 +14,14 @@ typedef struct LevelInfo {
 	int depth;
 } LevelInfo;
 
-int compareStringCaseInsensitive(char const* a, char const* b);
-
 LRESULT CALLBACK MOD_WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void MOD_EngineTick();
 void MOD_Init();
-void MOD_Reset();
 
-void MOD_ClearLumGateOverrides();
+void MOD_StartMod();
 
 BOOL MOD_InDevMode();
 void MOD_SetDevMode(BOOL state);
-
-void MOD_BugReport();
 
 BOOL MOD_SendToCurrentLevel();
 BOOL MOD_ProgressLevelChain();
@@ -34,18 +30,13 @@ BOOL MOD_JumpToLevel(char* levelName);
 void MOD_ExitChain();
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame);
 
-void MOD_Print(char*, ...);
-void MOD_ShowScreenText(int type, char*, ...);
-void MOD_Main();
-void MOD_UpdateSettings(BOOL connected, BOOL deathLink, BOOL damageLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int deathLinkAmnesty, BOOL betterLevelPortals, int lumBundleSize, int* lumGates, char** levelIds, int* chainLengths, int** chainContents);
-void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, BOOL knowledge, BOOL fragmented, BOOL hover, BOOL ledge, BOOL swim, BOOL lavaHover);
-void MOD_TriggerDeath(char* data);
-void MOD_TestDeathLink();
-
 void MOD_SetScreenTextShown(int type, BOOL value);
-
+void MOD_ShowScreenText(int type, char*, ...);
+void MOD_ClearLumGateOverrides();
 void MOD_CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length, int depth);
+void MOD_BugReport();
 
+void MOD_TestDeathLink();
 BOOL MOD_GetDeathLink(BOOL ignoreOverride);
 void MOD_ToggleDeathLink();
 

@@ -43,6 +43,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <SourcePath>$(VC_SourcePath)\src;</SourcePath>
@@ -52,7 +55,7 @@
     <SourcePath>$(VC_SourcePath)\src;</SourcePath>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
-    <VcpkgEnabled>false</VcpkgEnabled>
+    <VcpkgEnableManifest>true</VcpkgEnableManifest>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -60,14 +63,15 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <CompileAs>CompileAsC</CompileAs>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(ACPLIB)\include;$(detours)\include;$(R2CONSOLE)\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ACPLIB)\lib;$(detours)\lib;$(R2CONSOLE)\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ACP_Ray2.lib;R2Console.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Crypt32.lib;bcrypt.lib;ACP_Ray2.lib;R2Console.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(OutDir)Rayman2APMod.dll" "$(R2_DIRECTORY)\Mods\"</Command>
@@ -81,7 +85,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_WINDOWS;_USRDLL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <CompileAs>CompileAsC</CompileAs>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(ACPLIB)\include;$(detours)\include;$(R2CONSOLE)\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -90,24 +95,29 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ACPLIB)\lib;$(detours)\lib;$(R2CONSOLE)\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ACP_Ray2.lib;R2Console.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Crypt32.lib;bcrypt.lib;ACP_Ray2.lib;R2Console.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y "$(OutDir)Rayman2APMod.dll" "$(R2_DIRECTORY)\Mods\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\APCpp\Archipelago.h" />
+    <ClInclude Include="src/ap_connect.h" />
     <ClInclude Include="src/bitset.h" />
     <ClInclude Include="src/framework.h" />
     <ClInclude Include="src/mod.h" />
-    <ClInclude Include="src/connector.h" />
+    <ClInclude Include="src/mod_ext.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\APCpp\Archipelago.cpp" />
+    <ClCompile Include="..\APCpp\Archipelago_DataStorageSim.cpp" />
+    <ClCompile Include="..\APCpp\Archipelago_Gifting.cpp" />
+    <ClCompile Include="src/ap_connect.cpp" />
     <ClCompile Include="src/bitset.c" />
     <ClCompile Include="src/dllmain.c" />
     <ClCompile Include="src/mod.c" />
     <ClCompile Include="src/commands.c" />
-    <ClCompile Include="src/connector.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

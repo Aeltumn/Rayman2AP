@@ -1,6 +1,6 @@
 #include "framework.h"
+#include "ap_connect.h"
 #include "mod.h"
-#include "connector.h"
 
 /*
 	Information on currently collected information is stored into the global AI object:
@@ -125,15 +125,14 @@ __declspec(dllexport)
 int ModMain(BOOL bInit) {
 	if (bInit) {
 		fn_vAttachHooks();
-
-		// Try to start the AP connector, shut down the program on failure!
-		if (MOD_StartConnector()) {
+		if (AP_StartArchipelagoConnector()) {
+			MOD_Print("Failed to start Archipelago connector!");
 			exit(2);
 			return 1;
 		}
-		MOD_Main();
+		MOD_StartMod();
 	} else {
-		MOD_StopConnector();
+		AP_StopArchipelagoConnector();
 		fn_vDetachHooks();
 	}
 	return 0;

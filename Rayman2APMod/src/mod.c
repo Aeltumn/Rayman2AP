@@ -1,4 +1,5 @@
 #include "mod.h"
+#include "ap_connect.h"
 
 #define SCREEN_TEXT_FADE_TIME 8
 #define TEXT_MARGIN 2
@@ -129,9 +130,9 @@ BOOL MOD_InTopOfTheWorld = FALSE;
 BOOL MOD_HasSavedThatOneTeensiePreviously = FALSE;
 
 // Level chain settings info
+BOOL MOD_InitLevelChains = FALSE;
 char MOD_LevelIds[LEVEL_COUNT][MAX_LENGTH];
 int MOD_LevelChainsLengths[CHAIN_COUNT];
-BOOL MOD_InitLevelChains = FALSE;
 int* MOD_LevelChainContents[CHAIN_COUNT];
 
 // Level chain dynamic info
@@ -144,6 +145,17 @@ int MOD_LastLimitedLevel = -1;
 
 // Store whether dev mode is enabled
 BOOL MOD_DevMode = FALSE;
+
+/** Removes a substring from a larger string. */
+void removeSubstring(char const* string, char const* substring) {
+	char* _substr = strstr(string, substring);
+	while (_substr != NULL && strcmp(substring, "") != 0) {
+		sprintf(_substr, "%s%s", "", _substr + strlen(substring));
+		_substr = strstr(string, substring);
+	}
+	return _substr;
+}
+
 
 /** Returns whether the win condition is done. */
 bool MOD_FinishedWinCondition() {
@@ -163,6 +175,24 @@ bool MOD_FinishedWinCondition() {
 		return MOD_Masks >= 4 && MOD_Cages >= 80;
 	}
 	return false;
+}
+
+/** Handles an incoming notification. */
+void MOD_Notify(const char* message) {
+	// If we receive collected from another source it means another
+	// player obtained something we should be informed about on the screen
+	MOD_ShowScreenText(2, message);
+}
+
+/** Handles an incoming chat message. */
+void MOD_Chat(const char* message) {
+	MOD_ShowScreenText(0, message);
+
+	// Filter color codes out of text before printing!
+	removeSubstring(message, "/o400:");
+	removeSubstring(message, "/o200:");
+	removeSubstring(message, "/o0:");
+	MOD_Print(message);
 }
 
 /** Resets all data completely. */
@@ -698,9 +728,7 @@ void MOD_ExitChain() {
 
 			// Only send the check for completing the chain!
 			if (completedChain) {
-				char str[6];
-				sprintf(str, "%d", id);
-				MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
+				AP_MarkCollected(id);
 			}
 		}
 	}
@@ -715,7 +743,7 @@ ACP_tdxBool MOD_TriggerFinish() {
 
 	if (MOD_FinishedWinCondition()) {
 		MOD_ShowScreenText(3, "Game completed!");
-		MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+		AP_Complete();
 		return FALSE;
 	} else {
 		MOD_ShowScreenText(3, "Game not complete!");
@@ -1240,7 +1268,7 @@ void MOD_CheckVariables() {
 		if (MOD_GetDeathLink(FALSE) && MOD_CurrentHealth < MOD_LastHealth) {
 			MOD_StoredDeathLinks++;
 			if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
-				MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman took damage");
+				AP_SendDeathLink("Rayman took damage");
 				MOD_StoredDeathLinks = 0;
 			}
 		}
@@ -1333,7 +1361,7 @@ void MOD_CheckVariables() {
 
 					if (dx <= 30 && dy <= 30 && dz <= 30) {
 						MOD_SentKnowledgeOfCOBD = TRUE;
-						MOD_SendMessage(MESSAGE_TYPE_COLLECTED, "1101");
+						AP_MarkCollected(1101);
 					}
 				}
 			}
@@ -1359,9 +1387,7 @@ void MOD_CheckVariables() {
 						} else if (MOD_LumBundleSize > 1) {
 							// In lum bundle mode, send the new lum amount!
 							MOD_CollectedLums++;
-							char str[6];
-							sprintf(str, "%d", MOD_CollectedLums);
-							MOD_SendMessage(MESSAGE_TYPE_LUMS, str);
+							AP_UpdateLums(MOD_CollectedLums);
 						}
 					}
 
@@ -1391,9 +1417,7 @@ void MOD_CheckVariables() {
 					if (MOD_RoomRandomisation && i >= 960 && i <= 1002) continue;
 
 					// Send up the id of the item directly
-					char str[6];
-					sprintf(str, "%d", i);
-					MOD_SendMessage(MESSAGE_TYPE_COLLECTED, str);
+					AP_MarkCollected(i);
 				}
 			}
 		}
@@ -1415,7 +1439,7 @@ void MOD_CheckVariables() {
 					if (dx <= 10 && dy <= 10 && dz <= 10) {
 						MOD_TreasureComplete = TRUE;
 						MOD_ShowScreenText(3, "Treasure ending complete!");
-						MOD_SendMessageE(MESSAGE_TYPE_COMPLETE);
+						AP_Complete();
 					}
 				}
 			}
@@ -1647,8 +1671,6 @@ LRESULT CALLBACK MOD_WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 /** Ticked by the engine every frame, runs all messages received since last tick. */
 void MOD_EngineTick() {
-	MOD_RunPendingMessages();
-
 	// In dev mode we send console messages whenever checks happen!
 	if (MOD_DevMode) {
 		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
@@ -1671,7 +1693,6 @@ void MOD_EngineTick() {
 			}
 		}
 	}
-
 	if (MOD_Connected) {
 		MOD_CheckVariables();
 	}
@@ -1685,7 +1706,7 @@ void MOD_Init() {
 		if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
 			MOD_StoredDeathLinks++;
 			if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
-				MOD_SendMessage(MESSAGE_TYPE_DEATH, "Rayman died");
+				AP_SendDeathLink("Rayman died");
 				MOD_StoredDeathLinks = 0;
 			}
 		}
@@ -1697,7 +1718,7 @@ void MOD_Init() {
 }
 
 /** Updates the current archipelago settings. */
-void MOD_UpdateSettings(BOOL connected, BOOL deathLink, BOOL damageLink, int endGoal, BOOL lumsanity, BOOL roomRandomisation, BOOL accessiblePortals, int deathLinkAmnesty, BOOL betterLevelPortals, int lumBundleSize, int* lumGates, char** levelIds, int* chainLengths, int** chainContents) {
+void MOD_UpdateSettings(bool connected, bool deathLink, bool damageLink, int endGoal, bool lumsanity, bool roomRandomisation, bool accessiblePortals, int deathLinkAmnesty, bool betterLevelPortals, int lumBundleSize, int* lumGates, const char** levelIds, int* chainLengths, int** chainContents) {
 	MOD_Connected = connected;
 	MOD_DeathLink = deathLink;
 	MOD_DamageLink = damageLink;
@@ -1718,16 +1739,13 @@ void MOD_UpdateSettings(BOOL connected, BOOL deathLink, BOOL damageLink, int end
 		MOD_LevelChainsLengths[i] = chainLengths[i];
 	}
 	for (int i = 0; i < CHAIN_COUNT; i++) {
-		if (MOD_InitLevelChains) {
-			free(MOD_LevelChainContents[i]);
-		}
 		MOD_LevelChainContents[i] = chainContents[i];
 	}
 	MOD_InitLevelChains = TRUE;
 }
 
 /** Updates the current progression state. */
-void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, BOOL knowledge, BOOL fragmented, BOOL hover, BOOL ledge, BOOL swim, BOOL lavaHover) {
+void MOD_UpdateState(int lums, int cages, int masks, int upgrades, bool elixir, bool knowledge, bool fragmented, bool hover, bool ledge, bool swim, bool lavaHover) {
 	MOD_Lums = lums;
 	MOD_Cages = cages;
 	MOD_Masks = masks;
@@ -1786,9 +1804,7 @@ void MOD_UpdateState(int lums, int cages, int masks, int upgrades, BOOL elixir, 
 			}
 		}
 		if (oldCollected != MOD_CollectedLums) {
-			char str[6];
-			sprintf(str, "%d", MOD_CollectedLums);
-			MOD_SendMessage(MESSAGE_TYPE_LUMS, str);
+			AP_UpdateLums(MOD_CollectedLums);
 		}
 	}
 }
@@ -1836,30 +1852,34 @@ void MOD_TriggerDeath(char* data) {
 }
 
 /** Prints a message to the console. */
-void MOD_Print(char* text, ...) {
+void MOD_Print(const char* text, ...) {
 	va_list args;
 	va_start(args, text);
 
+	// Create a duplicate of the char
+	char* copy = malloc(strlen(text) + 1);
+	strcpy(copy, text);
+
 	// Remove any carriage returns from the input as they crash the game
-	int length = strlen(text);
+	int length = strlen(copy);
 	int nullIndex = length;
 	for (int i = length - 1; i >= 0; i--) {
-		if (text[i] == '\r') {
+		if (copy[i] == '\r') {
 			// Move the null terminator forward to remove trailing \r's
 			if (i == nullIndex - 1) {
-				text[i] = 0;
+				copy[i] = 0;
 				nullIndex--;
 			} else {
-				text[i] = ' ';
+				copy[i] = ' ';
 			}
 		}
 	}
 
-	long lSize = SPTXT_fn_lGetFmtStringLength(text, args);
+	long lSize = SPTXT_fn_lGetFmtStringLength(copy, args);
 	char* szBuffer = _alloca(lSize);
 
 	if (szBuffer) {
-		vsprintf(szBuffer, text, args);
+		vsprintf(szBuffer, copy, args);
 
 		// Print the message to the cosole
 #ifndef DISABLE_CONSOLE_PRINT
@@ -1867,7 +1887,7 @@ void MOD_Print(char* text, ...) {
 #endif
 
 		// Print all messages to a log file
-		FILE* pFile = fopen("ap_log_console.txt", "a");
+		FILE* pFile = fopen("ap_log.txt", "a");
 		if (pFile != NULL) {
 			fprintf(pFile, szBuffer);
 			fprintf(pFile, "\n");
@@ -2618,7 +2638,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 	SPTXT_vResetTextInfo(pInfo);
 }
 
-void MOD_Main(void) {
+void MOD_StartMod(void) {
 	// Load preferences for screen text
 	uint8_t preferences = 15;
 	FILE* f = fopen("ap_settings.conf", "rb");
@@ -2642,7 +2662,7 @@ void MOD_Main(void) {
 	SPTXT_vAddTextCallback(MOD_vTextCallback);
 
 	// Print a ready message
-	MOD_Print("Rayman2APMod v%s has started succesfully", CURRENT_VERSION);
+	MOD_Print("Rayman2APMod v%s has started successfully", CURRENT_VERSION);
 }
 
 void MOD_BugReport() {
@@ -2705,6 +2725,7 @@ void MOD_BugReport() {
 	for (int i = 0; i < 6; i++) {
 		fprintf(f, "MOD_LumGates[%d]: %d\n", i, MOD_LumGates[i]);
 	}
+	fprintf(f, "\n");
 	fprintf(f, "MOD_PendingDeathLink: %d\n", MOD_PendingDeathLink);
 	fprintf(f, "MOD_DeathLinkOverride: %d\n", MOD_DeathLinkOverride);
 	fprintf(f, "MOD_TriggeredDeath: %d\n", MOD_TriggeredDeathAnimation);
@@ -2719,6 +2740,7 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_LastHoveredLevel: %d\n", MOD_LastHoveredLevel);
 	fprintf(f, "MOD_LastLimitedLevel: %d\n", MOD_LastLimitedLevel);
 	fprintf(f, "MOD_DevMode: %d\n", MOD_DevMode);
+	fprintf(f, "\n");
 	fprintf(f, "MOD_InWoods: %d\n", MOD_InWoods);
 	fprintf(f, "MOD_InMenhirHills: %d\n", MOD_InMenhirHills);
 	fprintf(f, "MOD_HadElixirPreviously: %d\n", MOD_HadElixirPreviously);

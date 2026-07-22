@@ -1880,6 +1880,7 @@ void MOD_Print(const char* text, ...) {
 
 	if (szBuffer) {
 		vsprintf(szBuffer, copy, args);
+		free(copy);
 
 		// Print the message to the cosole
 #ifndef DISABLE_CONSOLE_PRINT

@@ -890,9 +890,12 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 			
 			// Marhes of Awakening
 			if (compareStringCaseInsensitive(szLevelName, "Ski_10") == 0) {
-				if (MOD_ProgressLevelChain()) return;
-				MOD_EnterLevelChain(CHAIN_MARSHES);
-				return;
+				if (MOD_InLevelChain) {
+					if (MOD_ProgressLevelChain()) return;
+				} else {
+					MOD_EnterLevelChain(CHAIN_MARSHES);
+					return;
+				}
 			} else if (compareStringCaseInsensitive(szLevelName, "ski_60") == 0) {
 				if (MOD_ProgressLevelChain()) return;
 			}

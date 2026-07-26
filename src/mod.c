@@ -843,8 +843,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		// We ignore exit 99 as that's what is used when moving to the menu and back.
 		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && structure->ucExitIdToQuitPrevLevel != 99) {
 			// When entering the menu, update the previous level and exit to put you at the right spot!
-			MOD_ExitChain();
-			return;
+			if (MOD_ProgressLevelChain()) return;
 		} else {
 			// When entering a level we have to determine which chain to move you towards!
 
@@ -1529,11 +1528,6 @@ void MOD_CheckVariables() {
 		// While in the menhir hills we sync the elixir state! 
 		if (MOD_InMenhirHills) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
-		}
-
-		// If you're in the menu, quit any chains!
-		if (MOD_InLevelChain && compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
-			MOD_ExitChain();
 		}
 
 		// In accessible portals mode we show all portals for which we have enough lums!

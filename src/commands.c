@@ -154,8 +154,9 @@ void fn_vProgress(int lNbArgs, char** d_szArgs) {
 /** Sends you to the hall of doors safely. */
 void fn_vStuck(int lNbArgs, char** d_szArgs) {
 	// Make sure we leave whatever chain we're in!
-	MOD_ExitChain(TRUE);
+	MOD_ExitChain();
 
+	// Go back to the mapmonde from Woods
 	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 	structure->ucPreviousLevel = 3;
 	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);

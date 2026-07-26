@@ -43,9 +43,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Label="Vcpkg">
-    <VcpkgEnableManifest>true</VcpkgEnableManifest>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <SourcePath>$(VC_SourcePath)\src;</SourcePath>
@@ -56,6 +53,7 @@
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
     <VcpkgEnableManifest>true</VcpkgEnableManifest>
+    <VcpkgTriplet>x86-windows</VcpkgTriplet>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -102,7 +100,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\APCpp\Archipelago.h" />
+    <ClInclude Include="APCpp\Archipelago.h" />
     <ClInclude Include="src/ap_connect.h" />
     <ClInclude Include="src/bitset.h" />
     <ClInclude Include="src/framework.h" />
@@ -110,9 +108,9 @@
     <ClInclude Include="src/mod_ext.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\APCpp\Archipelago.cpp" />
-    <ClCompile Include="..\APCpp\Archipelago_DataStorageSim.cpp" />
-    <ClCompile Include="..\APCpp\Archipelago_Gifting.cpp" />
+    <ClCompile Include="APCpp\Archipelago.cpp" />
+    <ClCompile Include="APCpp\Archipelago_DataStorageSim.cpp" />
+    <ClCompile Include="APCpp\Archipelago_Gifting.cpp" />
     <ClCompile Include="src/ap_connect.cpp" />
     <ClCompile Include="src/bitset.c" />
     <ClCompile Include="src/dllmain.c" />

@@ -9,7 +9,7 @@
 #include <thread>
 #include <windows.h>
 #include <algorithm>
-#include "../../APCpp/Archipelago.h"
+#include "../APCpp/Archipelago.h"
 
 // Current Archipelago item state
 int lums = 0;

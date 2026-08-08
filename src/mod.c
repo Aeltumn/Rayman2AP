@@ -816,12 +816,15 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// If we're using room randomisation, change the layout!
 	if (MOD_RoomRandomisation) {
 		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+			BOOL FinishedWoods = AI_fn_bGetBooleanInArray(pGlobal, 42, 841);
 			if (structure->ucExitIdToQuitPrevLevel != 99) {
 				// We ignore exit 99 as that's what is used when moving to the menu and back.
 				GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 				return;
-			} else if (structure->ucPreviousLevel == 3) {
-				// When entering the mapmonde from Woods of Light, go to the next area.
+			} else if (structure->ucPreviousLevel == 3 && FinishedWoods) {
+				// When entering the mapmonde from Woods of Light, go to the next area. We cannot determine if 
+				// this is the start or end portal, so we simply say if you have unlocked the portals both
+				// will send you to the next level.
 				if (MOD_ProgressLevelChain()) return;
 			} else {
 				// When entering mapmonde from anything but Woods of Light, exit any previous chains.
@@ -1266,15 +1269,44 @@ void MOD_CheckVariables() {
 	}
 
 	// Check for damage link
-	if (MOD_DamageLink && !MOD_IgnoreDeath) {
-		if (MOD_GetDeathLink(FALSE) && MOD_CurrentHealth < MOD_LastHealth) {
-			MOD_StoredDeathLinks++;
-			if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
-				AP_SendDeathLink("Rayman took damage");
-				MOD_StoredDeathLinks = 0;
+	if (MOD_CurrentHealth < MOD_LastHealth) {
+		if (MOD_DamageLink) {
+			// Rayman took damage, store a death link if enabled!
+			if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
+				MOD_StoredDeathLinks++;
+				if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
+					AP_SendDeathLink("Rayman took damage");
+					MOD_StoredDeathLinks = 0;
+				}
+			}
+			MOD_IgnoreDeath = FALSE;
+		} else {
+			// Check if Rayman is in BNT_ReflexeMort and trigger a death.
+			// Otherwise this was non-fatal damage and we don't trigger a
+			// death link unless we're in damage link mode.
+			int activeReflex = -1;
+			AI_tdstMind* mind = pRayEngine->hBrain->p_stMind;
+			AI_tdstAIModel* model = mind->p_stAIModel;
+			AI_tdstScriptAI* scriptAI = model->a_stScriptAIReflex;
+			AI_tdstIntelligence* intelligence = mind->p_stReflex;
+			for (unsigned long i = 0; i < scriptAI->ulNbComport; i++) {
+				if (intelligence->p_stCurrentComport == &scriptAI->a_stComport[i]) {
+					activeReflex = i;
+					break;
+				}
+			}
+
+			if (activeReflex == 0) {
+				if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
+					MOD_StoredDeathLinks++;
+					if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
+						AP_SendDeathLink("Rayman died");
+						MOD_StoredDeathLinks = 0;
+					}
+				}
+				MOD_IgnoreDeath = FALSE;
 			}
 		}
-		MOD_IgnoreDeath = FALSE;
 	}
 	MOD_LastHealth = MOD_CurrentHealth;
 
@@ -1690,26 +1722,14 @@ void MOD_EngineTick() {
 			}
 		}
 	}
-	if (MOD_Connected) {
+	if (MOD_DevMode || MOD_Connected) {
 		MOD_CheckVariables();
 	}
 	GAM_fn_vEngine();
 }
 
-/** Handles the player dying and triggers a death link. */
+/** Handles the player dying for refreshing swim detection. */
 void MOD_Init() {
-	// Test if the player has died, this gets triggered once on death
-	if (GAM_fn_ucGetEngineMode() == 7 && !MOD_DamageLink) {
-		if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
-			MOD_StoredDeathLinks++;
-			if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
-				AP_SendDeathLink("Rayman died");
-				MOD_StoredDeathLinks = 0;
-			}
-		}
-		MOD_IgnoreDeath = FALSE;
-	}
-
 	MOD_TriggeredDeathAnimation = FALSE;
 	GAM_fn_vChooseTheGoodInit();
 }

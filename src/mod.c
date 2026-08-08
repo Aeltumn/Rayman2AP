@@ -817,7 +817,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	if (MOD_RoomRandomisation) {
 		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
 			BOOL FinishedWoods = AI_fn_bGetBooleanInArray(pGlobal, 42, 841);
-			if (structure->ucExitIdToQuitPrevLevel != 99) {
+			if (structure->ucExitIdToQuitPrevLevel == 99) {
 				// We ignore exit 99 as that's what is used when moving to the menu and back.
 				GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 				return;

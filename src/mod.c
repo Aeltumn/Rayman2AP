@@ -801,10 +801,19 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 	// If we're using room randomisation, change the layout!
 	if (MOD_RoomRandomisation) {
-		// We ignore exit 99 as that's what is used when moving to the menu and back.
-		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && structure->ucExitIdToQuitPrevLevel != 99) {
-			// When entering the menu, update the previous level and exit to put you at the right spot!
-			if (MOD_ProgressLevelChain()) return;
+		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+			if (structure->ucExitIdToQuitPrevLevel != 99) {
+				// We ignore exit 99 as that's what is used when moving to the menu and back.
+				GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+				return;
+			} else if (structure->ucPreviousLevel == 3) {
+				// When entering the mapmonde from Woods of Light, go to the next area.
+				if (MOD_ProgressLevelChain()) return;
+			} else {
+				// When entering mapmonde from anything but Woods of Light, exit any previous chains.
+				MOD_ExitChain();
+				return;
+			}
 		} else {
 			// When entering a level we have to determine which chain to move you towards!
 

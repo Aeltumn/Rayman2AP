@@ -121,9 +121,11 @@ void fn_vStuck(int lNbArgs, char** d_szArgs) {
 	// Make sure we leave whatever chain we're in!
 	MOD_ExitChain();
 
-	// Go back to the mapmonde from Woods
+	// Go back to the mapmonde from Woods, use the exit id from the main menu
+	// so we don't see this as completing the level.
 	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 	structure->ucPreviousLevel = 3;
+	structure->ucExitIdToQuitPrevLevel = 99;
 	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 }
 

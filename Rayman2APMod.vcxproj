@@ -101,7 +101,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="APCpp\Archipelago.h" />
-    <ClInclude Include="src/ap_connect.h" />
+    <ClInclude Include="src/archipelago.h" />
     <ClInclude Include="src/bitset.h" />
     <ClInclude Include="src/framework.h" />
     <ClInclude Include="src/mod.h" />
@@ -111,7 +111,7 @@
     <ClCompile Include="APCpp\Archipelago.cpp" />
     <ClCompile Include="APCpp\Archipelago_DataStorageSim.cpp" />
     <ClCompile Include="APCpp\Archipelago_Gifting.cpp" />
-    <ClCompile Include="src/ap_connect.cpp" />
+    <ClCompile Include="src/archipelago.cpp" />
     <ClCompile Include="src/bitset.c" />
     <ClCompile Include="src/dllmain.c" />
     <ClCompile Include="src/mod.c" />

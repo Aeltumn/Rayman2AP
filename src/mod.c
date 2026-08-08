@@ -1,5 +1,5 @@
 #include "mod.h"
-#include "ap_connect.h"
+#include "archipelago.h"
 
 #define SCREEN_TEXT_FADE_TIME 8
 #define TEXT_MARGIN 2
@@ -10,39 +10,13 @@
         MOD_ShowScreenText(4, (txt), __VA_ARGS__); \
     } while (0)
 
-// Define the indices of every level chain
-int CHAIN_BAYOU = 0;
-int CHAIN_BENEATH = 1;
-int CHAIN_CANOPY = 2;
-int CHAIN_COBD = 3;
-int CHAIN_ECHOING = 4;
-int CHAIN_FAIRY_GLADE = 5;
-int CHAIN_FAIRY_REVISIT = 6;
-int CHAIN_IRON_MOUNT = 7;
-int CHAIN_MARSHES = 8;
-int CHAIN_MENHIR = 9;
-int CHAIN_PRECIPICE = 10;
-int CHAIN_PRISON = 11;
-int CHAIN_SANC_ROCK = 12;
-int CHAIN_SANC_STONE = 13;
-int CHAIN_SANC_WATER = 14;
-int CHAIN_SIDE_TEMPLE = 15;
-int CHAIN_TOMB = 16;
-int CHAIN_TOP = 17;
-int CHAIN_WALK_LIFE = 18;
-int CHAIN_WALK_POWER = 19;
-int CHAIN_WHALE = 20;
-int CHAIN_WOODS = 21;
-
-// Track important portal ids
+// Store arrays with DSG variables of various types
 int* NO_LUM_GATE_LEVELS[4] = { 961, 964, 967, 970 };
 int* LUM_GATE_ONE_LEVELS[4] = { 972, 976, 979, 981 };
 int* LUM_GATE_TWO_LEVELS[5] = { 975, 985, 988, 990, 993 };
 int* LUM_GATE_THREE_LEVELS[2] = { 1007, 1000 };
 int* LUM_GATE_FOUR_LEVELS[1] = { 1002 };
 int FINAL_LEVEL = 1005;
-
-// Store the base game lum amounts and super lum ids
 int* BASE_GAME_LUMS[6] = { 100, 300, 475, 550, 60, 450 };
 int* SUPER_LUM_IDS[290] = { 1, 2, 3, 4, 5, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 51, 52, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 161, 162, 163, 164, 165, 172, 173, 174, 175, 176, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 292, 293, 294, 295, 296, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 491, 492, 493, 494, 495, 496, 497, 498, 499, 500, 556, 557, 558, 559, 560, 613, 614, 615, 616, 617, 618, 619, 620, 621, 622, 631, 632, 633, 634, 635, 636, 637, 638, 639, 640, 646, 647, 648, 649, 650, 661, 662, 663, 664, 665, 666, 667, 668, 669, 670, 671, 672, 673, 674, 675, 676, 677, 678, 679, 680, 681, 682, 683, 684, 685, 686, 687, 688, 689, 690, 721, 722, 723, 724, 725, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741, 742, 743, 744, 745, 746, 747, 748, 749, 750, 762, 763, 764, 765, 766, 776, 777, 778, 779, 780, 781, 782, 783, 784, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 1311, 1312, 1313, 1314, 1315, 1354, 1355, 1356, 1357, 1358, 1389, 1390, 1391, 1392, 1393 };
 
@@ -1266,7 +1240,7 @@ void MOD_CheckVariables() {
 	}
 
 	// Check for damage link
-	if (!MOD_IgnoreDeath) {
+	if (MOD_DamageLink && !MOD_IgnoreDeath) {
 		if (MOD_GetDeathLink(FALSE) && MOD_CurrentHealth < MOD_LastHealth) {
 			MOD_StoredDeathLinks++;
 			if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {

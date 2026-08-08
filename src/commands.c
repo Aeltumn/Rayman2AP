@@ -1,36 +1,14 @@
 #include "framework.h"
-#include "ap_connect.h"
+#include "archipelago.h"
 #include "mod.h"
 
-tdfnCommand fn_vApCmd;
-tdfnCommand fn_vDeathlinkCommand;
-tdfnCommand fn_vSayCommand;
-tdfnCommand fn_vDsgCommand;
-tdfnCommand fn_vProgress;
-tdfnCommand fn_vStuck;
-tdfnCommand fn_vBugReport;
-tdfnCommand fn_vChainTp;
-tdfnCommand fn_vScreenText;
-
-void MOD_InitCommands(void) {
-	fn_vRegisterCommand("ap", fn_vApCmd);
-	fn_vRegisterCommand("deathlink", fn_vDeathlinkCommand);
-	fn_vRegisterCommand("say", fn_vSayCommand);
-	fn_vRegisterCommand("stuck", fn_vStuck);
-	fn_vRegisterCommand("dsg", fn_vDsgCommand);
-	fn_vRegisterCommand("progress", fn_vProgress);
-	fn_vRegisterCommand("chaintp", fn_vChainTp);
-	fn_vRegisterCommand("bugreport", fn_vBugReport);
-	fn_vRegisterCommand("screentext", fn_vScreenText);
-}
-
 /** Reconstructs input arguments. */
-char* reconstructArgs(int lNbArgs, char** d_szArgs) {
-	int total_len = 0;
-	for (int i = 1; i < lNbArgs; i++) {
-		total_len += strlen(d_szArgs[i]) + 1;
+char* reconstruct(int lNbArgs, char** d_szArgs, int offset) {
+	int totalLength = 0;
+	for (int i = offset; i < lNbArgs; i++) {
+		totalLength += strlen(d_szArgs[i]) + 1;
 	}
-	char* combined = malloc(total_len);
+	char* combined = malloc(totalLength);
 	combined[0] = '\0';
 	for (int i = 1; i < lNbArgs; i++) {
 		strcat(combined, d_szArgs[i]);
@@ -50,8 +28,9 @@ void fn_vApCmd(int lNbArgs, char** d_szArgs) {
 
 	char* command = d_szArgs[0];
 	if (_stricmp(command, "connect") == 0) {
-		char* combined = reconstructArgs(lNbArgs, d_szArgs);
+		char* combined = reconstruct(lNbArgs, d_szArgs, 1);
 		AP_Connect(combined);
+		free(combined);
 	} else if (_stricmp(command, "disconnect") == 0) {
 		AP_Disconnect();
 	} else if (_stricmp(command, "check") == 0) {
@@ -80,21 +59,9 @@ void fn_vDeathlinkCommand(int lNbArgs, char** d_szArgs) {
 
 /** Allows sending messages to the Archipelago server. */
 void fn_vSayCommand(int lNbArgs, char** d_szArgs) {
-	int totalLength = 0;
-	for (int i = 0; i < lNbArgs; i++) {
-		totalLength += strlen(d_szArgs[i]);
-	}
-	totalLength += lNbArgs - 1;
-	char* result = malloc(totalLength + 1);
-	result[0] = '\0';
-	for (int i = 0; i < lNbArgs; i++) {
-		if (i > 0) {
-			strcat(result, " ");
-		}
-		strcat(result, d_szArgs[i]);
-	}
-	AP_SendChat(result);
-	free(result);
+	char* combined = reconstruct(lNbArgs, d_szArgs, 0);
+	AP_SendChat(combined);
+	free(combined);
 }
 
 /** Allows editing DSG variables on the global object for testing. */
@@ -205,4 +172,16 @@ void fn_vScreenText(int lNbArgs, char** d_szArgs) {
 		}
 	}
 	MOD_Print("Usage: screentext <chat|deathlink|items> <on|off>");
+}
+
+void MOD_InitCommands() {
+	fn_vRegisterCommand("ap", fn_vApCmd);
+	fn_vRegisterCommand("deathlink", fn_vDeathlinkCommand);
+	fn_vRegisterCommand("say", fn_vSayCommand);
+	fn_vRegisterCommand("stuck", fn_vStuck);
+	fn_vRegisterCommand("dsg", fn_vDsgCommand);
+	fn_vRegisterCommand("progress", fn_vProgress);
+	fn_vRegisterCommand("chaintp", fn_vChainTp);
+	fn_vRegisterCommand("bugreport", fn_vBugReport);
+	fn_vRegisterCommand("screentext", fn_vScreenText);
 }

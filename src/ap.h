@@ -1,6 +1,8 @@
 #pragma once
 
 #ifdef __cplusplus
+#include "../APCpp/Archipelago.h"
+
 class APListener {
 public:
 	void wait();

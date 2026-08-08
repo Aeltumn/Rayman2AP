@@ -14,6 +14,7 @@
 
 #include <ACP_Ray2.h>
 #include <AI/AI_Array.h>
+#include <Ray2x/SPTXT/SPTXT.h>
 #include <r2console_api.h>
 
 #pragma comment (lib, "crypt32")

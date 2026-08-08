@@ -1,15 +1,11 @@
-#include "archipelago.h"
+#include "ap.h"
 #include "mod.h"
 
 #include <string>
-#include <iostream>
 #include <sstream>
-#include <iomanip>
 #include <unordered_map>
 #include <thread>
-#include <windows.h>
 #include <algorithm>
-#include "../APCpp/Archipelago.h"
 
 // Current Archipelago item state
 int lums = 0;

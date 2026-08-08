@@ -1,5 +1,3 @@
-#include "framework.h"
-#include "archipelago.h"
 #include "mod.h"
 
 /** Attach detours hooks to game events. */

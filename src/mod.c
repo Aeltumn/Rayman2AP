@@ -102,6 +102,10 @@ BOOL MOD_HasSavedCarmenPreviously = FALSE;
 BOOL MOD_InTopOfTheWorld = FALSE;
 BOOL MOD_HasSavedThatOneTeensiePreviously = FALSE;
 
+// The previous value of dsg variable 100.
+BOOL MOD_InHoverless = FALSE;
+ACP_tdxBool* MOD_PreviousDsg100 = FALSE;
+
 // Level chain settings info
 BOOL MOD_InitLevelChains = FALSE;
 char MOD_LevelIds[LEVEL_COUNT][MAX_LENGTH];
@@ -773,6 +777,16 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		}
 	}
 
+	// Restore the hoverless property
+	HIE_tdstSuperObject* pRayman = HIE_fn_p_stFindObjectByName("Rayman");
+	if (pRayman) {
+		if (MOD_InHoverless) {
+			ACP_tdxBool canHoverOnIce = *MOD_PreviousDsg100;
+			AI_fn_bSetDsgVar(pRayman, 100, &canHoverOnIce);
+			MOD_InHoverless = FALSE;
+		}
+	}
+
 	// In dev mode print which locations we switch to
 	if (MOD_DevMode) MOD_PrintConsolePlusScreen("Changing level to %s while previous level is %d with exit %d", szLevelName, structure->ucPreviousLevel, structure->ucExitIdToQuitPrevLevel);
 
@@ -1222,7 +1236,9 @@ void MOD_CheckVariables() {
 			if (activeComport == 4 || // YLT_Helico
 				activeComport == 2 // YLT_SautReception
 			) {
-				int lastJumpTime = 7;
+				// YLT_Helico sets 44 to 1 if it's over 80, YLT_SautReception sets it to 1 if it's over 250, so
+				// we leave it higher in SautReception as climbing onto things is at 80 there instead.
+				int lastJumpTime = activeComport == 4 ? 7 : 87;
 				AI_fn_bSetDsgVar(pRayman, 24, &lastJumpTime);
 			}
 		}
@@ -1232,6 +1248,20 @@ void MOD_CheckVariables() {
 			// Force prevent hovering every frame.
 			ACP_tdxBool cantHover = TRUE;
 			AI_fn_bSetDsgVar(pRayman, 92, &cantHover);
+
+			// If set to true, this overrides the previous value!
+			if (!MOD_InHoverless) {
+				MOD_InHoverless = TRUE;
+				AI_fn_bGetDsgVar(pRayman, 100, NULL, &MOD_PreviousDsg100);
+				ACP_tdxBool canHoverOnIce = FALSE;
+				AI_fn_bSetDsgVar(pRayman, 100, &canHoverOnIce);
+			}
+		} else {
+			if (MOD_InHoverless) {
+				MOD_InHoverless = FALSE;
+				ACP_tdxBool canHoverOnIce = *MOD_PreviousDsg100;
+				AI_fn_bSetDsgVar(pRayman, 100, &canHoverOnIce);
+			}
 		}
 	}
 

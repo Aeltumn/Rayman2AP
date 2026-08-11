@@ -525,7 +525,7 @@ void MOD_ExitChain() {
 	// Determine if this chain was completed and we should unlock the next level!
 	int chainId = MOD_LevelCurrentChain;
 	int chainLength = MOD_LevelChainsLengths[chainId];
-	BOOL completedChain = MOD_LevelCurrentIndex >= chainLength - 1;
+	BOOL completedChain = MOD_LevelCurrentIndex >= chainLength;
 	if (MOD_DevMode) MOD_Print("Exiting chain %d as we are in %d which exceeds length %d, completed? %s", chainId, MOD_LevelCurrentIndex, chainLength, completedChain ? "TRUE" : "FALSE");
 
 	// Reset all data and leave the chain fully
@@ -693,6 +693,7 @@ void MOD_ExitChain() {
 
 			// Only send the check for completing the chain!
 			if (completedChain) {
+				if (MOD_DevMode) MOD_Print("Completed chain, marking %d as collected", id);
 				AP_MarkCollected(id);
 			}
 		}
@@ -816,15 +817,15 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// If we're using room randomisation, change the layout!
 	if (MOD_RoomRandomisation) {
 		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
-			MOD_Print("It's %d", structure->ucPreviousLevel);
 			BOOL FinishedWoods = AI_fn_bGetBooleanInArray(pGlobal, 42, 841);
 			if (structure->ucExitIdToQuitPrevLevel == 99) {
 				// We ignore exit 99 as that's what is used when moving to the menu and back.
 				GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 				return;
-			} else if ((structure->ucPreviousLevel == 3 && FinishedWoods) || 
-					   (structure->ucPreviousLevel == 20 && structure->ucExitIdToQuitPrevLevel == 1) || 
-					   (structure->ucPreviousLevel == 115 && structure->ucExitIdToQuitPrevLevel == 1)) {
+			} else if ((structure->ucPreviousLevel == 3 && FinishedWoods) || // Learn_10
+					   (structure->ucPreviousLevel == 20 && structure->ucExitIdToQuitPrevLevel == 1) || // Ly_10
+					   (structure->ucPreviousLevel == 115 && structure->ucExitIdToQuitPrevLevel == 1) || // Ly_20
+					   (structure->ucPreviousLevel == 240 && structure->ucExitIdToQuitPrevLevel == 1)) { // astro_10
 				// When entering the mapmonde from Woods of Light or Walks go to the next area with some
 				// basic checks to prevent using the wrong portals. Unfortunately Woods does not use a different
 				// exit id for the different portals.
@@ -834,6 +835,10 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				MOD_ExitChain();
 				return;
 			}
+		} else if (compareStringCaseInsensitive(szLevelName, "raycap") == 0) {
+			// The recap always means you completed a level, proceed to the next one to trigger
+			// an exit chain with completion!
+			if (MOD_ProgressLevelChain()) return;
 		} else {
 			// When entering a level we have to determine which chain to move you towards!
 

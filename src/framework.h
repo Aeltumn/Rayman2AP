@@ -47,4 +47,4 @@
 #define CHAIN_WHALE 20
 #define CHAIN_WOODS 21
 
-#define CURRENT_VERSION "1.2.1"
+#define CURRENT_VERSION "1.2.2"

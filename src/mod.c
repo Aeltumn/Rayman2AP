@@ -816,15 +816,18 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// If we're using room randomisation, change the layout!
 	if (MOD_RoomRandomisation) {
 		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+			MOD_Print("It's %d", structure->ucPreviousLevel);
 			BOOL FinishedWoods = AI_fn_bGetBooleanInArray(pGlobal, 42, 841);
 			if (structure->ucExitIdToQuitPrevLevel == 99) {
 				// We ignore exit 99 as that's what is used when moving to the menu and back.
 				GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 				return;
-			} else if (structure->ucPreviousLevel == 3 && FinishedWoods) {
-				// When entering the mapmonde from Woods of Light, go to the next area. We cannot determine if 
-				// this is the start or end portal, so we simply say if you have unlocked the portals both
-				// will send you to the next level.
+			} else if ((structure->ucPreviousLevel == 3 && FinishedWoods) || 
+					   (structure->ucPreviousLevel == 20 && structure->ucExitIdToQuitPrevLevel == 1) || 
+					   (structure->ucPreviousLevel == 115 && structure->ucExitIdToQuitPrevLevel == 1)) {
+				// When entering the mapmonde from Woods of Light or Walks go to the next area with some
+				// basic checks to prevent using the wrong portals. Unfortunately Woods does not use a different
+				// exit id for the different portals.
 				if (MOD_ProgressLevelChain()) return;
 			} else {
 				// When entering mapmonde from anything but Woods of Light, exit any previous chains.
@@ -1192,13 +1195,13 @@ void setLumGateOverride(int lumGateId) {
 
 /** Checks if any lums/cages have been collected since last frame. */
 void MOD_CheckVariables() {
-	// Store current health for damage link
-	HIE_tdstEngineObject* pRayEngine = HIE_M_hSuperObjectGetActor(HIE_M_hGetMainActor());
-	MOD_CurrentHealth = pRayEngine->hStandardGame->ucHitPoints;
-
 	// Check for movement every frame!
 	HIE_tdstSuperObject* pRayman = HIE_fn_p_stFindObjectByName("Rayman");
 	if (pRayman) {
+		// Store current health for damage link
+		HIE_tdstEngineObject* pRayEngine = HIE_M_hSuperObjectGetActor(pRayman);
+		MOD_CurrentHealth = pRayEngine->hStandardGame->ucHitPoints;
+
 		// Prevent swimming!
 		if (!MOD_Swim) {
 			unsigned char* etat;
@@ -1266,49 +1269,49 @@ void MOD_CheckVariables() {
 				AI_fn_bSetDsgVar(pRayman, 100, &canHoverOnIce);
 			}
 		}
-	}
 
-	// Check for damage link
-	if (MOD_CurrentHealth < MOD_LastHealth) {
-		if (MOD_DamageLink) {
-			// Rayman took damage, store a death link if enabled!
-			if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
-				MOD_StoredDeathLinks++;
-				if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
-					AP_SendDeathLink("Rayman took damage");
-					MOD_StoredDeathLinks = 0;
-				}
-			}
-			MOD_IgnoreDeath = FALSE;
-		} else {
-			// Check if Rayman is in BNT_ReflexeMort and trigger a death.
-			// Otherwise this was non-fatal damage and we don't trigger a
-			// death link unless we're in damage link mode.
-			int activeReflex = -1;
-			AI_tdstMind* mind = pRayEngine->hBrain->p_stMind;
-			AI_tdstAIModel* model = mind->p_stAIModel;
-			AI_tdstScriptAI* scriptAI = model->a_stScriptAIReflex;
-			AI_tdstIntelligence* intelligence = mind->p_stReflex;
-			for (unsigned long i = 0; i < scriptAI->ulNbComport; i++) {
-				if (intelligence->p_stCurrentComport == &scriptAI->a_stComport[i]) {
-					activeReflex = i;
-					break;
-				}
-			}
-
-			if (activeReflex == 0) {
+		// Check for damage link
+		if (MOD_CurrentHealth < MOD_LastHealth) {
+			if (MOD_DamageLink) {
+				// Rayman took damage, store a death link if enabled!
 				if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
 					MOD_StoredDeathLinks++;
 					if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
-						AP_SendDeathLink("Rayman died");
+						AP_SendDeathLink("Rayman took damage");
 						MOD_StoredDeathLinks = 0;
 					}
 				}
 				MOD_IgnoreDeath = FALSE;
+			} else {
+				// Check if Rayman is in BNT_ReflexeMort and trigger a death.
+				// Otherwise this was non-fatal damage and we don't trigger a
+				// death link unless we're in damage link mode.
+				int activeReflex = -1;
+				AI_tdstMind* mind = pRayEngine->hBrain->p_stMind;
+				AI_tdstAIModel* model = mind->p_stAIModel;
+				AI_tdstScriptAI* scriptAI = model->a_stScriptAIReflex;
+				AI_tdstIntelligence* intelligence = mind->p_stReflex;
+				for (unsigned long i = 0; i < scriptAI->ulNbComport; i++) {
+					if (intelligence->p_stCurrentComport == &scriptAI->a_stComport[i]) {
+						activeReflex = i;
+						break;
+					}
+				}
+
+				if (activeReflex == 0) {
+					if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
+						MOD_StoredDeathLinks++;
+						if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
+							AP_SendDeathLink("Rayman died");
+							MOD_StoredDeathLinks = 0;
+						}
+					}
+					MOD_IgnoreDeath = FALSE;
+				}
 			}
 		}
+		MOD_LastHealth = MOD_CurrentHealth;
 	}
-	MOD_LastHealth = MOD_CurrentHealth;
 
 	// Check at most twice per second!
 	MOD_VariableCheckTicks++;
@@ -1847,11 +1850,14 @@ void MOD_TestDeathLink() {
 	MOD_IgnoreDeath = TRUE;
 	MOD_PendingDeathLink = FALSE;
 
-	HIE_tdstEngineObject* pRayman = HIE_M_hSuperObjectGetActor(HIE_M_hGetMainActor());
-	if (pRayman) {
-		pRayman->hCollSet->stColliderInfo.ucColliderType = 52;
-		pRayman->hCollSet->stColliderInfo.ucColliderPriority = 255;
-		pRayman->hStandardGame->ucHitPoints--;
+	HIE_tdstSuperObject* sRayman = HIE_fn_p_stFindObjectByName("Rayman");
+	if (sRayman) {
+		HIE_tdstEngineObject* pRayman = HIE_M_hSuperObjectGetActor(sRayman);
+		if (pRayman) {
+			pRayman->hCollSet->stColliderInfo.ucColliderType = 52;
+			pRayman->hCollSet->stColliderInfo.ucColliderPriority = 255;
+			pRayman->hStandardGame->ucHitPoints--;
+		}
 	}
 }
 

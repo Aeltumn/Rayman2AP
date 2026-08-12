@@ -2041,8 +2041,17 @@ void MOD_CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* le
 	strcpy(level->levelName, levelName);
 
 	// Determine the lums/cages of this level
+	// Woods of Light
+	if (compareStringCaseInsensitive(levelName, "Learn_10") == 0) {
+		strcpy(level->name, "The Woods of Light");
+		level->lumsMax = 5;
+		level->cagesMax = 2;
+		level->lums = CountCollectibleLums((int[]) { 1396, 1397, 1398, 1399, 1400 }, (int[]) { 0 }, 0, level->lumsMax);
+		level->cages = CountCollectibleCages((int[]) { 840, 841 }, level->cagesMax);
+	}
+
 	// Fairy Glade
-	if (compareStringCaseInsensitive(levelName, "Learn_30") == 0) {
+	else if (compareStringCaseInsensitive(levelName, "Learn_30") == 0) {
 		strcpy(level->name, "The Fairy Glade 1");
 		level->lumsMax = 9;
 		level->cagesMax = 2;

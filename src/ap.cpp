@@ -624,11 +624,11 @@ void APListener::wait() {
                 AP_Message* message = AP_GetLatestMessage();
                 if (message->type == AP_MessageType::Chat) {
                     AP_ChatMessage* chatMessage = static_cast<AP_ChatMessage*>(message);
-                    std::string formattedMessage = "/o400:" + chatMessage->player + " /o0:- " + chatMessage->message;
+                    std::string formattedMessage = "/o400:" + chatMessage->player + "=/o0: " + chatMessage->message;
                     MOD_Chat(formattedMessage.c_str());
                 } else if (message->type == AP_MessageType::ServerChat) {
                     AP_ServerChatMessage* serverChatMessage = static_cast<AP_ServerChatMessage*>(message);
-                    std::string formattedMessage = "/o200:Server /o0:- " + serverChatMessage->message;
+                    std::string formattedMessage = "/o200:Server=/o0: " + serverChatMessage->message;
                     MOD_Chat(formattedMessage.c_str());
                 } else {
                     MOD_Print(message->text.c_str());

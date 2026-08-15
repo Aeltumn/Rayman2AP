@@ -8,7 +8,7 @@ char* reconstruct(int lNbArgs, char** d_szArgs, int offset) {
 	}
 	char* combined = malloc(totalLength);
 	combined[0] = '\0';
-	for (int i = 1; i < lNbArgs; i++) {
+	for (int i = offset; i < lNbArgs; i++) {
 		strcat(combined, d_szArgs[i]);
 		if (i < lNbArgs - 1) {
 			strcat(combined, " ");

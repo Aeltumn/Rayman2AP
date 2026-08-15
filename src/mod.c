@@ -124,13 +124,23 @@ int MOD_LastLimitedLevel = -1;
 BOOL MOD_DevMode = FALSE;
 
 /** Removes a substring from a larger string. */
-char* removeSubstring(char const* string, char const* substring) {
+char* removeSubstring(const char* string, char const* substring) {
 	char* _substr = strstr(string, substring);
 	while (_substr != NULL && strcmp(substring, "") != 0) {
 		sprintf(_substr, "%s%s", "", _substr + strlen(substring));
 		_substr = strstr(string, substring);
 	}
 	return _substr;
+}
+
+/** Replaces a char with another char. */
+void replaceSubstring(char* string, char from, char to) {
+	int length = strlen(string);
+	for (int i = 0; i < length; i++) {
+		if (string[i] == from) {
+			string[i] = to;
+		}
+	}
 }
 
 
@@ -169,6 +179,7 @@ void MOD_Chat(const char* message) {
 	removeSubstring(message, "/o400:");
 	removeSubstring(message, "/o200:");
 	removeSubstring(message, "/o0:");
+	replaceSubstring(message, '=', ':');
 	MOD_Print(message);
 }
 

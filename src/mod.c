@@ -544,7 +544,6 @@ void MOD_ExitChain() {
 	MOD_LevelCurrentChain = -1;
 	MOD_LevelCurrentIndex = -1;
 	
-
 	// If we finish a revisit or sub-level we have to place you back where you entered!
 	if (completedChain) {
 		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
@@ -815,9 +814,12 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		if (MOD_TriggerFinish()) return;
 	}
 
+	// Store the actual previous level before we modify it!
+	unsigned char actualPreviousLevel = structure->ucPreviousLevel;
+
 	// When you exit the Pirate Ship from the ending exit we put you back at the default exit unless you have enough masks.
 	if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
-		if (!MOD_FinishedWinCondition() && structure->ucPreviousLevel == 240) {
+		if (!MOD_FinishedWinCondition() && actualPreviousLevel == 240) {
 			structure->ucPreviousLevel = 140;
 		}
 
@@ -833,10 +835,10 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 				// We ignore exit 99 as that's what is used when moving to the menu and back.
 				GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 				return;
-			} else if ((structure->ucPreviousLevel == 3 && FinishedWoods) || // Learn_10
-					   (structure->ucPreviousLevel == 20 && structure->ucExitIdToQuitPrevLevel == 1) || // Ly_10
-					   (structure->ucPreviousLevel == 115 && structure->ucExitIdToQuitPrevLevel == 1) || // Ly_20
-					   (structure->ucPreviousLevel == 240 && structure->ucExitIdToQuitPrevLevel == 1)) { // astro_10
+			} else if ((actualPreviousLevel == 3 && FinishedWoods) || // Learn_10
+					   (actualPreviousLevel == 20 && structure->ucExitIdToQuitPrevLevel == 1) || // Ly_10
+					   (actualPreviousLevel == 115 && structure->ucExitIdToQuitPrevLevel == 1) || // Ly_20
+					   (actualPreviousLevel == 240 && structure->ucExitIdToQuitPrevLevel == 1)) { // astro_10
 				// When entering the mapmonde from Woods of Light or Walks go to the next area with some
 				// basic checks to prevent using the wrong portals. Unfortunately Woods does not use a different
 				// exit id for the different portals.

@@ -830,12 +830,12 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// If we're using room randomisation, change the layout!
 	if (MOD_RoomRandomisation) {
 		if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
-			BOOL FinishedWoods = AI_fn_bGetBooleanInArray(pGlobal, 42, 841);
 			if (structure->ucExitIdToQuitPrevLevel == 99) {
 				// We ignore exit 99 as that's what is used when moving to the menu and back.
 				GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 				return;
-			} else if ((actualPreviousLevel == 3 && FinishedWoods) || // Learn_10
+			} else if ((actualPreviousLevel == 0 && structure->ucExitIdToQuitPrevLevel == 0) || // Learn_10 re-visits from both exits (can't distinguish)
+					   (actualPreviousLevel == 3 && structure->ucExitIdToQuitPrevLevel == 1) || // Learn_10 normal completions
 					   (actualPreviousLevel == 20 && structure->ucExitIdToQuitPrevLevel == 1) || // Ly_10
 					   (actualPreviousLevel == 115 && structure->ucExitIdToQuitPrevLevel == 1) || // Ly_20
 					   (actualPreviousLevel == 240 && structure->ucExitIdToQuitPrevLevel == 1)) { // astro_10

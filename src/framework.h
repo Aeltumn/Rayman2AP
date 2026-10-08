@@ -19,7 +19,7 @@
 
 #pragma comment (lib, "crypt32")
 
-#define LEVEL_COUNT 57
+#define LEVEL_COUNT 53
 #define MAX_LEVEL_NAME_LENGTH 46
 #define MAX_LENGTH 32
 #define CHAIN_COUNT 22
@@ -47,4 +47,4 @@
 #define CHAIN_WHALE 20
 #define CHAIN_WOODS 21
 
-#define CURRENT_VERSION "1.2.3"
+#define CURRENT_VERSION "1.2.4"

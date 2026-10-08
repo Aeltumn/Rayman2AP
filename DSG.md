@@ -98,3 +98,9 @@ OR
 524288 Iron Mountains 1 Swings
 1048576 Iron Mountains 3 Swings
 2097152 Powered Shots
+
+Possibly completely free DSG variables:
+801-839, 920-952, 968, 971, 973, 974, 977, 980, 984, 986, 987, 991, 995, 996, 997, 998, 1009, 1016-1022, 1024-1088
+
+57 levels, we store custom completions in
+801-839 and 920-937

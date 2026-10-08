@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 typedef struct LevelInfo {
+	int id;
 	char name[MAX_LEVEL_NAME_LENGTH];
 	char levelName[MAX_LEVEL_NAME_LENGTH];
 	int lums;

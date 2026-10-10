@@ -61,6 +61,7 @@ BOOL MOD_InLumGate = FALSE;
 int MOD_CurrentHealth = 0;
 int MOD_LastHealth = 0;
 int MOD_CurrentLumGate = -1;
+int MOD_TicksDead = 0;
 
 // Store variables for the screen text system
 char MOD_ScreenText[10][128];
@@ -141,7 +142,7 @@ int getCompletionDsg(int levelId) {
 bool hasUnlocked(int portal) {
 	if (!MOD_UnlockLevels) return true;
 	for (int i = 0; i < PORTAL_COUNT; i++) {
-		bool id = MOD_UnlockDsgLevels[i];
+		int id = MOD_UnlockDsgLevels[i];
 		if (id == -1) break;
 		if (id == portal) {
 			return true;
@@ -1441,19 +1442,24 @@ void MOD_CheckVariables() {
 			}
 
 			if (activeReflex == 0) {
-				if (!MOD_AwaitingRespawn && !MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
-					if (MOD_DevMode) MOD_Print("Death link sent");
-					MOD_StoredDeathLinks++;
-					if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
-						AP_SendDeathLink("Rayman died");
-						MOD_StoredDeathLinks = 0;
+				if (MOD_TicksDead >= 20) {
+					if (!MOD_AwaitingRespawn && !MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
+						if (MOD_DevMode) MOD_Print("Death link sent from %s", GAM_fn_p_szGetLevelName());
+						MOD_StoredDeathLinks++;
+						if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
+							AP_SendDeathLink("Rayman died");
+							MOD_StoredDeathLinks = 0;
+						}
 					}
 
 					// Avoid triggering twice for the same reflex 0!
+					MOD_IgnoreDeath = FALSE;
 					MOD_AwaitingRespawn = TRUE;
-				}
-				MOD_IgnoreDeath = FALSE;
+				} else {
+					MOD_TicksDead++;
+				}			
 			} else {
+				MOD_TicksDead = FALSE;
 				MOD_AwaitingRespawn = FALSE;
 			}
 		}

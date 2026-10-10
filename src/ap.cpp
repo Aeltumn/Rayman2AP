@@ -19,6 +19,7 @@ bool hover = true;
 bool ledge = true;
 bool swim = true;
 bool lavaHover = true;
+bool unlockLevels = false;
 
 // Current Archipelago settings
 bool deathLink = false;
@@ -42,16 +43,21 @@ const char* levelIds[LEVEL_COUNT];
 int levelChainLengths[CHAIN_COUNT];
 int* levelChainContents[CHAIN_COUNT];
 
+int unlockedLevelCount = 0;
+int unlockedLevels[PORTAL_COUNT];
+
+int PORTAL_IDS[PORTAL_COUNT] = { 961, 964, 967, 970, 972, 976, 979, 981, 975, 985, 988, 990, 993, 1007, 1000, 1002 };
+
 /** Sends a state update to the game client. */
 void sendStateUpdate(bool force) {
     if (!force && !AP_IsConnected()) return;
-    MOD_UpdateState(lums, cages, masks, upgrades, elixir, knowledge, fragmented, hover, ledge, swim, lavaHover);
+    MOD_UpdateState(lums, cages, masks, upgrades, elixir, knowledge, fragmented, hover, ledge, swim, lavaHover, unlockedLevelCount, unlockedLevels);
 }
 
 /** Sends the current settings to game client. */
 void sendSettings(bool force) {
     if (!force && !AP_IsConnected()) return;
-    MOD_UpdateSettings(AP_IsConnected(), deathLink, damageLink, endGoal, lumsanity, roomRandomisation, accessiblePortals, deathLinkAmnesty, betterLevelPortals, lumBundleSize, lumGates, levelIds, levelChainLengths, levelChainContents);
+    MOD_UpdateSettings(AP_IsConnected(), deathLink, damageLink, endGoal, lumsanity, roomRandomisation, accessiblePortals, deathLinkAmnesty, betterLevelPortals, lumBundleSize, lumGates, levelIds, levelChainLengths, levelChainContents, unlockLevels);
 }
 
 /** Handles clearing cached item checks. */
@@ -67,6 +73,10 @@ void handleItemClear() {
     ledge = true;
     swim = true;
     lavaHover = true;
+    unlockedLevelCount = 0;
+    for (int i = 0; i < PORTAL_COUNT; i++) {
+        unlockedLevels[i] = -1;
+    }
     previousCommunicatedLumBundle = 0;
     sendStateUpdate(connected);
 }
@@ -98,6 +108,7 @@ void handleReset() {
         levelChainLengths[i] = 0;
         levelChainContents[i] = NULL;
     }
+    unlockLevels = false;
     sendSettings(wasConnected);
 }
 
@@ -259,9 +270,57 @@ void handleItem(int64_t id, bool notify) {
         upgrades |= 2097152;
         break;
     default:
-        // The item type is invalid, send a debug log!
-        MOD_Print("Received invalid item: %d", id);
-        return;
+        if (id >= 1651653 && id <= 1651668) {
+            if (id == 1651653) {
+                type = "Fairy Glade Portal";
+            } else if (id == 1651654) {
+                type = "Marshes of Awakening Portal";
+            } else if (id == 1651655) {
+                type = "Bayou Portal";
+            } else if (id == 1651656) {
+                type = "Sanctuary of Water and Ice Portal";
+            } else if (id == 1651657) {
+                type = "Menhir Hills Portal";
+            } else if (id == 1651658) {
+                type = "Canopy Portal";
+            } else if (id == 1651659) {
+                type = "Whale Bay Portal";
+            } else if (id == 1651660) {
+                type = "Sanctuary of Stone and Fire Portal";
+            } else if (id == 1651661) {
+                type = "Echoing Caves Portal";
+            } else if (id == 1651662) {
+                type = "Precipice Portal";
+            } else if (id == 1651663) {
+                type = "Top of the World Portal";
+            } else if (id == 1651664) {
+                type = "Sanctuary of Rock and Lava Portal";
+            } else if (id == 1651665) {
+                type = "Beneath the Sanctuary of Rock and Lava Portal";
+            } else if (id == 1651666) {
+                type = "Tomb of the Ancients Portal";
+            } else if (id == 1651667) {
+                type = "Iron Mountains Portal";
+            } else {
+                type = "Prison Ship Portal";
+            }
+
+            int portalId = PORTAL_IDS[id - 1651653];
+            for (int i = 0; i < PORTAL_COUNT; i++) {
+                // If we already noted this portal, don't do it again!
+                if (unlockedLevels[i] == portalId) break;
+                if (unlockedLevels[i] == -1) {
+                    unlockedLevels[i] = portalId;
+                    unlockedLevelCount++;
+                    break;
+                }
+            }
+            break;
+        } else {
+            // The item type is invalid, send a debug log!
+            MOD_Print("Received invalid item: %d", id);
+            return;
+        }
     }
 
     // Send an update to the client with the new information
@@ -368,6 +427,10 @@ void handleDamageLink(std::string data) {
     damageLink = std::stoi(data) == 1;
     sendSettings(false);
 }
+void handleUnlockLevels(std::string data) {
+    unlockLevels = std::stoi(data) == 1;
+    sendSettings(false);
+}
 void handleAutomaticMovement(std::string data) {
     auto value = std::stoi(data);
     if ((value & 1) > 0) hover = false;
@@ -462,6 +525,7 @@ bool connect(std::string ip, std::string slot, std::string password) {
     AP_RegisterSlotDataRawCallback("damage_link", handleDamageLink);
     AP_RegisterSlotDataRawCallback("fragmented_lums", handleFragmentedLums);
     AP_RegisterSlotDataRawCallback("automatic_movement", handleAutomaticMovement);
+    AP_RegisterSlotDataRawCallback("unlock_levels", handleUnlockLevels);
     AP_Start();
     return true;
 }

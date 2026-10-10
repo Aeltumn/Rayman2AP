@@ -34,6 +34,7 @@ BOOL MOD_Hover = TRUE;
 BOOL MOD_LedgeGrab = TRUE;
 BOOL MOD_Swim = TRUE;
 BOOL MOD_LavaHover = TRUE;
+BOOL MOD_UnlockLevels = FALSE;
 
 // Store archipelago settings
 BOOL MOD_Connected = FALSE;
@@ -114,6 +115,9 @@ char MOD_LevelIds[LEVEL_COUNT][MAX_LENGTH];
 int MOD_LevelChainsLengths[CHAIN_COUNT];
 int* MOD_LevelChainContents[CHAIN_COUNT];
 
+// Unlocked portals
+int MOD_UnlockDsgLevels[PORTAL_COUNT];
+
 // Level chain dynamic info
 BOOL MOD_InLevelChain = FALSE;
 int MOD_LevelCurrentChain = -1;
@@ -131,6 +135,58 @@ int getCompletionDsg(int levelId) {
 	int dsg = 801 + levelId;
 	if (dsg >= 840) dsg += 80;
 	return dsg;
+}
+
+/** Returns whether the given portal id is unlocked. */
+bool hasUnlocked(int portal) {
+	if (!MOD_UnlockLevels) return true;
+	for (int i = 0; i < PORTAL_COUNT; i++) {
+		bool id = MOD_UnlockDsgLevels[i];
+		if (id == -1) break;
+		if (id == portal) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/** Returns the next portal id. */
+int getNextId(int portal) {
+	int id = 0;
+	if (portal == 960) {
+		id = 961;
+	} else if (portal == 961) {
+		id = 964;
+	} else if (portal == 964) {
+		id = 967;
+	} else if (portal == 967) {
+		id = 970;
+	} else if (portal == 970) {
+		id = 972;
+	} else if (portal == 972) {
+		id = 976;
+	} else if (portal == 976) {
+		id = 979;
+	} else if (portal == 979) {
+		id = 981;
+	} else if (portal == 981) {
+		id = 975;
+	} else if (portal == 975) {
+		id = 985;
+	} else if (portal == 985) {
+		id = 988;
+	} else if (portal == 988) {
+		id = 990;
+	} else if (portal == 990) {
+		id = 993;
+	} else if (portal == 993) {
+		id = 1007;
+	} else if (portal == 1007) {
+		id = 1000;
+	} else if (portal == 1000) {
+		id = 1002;
+	}
+	return id;
 }
 
 /** Removes a substring from a larger string. */
@@ -205,6 +261,10 @@ void MOD_Reset() {
 
 	clearBitSet(&MOD_LastCollected);
 	clearBitSet(&MOD_DevCollected);
+
+	for (int i = 0; i < PORTAL_COUNT; i++) {
+		MOD_UnlockDsgLevels[i] = -1;
+	}
 
 	MOD_ClearLumGateOverrides();
 }
@@ -757,6 +817,17 @@ void MOD_ExitChain() {
 			if (completedChain) {
 				if (MOD_DevMode) MOD_Print("Completed chain, marking %d as collected", id);
 				AP_MarkCollected(id);
+
+				// This is for unlocking the next portal!
+				AP_MarkCollected(801 + chainId);
+			}
+
+			// If you haven't unlocked hte next portal we don't let you unlock it!
+			if (!hasUnlocked(getNextId(id))) {
+				structure->ucExitIdToQuitPrevLevel = 0;
+				if (entryLevelId != -1) {
+					structure->ucPreviousLevel = entryLevelId;
+				}
 			}
 		}
 	}
@@ -1663,18 +1734,30 @@ void MOD_CheckVariables() {
 		}
 
 		// In accessible portals mode we show all portals for which we have enough lums!
-		if (MOD_AccessiblePortals) {
+		if (MOD_AccessiblePortals || MOD_UnlockLevels) {
 			{
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
+					if (!hasUnlocked(NO_LUM_GATE_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
+						if (MOD_UnlockLevels) {
+							if (i == 0) {
+								MOD_ShowScreenText(3, "Fairy Glade Portal unlocked!");
+							} else if (i == 1) {
+								MOD_ShowScreenText(3, "Marshes of Awakening Portal unlocked!");
+							} else if (i == 2) {
+								MOD_ShowScreenText(3, "Bayou Portal unlocked!");
+							} else if (i == 3) {
+								MOD_ShowScreenText(3, "Sanctuary of Water and Ice Portal unlocked!");
+							}
+						}
 						changed = TRUE;
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText(3, "First level set unlocked!");
+					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "First level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1684,14 +1767,26 @@ void MOD_CheckVariables() {
 			if (MOD_Lums >= MOD_LumGates[0] && !MOD_InCanopy) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
+					if (!hasUnlocked(LUM_GATE_ONE_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i], TRUE);
+						if (MOD_UnlockLevels) {
+							if (i == 0) {
+								MOD_ShowScreenText(3, "Menhir Hills Portal unlocked!");
+							} else if (i == 1) {
+								MOD_ShowScreenText(3, "Canopy Portal unlocked!");
+							} else if (i == 2) {
+								MOD_ShowScreenText(3, "Whale Bay Portal unlocked!");
+							} else if (i == 3) {
+								MOD_ShowScreenText(3, "Sanctuary of Stone and Fire Portal unlocked!");
+							}
+						}
 						changed = TRUE;
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText(3, "Second level set unlocked!");
+					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "Second level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1701,14 +1796,28 @@ void MOD_CheckVariables() {
 			if (MOD_Lums >= MOD_LumGates[1] && !MOD_InTopOfTheWorld) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 5; i++) {
+					if (!hasUnlocked(LUM_GATE_TWO_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i], TRUE);
+						if (MOD_UnlockLevels) {
+							if (i == 0) {
+								MOD_ShowScreenText(3, "Echoing Caves Portal unlocked!");
+							} else if (i == 1) {
+								MOD_ShowScreenText(3, "Precipice Portal unlocked!");
+							} else if (i == 2) {
+								MOD_ShowScreenText(3, "Top of the World Portal unlocked!");
+							} else if (i == 3) {
+								MOD_ShowScreenText(3, "Sanctuary of Rock and Lava Portal unlocked!");
+							} else if (i == 4) {
+								MOD_ShowScreenText(3, "Beneath the Sanctuary of Rock and Lava Portal unlocked!");
+							}
+						}
 						changed = TRUE;
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText(3, "Third level set unlocked!");
+					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "Third level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1716,9 +1825,17 @@ void MOD_CheckVariables() {
 			if (MOD_Lums >= MOD_LumGates[2]) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 2; i++) {
+					if (!hasUnlocked(LUM_GATE_THREE_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i], TRUE);
+						if (MOD_UnlockLevels) {
+							if (i == 0) {
+								MOD_ShowScreenText(3, "Tomb of the Ancients Portal unlocked!");
+							} else if (i == 1) {
+								MOD_ShowScreenText(3, "Iron Mountains Portal unlocked!");
+							}
+						}
 						changed = TRUE;
 					}
 				}
@@ -1727,17 +1844,22 @@ void MOD_CheckVariables() {
 					reloadMapMonde = TRUE;
 				}
 			}
+
 			if (MOD_Lums >= MOD_LumGates[3]) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 1; i++) {
+					if (!hasUnlocked(LUM_GATE_FOUR_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
+						if (MOD_UnlockLevels) {
+							MOD_ShowScreenText(3, "Prison Ship Portal unlocked!");
+						}
 						changed = TRUE;
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText(3, "Last level set unlocked!");
+					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "Last level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1849,7 +1971,7 @@ void MOD_Init() {
 }
 
 /** Updates the current archipelago settings. */
-void MOD_UpdateSettings(bool connected, bool deathLink, bool damageLink, int endGoal, bool lumsanity, bool roomRandomisation, bool accessiblePortals, int deathLinkAmnesty, bool betterLevelPortals, int lumBundleSize, int* lumGates, const char** levelIds, int* chainLengths, int** chainContents) {
+void MOD_UpdateSettings(bool connected, bool deathLink, bool damageLink, int endGoal, bool lumsanity, bool roomRandomisation, bool accessiblePortals, int deathLinkAmnesty, bool betterLevelPortals, int lumBundleSize, int* lumGates, const char** levelIds, int* chainLengths, int** chainContents, bool unlockLevels) {
 	MOD_Connected = connected;
 	MOD_DeathLink = deathLink;
 	MOD_DamageLink = damageLink;
@@ -1860,6 +1982,7 @@ void MOD_UpdateSettings(bool connected, bool deathLink, bool damageLink, int end
 	MOD_DeathLinkAmnesty = deathLinkAmnesty;
 	MOD_BetterLevelPortals = betterLevelPortals;
 	MOD_LumBundleSize = lumBundleSize;
+	MOD_UnlockLevels = unlockLevels;
 	for (int i = 0; i < 6; i++) {
 		MOD_LumGates[i] = lumGates[i];
 	}
@@ -1876,7 +1999,7 @@ void MOD_UpdateSettings(bool connected, bool deathLink, bool damageLink, int end
 }
 
 /** Updates the current progression state. */
-void MOD_UpdateState(int lums, int cages, int masks, int upgrades, bool elixir, bool knowledge, bool fragmented, bool hover, bool ledge, bool swim, bool lavaHover) {
+void MOD_UpdateState(int lums, int cages, int masks, int upgrades, bool elixir, bool knowledge, bool fragmented, bool hover, bool ledge, bool swim, bool lavaHover, int unlockedLevelCount, int* unlockedLevels) {
 	MOD_Lums = lums;
 	MOD_Cages = cages;
 	MOD_Masks = masks;
@@ -1888,6 +2011,14 @@ void MOD_UpdateState(int lums, int cages, int masks, int upgrades, bool elixir, 
 	MOD_LedgeGrab = ledge;
 	MOD_Swim = swim;
 	MOD_LavaHover = lavaHover;
+
+	for (int i = 0; i < PORTAL_COUNT; i++) {
+		if (i >= unlockedLevelCount) {
+			MOD_UnlockDsgLevels[i] = -1;
+		} else {
+			MOD_UnlockDsgLevels[i] = unlockedLevels[i];
+		}
+	}
 
 	// If we're not on lumsanity we need to include any non-super lums collected locally!
 	if (!MOD_Lumsanity) {
@@ -2853,6 +2984,7 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_LedgeGrab: %d\n", MOD_LedgeGrab);
 	fprintf(f, "MOD_Swim: %d\n", MOD_Swim);
 	fprintf(f, "MOD_LavaHover: %d\n", MOD_LavaHover);
+	fprintf(f, "MOD_UnlockLevels: %d\n", MOD_UnlockLevels);
 	fprintf(f, "\n");
 	fprintf(f, "MOD_Connected: %d\n", MOD_Connected);
 	fprintf(f, "MOD_DeathLink: %d\n", MOD_DeathLink);
@@ -2866,6 +2998,9 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_LumBundleSize: %d\n", MOD_LumBundleSize);
 	for (int i = 0; i < 6; i++) {
 		fprintf(f, "MOD_LumGates[%d]: %d\n", i, MOD_LumGates[i]);
+	}
+	for (int i = 0; i < PORTAL_COUNT; i++) {
+		fprintf(f, "MOD_UnlockDsgLevels[%d]: %d\n", i, MOD_UnlockDsgLevels[i]);
 	}
 	fprintf(f, "\n");
 	fprintf(f, "MOD_PendingDeathLink: %d\n", MOD_PendingDeathLink);

@@ -23,6 +23,7 @@
 #define MAX_LEVEL_NAME_LENGTH 46
 #define MAX_LENGTH 32
 #define CHAIN_COUNT 22
+#define PORTAL_COUNT 16
 
 #define CHAIN_BAYOU 0
 #define CHAIN_BENEATH 1

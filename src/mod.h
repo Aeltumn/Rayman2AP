@@ -34,6 +34,7 @@ BOOL MOD_ProgressLevelChain();
 void MOD_EnterLevelChain(int chainId);
 BOOL MOD_JumpToLevel(const char* levelName);
 void MOD_ExitChain();
+void MOD_ForfeitChain();
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame);
 
 void MOD_SetScreenTextShown(int type, BOOL value);
@@ -45,6 +46,9 @@ void MOD_BugReport();
 void MOD_TestDeathLink();
 BOOL MOD_GetDeathLink(BOOL ignoreOverride);
 void MOD_ToggleDeathLink();
+BOOL MOD_KillRayman();
+
+void MOD_ReturnToMapMonde();
 
 void AI_fn_vSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value);
 

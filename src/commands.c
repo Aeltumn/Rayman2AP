@@ -62,6 +62,15 @@ void fn_vSayCommand(int lNbArgs, char** d_szArgs) {
 	free(combined);
 }
 
+/** Kills Rayman. */
+void fn_vKillCommand(int lNbArgs, char** d_szArgs) {
+	if (!MOD_InDevMode()) {
+		MOD_Print("This command is only available in dev mode!");
+		return;
+	}
+	MOD_KillRayman();
+}
+
 /** Allows editing DSG variables on the global object for testing. */
 void fn_vDsgCommand(int lNbArgs, char** d_szArgs) {
 	if (!MOD_InDevMode()) {
@@ -118,15 +127,7 @@ void fn_vProgress(int lNbArgs, char** d_szArgs) {
 
 /** Sends you to the hall of doors safely. */
 void fn_vStuck(int lNbArgs, char** d_szArgs) {
-	// Make sure we leave whatever chain we're in!
-	MOD_ExitChain();
-
-	// Go back to the mapmonde from Woods, use the exit id from the main menu
-	// so we don't see this as completing the level.
-	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
-	structure->ucPreviousLevel = 3;
-	structure->ucExitIdToQuitPrevLevel = 99;
-	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
+	MOD_ReturnToMapMonde();
 }
 
 /** Prints bug report information. */
@@ -184,4 +185,5 @@ void MOD_InitCommands() {
 	fn_vRegisterCommand("chaintp", fn_vChainTp);
 	fn_vRegisterCommand("bugreport", fn_vBugReport);
 	fn_vRegisterCommand("screentext", fn_vScreenText);
+	fn_vRegisterCommand("kill", fn_vKillCommand);
 }

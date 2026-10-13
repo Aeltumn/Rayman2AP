@@ -9,6 +9,9 @@
         MOD_ShowScreenText(4, (txt), __VA_ARGS__); \
     } while (0)
 
+// From DERUST cpa_functions.c
+void (*fn_vKillEngineObjectOrAlwaysByPointer)(HIE_tdstEngineObject * p_stObject) = OFFSET(0x4062a0);
+
 // Store arrays with DSG variables of various types
 int NO_LUM_GATE_LEVELS[4] = { 961, 964, 967, 970 };
 int LUM_GATE_ONE_LEVELS[4] = { 972, 976, 979, 981 };
@@ -79,6 +82,11 @@ BitSet MOD_RealCollected;
 int MOD_VariableCheckTicks = 0;
 int MOD_VisitedTeensies = 0;
 
+// Store the last level exit when overriding it for the escape menu
+BOOL MOD_OverrideMenu = FALSE;
+unsigned char MOD_LastExitId = 0;
+unsigned char MOD_LastPreviousLevel = 0;
+
 // While in Woods we fake the cutscene completion
 BOOL MOD_InWoods = FALSE;
 
@@ -131,7 +139,7 @@ int MOD_LastLimitedLevel = -1;
 BOOL MOD_DevMode = FALSE;
 
 /** Returns the DSG storing the completion of level id. */
-int getCompletionDsg(int levelId) {
+int getVisitedDsg(int levelId) {
 	// 801-839 and 920-937
 	int dsg = 801 + levelId;
 	if (dsg >= 840) dsg += 80;
@@ -419,17 +427,6 @@ BOOL MOD_SendToCurrentLevel() {
 		// Get the level we are meant to be in and load into it
 		int chainLength = MOD_LevelChainsLengths[MOD_LevelCurrentChain];
 		if (MOD_DevMode) MOD_Print("Sending to level in chain %d at index %d and length %d", MOD_LevelCurrentChain, MOD_LevelCurrentIndex, chainLength);
-		
-		// Award a level completion for the previous index!
-		if (MOD_LevelCurrentIndex > 0) {
-			int lastLevelId = MOD_LevelChainContents[MOD_LevelCurrentChain][MOD_LevelCurrentIndex - 1];
-			int dsgVar = getCompletionDsg(lastLevelId);
-			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-			if (pGlobal) {
-				AI_fn_vSetBooleanInArray(pGlobal, 42, dsgVar, TRUE);
-				if (MOD_DevMode) MOD_Print("Awarded custom DSG var for completing a level %d for level %d", dsgVar, lastLevelId);
-			}
-		}
 
 		if (MOD_LevelCurrentIndex < 0 || MOD_LevelCurrentIndex >= chainLength) {
 			// If we're outside of the index of the current chain, exit it!
@@ -456,6 +453,11 @@ BOOL MOD_SendToCurrentLevel() {
 
 			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 			if (pGlobal) {
+				// Award a DSG when entering a level for the first time!
+				int dsgVar = getVisitedDsg(levelId);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, dsgVar, TRUE);
+				if (MOD_DevMode) MOD_Print("Awarded custom DSG var for visiting a level %d for level %d", dsgVar, levelId);
+
 				// If we enter a walk level or COBD we spawn their portal which makes them
 				// accessible from the HOF and remove the lum check.
 				if (MOD_LevelCurrentChain == CHAIN_WALK_LIFE) {
@@ -508,7 +510,7 @@ void MOD_EnterLevelChain(int chainId) {
 				} else {
 					// If this is a level at the same or lower depth that
 					// you haven't yet finished, prevent going to the target level!
-					int finishDsg = getCompletionDsg(levelInfo[i].id);
+					int finishDsg = getVisitedDsg(levelInfo[i].id);
 					if (!AI_fn_bGetBooleanInArray(pGlobal, 42, finishDsg)) break;
 				}
 			}
@@ -624,6 +626,17 @@ BOOL MOD_JumpToLevel(const char* levelName) {
 	return false;
 }
 
+/** Forfeits the current chain without changing the current level. */
+void MOD_ForfeitChain() {
+	// When we exit the lum gate, restore the data again!
+	MOD_ClearLumGateOverrides();
+
+	// Reset all data and leave the chain fully
+	MOD_InLevelChain = FALSE;
+	MOD_LevelCurrentChain = -1;
+	MOD_LevelCurrentIndex = -1;
+}
+
 /** Exits the current level chain, returning to the previous chain if applicable. */
 void MOD_ExitChain() {
 	// Ignore if we are not in a chain!
@@ -632,19 +645,14 @@ void MOD_ExitChain() {
 		return;
 	}
 
-	// When we exit the lum gate, restore the data again!
-	MOD_ClearLumGateOverrides();
-
 	// Determine if this chain was completed and we should unlock the next level!
 	int chainId = MOD_LevelCurrentChain;
 	int chainLength = MOD_LevelChainsLengths[chainId];
 	BOOL completedChain = MOD_LevelCurrentIndex >= chainLength;
 	if (MOD_DevMode) MOD_Print("Exiting chain %d as we are in %d which exceeds length %d, completed? %s", chainId, MOD_LevelCurrentIndex, chainLength, completedChain ? "TRUE" : "FALSE");
 
-	// Reset all data and leave the chain fully
-	MOD_InLevelChain = FALSE;
-	MOD_LevelCurrentChain = -1;
-	MOD_LevelCurrentIndex = -1;
+	// Exit the current chain
+	MOD_ForfeitChain();
 	
 	// If we finish a revisit or sub-level we have to place you back where you entered!
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
@@ -856,6 +864,13 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// Fetch the base game strucure as we'll have to modify it
 	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 
+	// Return the value to what it was if applicable!
+	if (MOD_OverrideMenu) {
+		structure->ucPreviousLevel = MOD_LastPreviousLevel;
+		structure->ucExitIdToQuitPrevLevel = MOD_LastExitId;
+		MOD_OverrideMenu = FALSE;
+	}
+
 	// When we exit the lum gate, restore the data again before we make any edits!
 	MOD_ClearLumGateOverrides();
 
@@ -951,7 +966,12 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		MOD_Finished = FALSE;
 	}
 
-	if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+	if (compareStringCaseInsensitive(szLevelName, "menu") == 0) {
+		// Abandoning should always exit all chains!
+		MOD_ForfeitChain();
+		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
+		return;
+	} else if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
 		if (structure->ucExitIdToQuitPrevLevel == 99) {
 			// We ignore exit 99 as that's what is used when moving to the menu and back.
 			GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
@@ -1206,6 +1226,22 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 }
 
+/** Returns to the map monde. */
+void MOD_ReturnToMapMonde() {
+	// Make sure we leave whatever chain we're in!
+	MOD_ForfeitChain();
+
+	// Send you back to the hall of doors where ever you were.
+	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+	const char* szLevelName = GAM_fn_p_szGetLevelName();
+	if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+		// If we're already in map monde warp to woods so you're not stuck!
+		structure->ucPreviousLevel = 3;
+	}
+	structure->ucExitIdToQuitPrevLevel = 99;
+	GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
+}
+
 /** Counts a series of lum collectables. */
 int CountCollectibleLums(int* values, int* superValues, int superLums, int count) {
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
@@ -1275,7 +1311,9 @@ void AI_fn_vSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char u
 	}
 
 	// Also update the last collected bitset so we don't trigger an update next tick!
-	setBitSet(&MOD_LastCollected, ulIndex + 1, value);
+	if (ucDsgVarId == 42) {
+		setBitSet(&MOD_LastCollected, ulIndex + 1, value);
+	}
 }
 
 /** Clears lum gate overrides. */
@@ -1334,6 +1372,52 @@ void setLumGateOverride(int lumGateId) {
 
 /** Checks if any lums/cages have been collected since last frame. */
 void MOD_CheckVariables() {
+	// Restore the button to go to the hall of doors at any time!
+	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+	if (*AI_g_bInGameMenu) {
+		HIE_tdstSuperObject* pMenu = HIE_fn_p_stFindObjectByName("YAM_GenMenuMap_I1");
+		if (pMenu) {
+			long current = AI_fn_lGetIntegerInArray(pMenu, 12, 5);
+			if (current != 2) {
+				// Temporarily replace the previous level and set it back later!
+				MOD_LastPreviousLevel = structure->ucPreviousLevel;
+				MOD_LastExitId = structure->ucExitIdToQuitPrevLevel;
+				structure->ucPreviousLevel = 145;
+				structure->ucExitIdToQuitPrevLevel = 0;
+				MOD_OverrideMenu = TRUE;
+				if (MOD_DevMode) MOD_Print("Temporarily overriding level %d exit %d with 145", MOD_LastPreviousLevel, MOD_LastExitId);
+
+				// Kill the current cursor and background
+				HIE_tdstSuperObject** ppCursor;
+				AI_fn_bGetDsgVar(pMenu, 0, NULL, &ppCursor);
+				if (ppCursor && *ppCursor && (*ppCursor)->hLinkedObject.p_stActor) {
+					fn_vKillEngineObjectOrAlwaysByPointer((*ppCursor)->hLinkedObject.p_stActor);
+					*ppCursor = NULL;
+				}
+				HIE_tdstSuperObject** ppBackground;
+				AI_fn_bGetDsgVar(pMenu, 6, NULL, &ppBackground);
+				if (ppBackground && *ppBackground && (*ppBackground)->hLinkedObject.p_stActor) {
+					fn_vKillEngineObjectOrAlwaysByPointer((*ppBackground)->hLinkedObject.p_stActor);
+					*ppBackground = NULL;
+				}
+
+				// Re-draw the menu by forcing it back into the activation state
+				int activeReflex = -1;
+				HIE_tdstEngineObject* pRayEngine = HIE_M_hSuperObjectGetActor(pMenu);
+				AI_tdstMind* mind = pRayEngine->hBrain->p_stMind;
+				AI_tdstAIModel* model = mind->p_stAIModel;
+				AI_tdstScriptAI* scriptAI = model->a_stScriptAIIntel;
+				AI_tdstIntelligence* intelligence = mind->p_stIntelligence;
+				intelligence->p_stCurrentComport = &scriptAI->a_stComport[1];
+			}
+		}
+	} else if (MOD_OverrideMenu) {
+		// Return the value to what it was!
+		structure->ucPreviousLevel = MOD_LastPreviousLevel;
+		structure->ucExitIdToQuitPrevLevel = MOD_LastExitId;
+		MOD_OverrideMenu = FALSE;
+	}
+
 	// Check for movement every frame!
 	HIE_tdstSuperObject* pRayman = HIE_fn_p_stFindObjectByName("Rayman");
 	if (pRayman) {
@@ -1345,15 +1429,9 @@ void MOD_CheckVariables() {
 		if (!MOD_Swim) {
 			unsigned char* etat;
 			AI_fn_bGetDsgVar(pRayman, 9, NULL, &etat);
-			if (*etat == 25 && !MOD_TriggeredDeathAnimation && GAM_fn_ucGetEngineMode() != 7) {
-				// Kill the player!
-				if (pRayEngine) {
-					MOD_TriggeredDeathAnimation = TRUE;
-					pRayEngine->hCollSet->stColliderInfo.ucColliderType = 52;
-					pRayEngine->hCollSet->stColliderInfo.ucColliderPriority = 255;
-					pRayEngine->hStandardGame->ucHitPoints--;
+			if (*etat == 25) {
+				if (MOD_KillRayman()) {
 					MOD_ShowScreenText(3, "Rayman can't swim!");
-					return;
 				}
 			}
 		}
@@ -1483,7 +1561,6 @@ void MOD_CheckVariables() {
 			if (!MOD_InLumGate) {
 				HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("NIK_DS1_ZyvaEnvoieTesLums");
 				if (pLums) {
-					GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 					int levelId = structure->ucExitIdToQuitPrevLevel;
 					int lumGateId = 0;
 					if (levelId == 21) {
@@ -1874,7 +1951,6 @@ void MOD_CheckVariables() {
 		// Reload mapmonde if we have to!
 		if (reloadMapMonde && compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
 			// Update the current exit first!
-			GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 			structure->ucExitIdToQuitPrevLevel = 0;
 			int lastLevelId = getLevelChainEntryId(MOD_LastHoveredLevel);
 			if (lastLevelId != -1) {
@@ -1913,7 +1989,7 @@ LRESULT CALLBACK MOD_WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 							if (MOD_LastSubLevelIndex < length - 1) {
 								for (int option = MOD_LastSubLevelIndex + 1; option < length; option++) {
 									// Find the next level that is finished and select it!
-									int finishDsg = getCompletionDsg(levelInfo[option].id);
+									int finishDsg = getVisitedDsg(levelInfo[option].id);
 									if (AI_fn_bGetBooleanInArray(pGlobal, 42, finishDsg)) {
 										MOD_LastSubLevelIndex = option;
 										break;
@@ -1924,7 +2000,7 @@ LRESULT CALLBACK MOD_WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 							if (MOD_LastSubLevelIndex > 0) {
 								for (int option = MOD_LastSubLevelIndex - 1; option >= 0; option--) {
 									// Find the next level that is finished and select it!
-									int finishDsg = getCompletionDsg(levelInfo[option].id);
+									int finishDsg = getVisitedDsg(levelInfo[option].id);
 									if (AI_fn_bGetBooleanInArray(pGlobal, 42, finishDsg)) {
 										MOD_LastSubLevelIndex = option;
 										break;
@@ -2093,20 +2169,32 @@ void MOD_TestDeathLink() {
 	// Don't deathlink while in the menu!
 	if (compareStringCaseInsensitive(szLevelName, "menu") == 0 || compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) return;
 
-	// Ignore deaths until the next time the player is alive
-	// so we don't trigger a death from this death.
-	MOD_IgnoreDeath = TRUE;
-	MOD_PendingDeathLink = FALSE;
+	// Attempt to kill Rayman.
+	if (MOD_KillRayman()) {
+		MOD_IgnoreDeath = TRUE;
+		MOD_PendingDeathLink = FALSE;
+	}
+}
 
-	HIE_tdstSuperObject* sRayman = HIE_fn_p_stFindObjectByName("Rayman");
-	if (sRayman) {
-		HIE_tdstEngineObject* pRayman = HIE_M_hSuperObjectGetActor(sRayman);
+/** Kills Rayman. */
+BOOL MOD_KillRayman() {
+	if (MOD_TriggeredDeathAnimation) return FALSE;
+	if (GAM_fn_ucGetEngineMode() != 9) return FALSE;
+
+	HIE_tdstSuperObject* pMain = GAM_g_stEngineStructure->g_hMainActor;
+	if (pMain) {
+		HIE_tdstEngineObject* pRayman = HIE_M_hSuperObjectGetActor(pMain);
 		if (pRayman) {
+			MOD_TriggeredDeathAnimation = TRUE;
 			pRayman->hCollSet->stColliderInfo.ucColliderType = 52;
 			pRayman->hCollSet->stColliderInfo.ucColliderPriority = 255;
-			pRayman->hStandardGame->ucHitPoints--;
+			if (pRayman->hStandardGame->ucHitPoints > 0) {
+				pRayman->hStandardGame->ucHitPoints--;
+			}
+			return TRUE;
 		}
 	}
+	return FALSE;
 }
 
 /** Triggers the player to die. */
@@ -2866,7 +2954,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 								pInfo->X = 15 + info.depth * 10;
 
 								// If you haven't finished this level, don't show it!
-								int finishDsg = getCompletionDsg(info.id);
+								int finishDsg = getVisitedDsg(info.id);
 								if (!AI_fn_bGetBooleanInArray(pGlobal, 42, finishDsg)) {
 									// If this is not a sub-level, stop showing further rooms!
 									if (info.depth == 0) {

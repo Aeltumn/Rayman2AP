@@ -1316,6 +1316,20 @@ void AI_fn_vSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char u
 	}
 }
 
+/** Gets the value of an integer array element. */
+long AI_fn_lGetIntegerInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex) {
+	AI_tdstArray* p_stArray;
+	AI_fn_bGetDsgVar(p_stSuperObj, ucDsgVarId, NULL, &p_stArray);
+	return AI_M_pArrayElement(p_stArray, ulIndex)->lValue;
+}
+
+/** Sets the value of the integer array. */
+void AI_fn_vSetIntegerInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, long value) {
+	AI_tdstArray* p_stArray;
+	AI_fn_bGetDsgVar(p_stSuperObj, ucDsgVarId, NULL, &p_stArray);
+	AI_M_pArrayElement(p_stArray, ulIndex)->lValue = value;
+}
+
 /** Clears lum gate overrides. */
 void MOD_ClearLumGateOverrides() {
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");

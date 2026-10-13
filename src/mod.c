@@ -860,14 +860,26 @@ ACP_tdxBool MOD_TriggerFinish() {
 	}
 }
 
+/** Sets the current exit portal based on the last level chain. */
+void MOD_SetExitPortal() {
+	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+	int entryLevelId = getLevelChainEntryId(MOD_LevelCurrentChain);
+	structure->ucPreviousLevel = entryLevelId;
+	structure->ucExitIdToQuitPrevLevel = 0;
+}
+
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// Fetch the base game strucure as we'll have to modify it
 	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 
 	// Return the value to what it was if applicable!
 	if (MOD_OverrideMenu) {
-		structure->ucPreviousLevel = MOD_LastPreviousLevel;
-		structure->ucExitIdToQuitPrevLevel = MOD_LastExitId;
+		if (MOD_InLevelChain) {
+			MOD_SetExitPortal();
+		} else {
+			structure->ucPreviousLevel = MOD_LastPreviousLevel;
+			structure->ucExitIdToQuitPrevLevel = MOD_LastExitId;
+		}
 		MOD_OverrideMenu = FALSE;
 	}
 
@@ -1228,6 +1240,11 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 
 /** Returns to the map monde. */
 void MOD_ReturnToMapMonde() {
+	// Exit at the last entered level chain
+	if (MOD_InLevelChain) {
+		MOD_SetExitPortal();
+	}
+
 	// Make sure we leave whatever chain we're in!
 	MOD_ForfeitChain();
 

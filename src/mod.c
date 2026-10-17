@@ -2071,7 +2071,10 @@ void MOD_EngineTick() {
 			}
 		}
 	}
-	if (MOD_DevMode || MOD_Connected) {
+
+	// Don't check for updates unless we're in-game!
+	const char* szLevelName = GAM_fn_p_szGetLevelName();
+	if ((MOD_DevMode || MOD_Connected) && compareStringCaseInsensitive(szLevelName, "menu") != 0) {
 		MOD_CheckVariables();
 	}
 	GAM_fn_vEngine();

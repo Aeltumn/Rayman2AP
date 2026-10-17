@@ -1410,36 +1410,49 @@ void MOD_CheckVariables() {
 		if (pMenu) {
 			long current = AI_fn_lGetIntegerInArray(pMenu, 12, 5);
 			if (current != 2) {
-				// Temporarily replace the previous level and set it back later!
-				MOD_LastPreviousLevel = structure->ucPreviousLevel;
-				MOD_LastExitId = structure->ucExitIdToQuitPrevLevel;
-				structure->ucPreviousLevel = 145;
-				structure->ucExitIdToQuitPrevLevel = 0;
-				MOD_OverrideMenu = TRUE;
-				if (MOD_DevMode) MOD_Print("Temporarily overriding level %d exit %d with 145", MOD_LastPreviousLevel, MOD_LastExitId);
-
-				// Kill the current cursor and background
-				HIE_tdstSuperObject** ppCursor;
-				AI_fn_bGetDsgVar(pMenu, 0, NULL, &ppCursor);
-				if (ppCursor && *ppCursor && (*ppCursor)->hLinkedObject.p_stActor) {
-					fn_vKillEngineObjectOrAlwaysByPointer((*ppCursor)->hLinkedObject.p_stActor);
-					*ppCursor = NULL;
-				}
-				HIE_tdstSuperObject** ppBackground;
-				AI_fn_bGetDsgVar(pMenu, 6, NULL, &ppBackground);
-				if (ppBackground && *ppBackground && (*ppBackground)->hLinkedObject.p_stActor) {
-					fn_vKillEngineObjectOrAlwaysByPointer((*ppBackground)->hLinkedObject.p_stActor);
-					*ppBackground = NULL;
-				}
-
-				// Re-draw the menu by forcing it back into the activation state
+				// Check that we're looking at something!
 				int activeReflex = -1;
 				HIE_tdstEngineObject* pRayEngine = HIE_M_hSuperObjectGetActor(pMenu);
 				AI_tdstMind* mind = pRayEngine->hBrain->p_stMind;
 				AI_tdstAIModel* model = mind->p_stAIModel;
-				AI_tdstScriptAI* scriptAI = model->a_stScriptAIIntel;
-				AI_tdstIntelligence* intelligence = mind->p_stIntelligence;
-				intelligence->p_stCurrentComport = &scriptAI->a_stComport[1];
+				AI_tdstScriptAI* scriptAI = model->a_stScriptAIReflex;
+				AI_tdstIntelligence* reflex = mind->p_stReflex;
+				for (unsigned long i = 0; i < scriptAI->ulNbComport; i++) {
+					if (reflex->p_stCurrentComport == &scriptAI->a_stComport[i]) {
+						activeReflex = i;
+						break;
+					}
+				}
+
+				MOD_Print("Active is %d", activeReflex);
+				if (activeReflex == 2) {
+					// Temporarily replace the previous level and set it back later!
+					MOD_LastPreviousLevel = structure->ucPreviousLevel;
+					MOD_LastExitId = structure->ucExitIdToQuitPrevLevel;
+					structure->ucPreviousLevel = 145;
+					structure->ucExitIdToQuitPrevLevel = 0;
+					MOD_OverrideMenu = TRUE;
+					if (MOD_DevMode) MOD_Print("Temporarily overriding level %d exit %d with 145", MOD_LastPreviousLevel, MOD_LastExitId);
+
+					// Kill the current cursor and background
+					HIE_tdstSuperObject** ppCursor;
+					AI_fn_bGetDsgVar(pMenu, 0, NULL, &ppCursor);
+					if (ppCursor && *ppCursor && (*ppCursor)->hLinkedObject.p_stActor) {
+						fn_vKillEngineObjectOrAlwaysByPointer((*ppCursor)->hLinkedObject.p_stActor);
+						*ppCursor = NULL;
+					}
+					HIE_tdstSuperObject** ppBackground;
+					AI_fn_bGetDsgVar(pMenu, 6, NULL, &ppBackground);
+					if (ppBackground && *ppBackground && (*ppBackground)->hLinkedObject.p_stActor) {
+						fn_vKillEngineObjectOrAlwaysByPointer((*ppBackground)->hLinkedObject.p_stActor);
+						*ppBackground = NULL;
+					}
+
+					// Re-draw the menu by forcing it back into the activation state
+					AI_tdstScriptAI* intelAI = model->a_stScriptAIIntel;
+					AI_tdstIntelligence* intelligence = mind->p_stIntelligence;
+					intelligence->p_stCurrentComport = &intelAI->a_stComport[1];
+				}
 			}
 		}
 	} else if (MOD_OverrideMenu) {
@@ -1822,10 +1835,11 @@ void MOD_CheckVariables() {
 		AI_fn_vSetBooleanInArray(pGlobal, 42, 1101, MOD_Knowledge);
 
 		// Show the final portal if and only if you have enough masks!
+		bool inMapMondeLoaded = compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && MOD_LastHoveredLevel != -1;
 		ACP_tdxBool reloadMapMonde = FALSE;
 		bool finished = MOD_FinishedWinCondition();
 		bool completedPirateShip = AI_fn_bGetBooleanInArray(pGlobal, 42, COMPLETED_PIRATE_SHIP);
-		if (!AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && finished && completedPirateShip) {
+		if (inMapMondeLoaded && !AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && finished && completedPirateShip) {
 			// Open up the portal!
 			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, TRUE);
 
@@ -1837,7 +1851,7 @@ void MOD_CheckVariables() {
 		}
 
 		// Remove final portal if it somehow spawned!
-		if (AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && (!finished || !completedPirateShip)) {
+		if (inMapMondeLoaded && AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && (!finished || !completedPirateShip)) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, FALSE);
 			reloadMapMonde = TRUE;
 		}
@@ -1848,7 +1862,7 @@ void MOD_CheckVariables() {
 		}
 
 		// In accessible portals mode we show all portals for which we have enough lums!
-		if (MOD_AccessiblePortals || MOD_UnlockLevels) {
+		if (inMapMondeLoaded && (MOD_AccessiblePortals || MOD_UnlockLevels)) {
 			{
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
@@ -1954,7 +1968,7 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					MOD_ShowScreenText(3, "Fourth level set unlocked!");
+					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "Fourth level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -1980,7 +1994,7 @@ void MOD_CheckVariables() {
 		}
 	
 		// Reload mapmonde if we have to!
-		if (reloadMapMonde && compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+		if (inMapMondeLoaded && reloadMapMonde) {
 			// Update the current exit first!
 			structure->ucExitIdToQuitPrevLevel = 0;
 			int lastLevelId = getLevelChainEntryId(MOD_LastHoveredLevel);

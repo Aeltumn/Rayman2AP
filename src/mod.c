@@ -483,14 +483,27 @@ BOOL MOD_SendToCurrentLevel() {
 				}
 
 				// Prevent them from entering!
-				if ((portal > 0 && !AP_HasUnlockedLevel(portal)) || lumGateRequired >= 0) {
+				BOOL blockEntry = (portal > 0 && !AP_HasUnlockedLevel(portal));
+				if (lumGateRequired >= 0) {
 					int lums = MOD_GetLums();
 					int required = AP_GetLumGate(lumGateRequired);
 					if (required > lums) {
 						MOD_ShowScreenText(3, "Need %d more lums to enter level!", lums - required);
-						MOD_ForfeitChain();
-						GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
+						blockEntry = TRUE;
 					}
+				}
+				if (blockEntry) {
+					MOD_ForfeitChain();
+
+					// Update the current exit first so you exit at the right spot!
+					GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
+					structure->ucExitIdToQuitPrevLevel = 0;
+					int lastLevelId = getLevelChainEntryId(chainId);
+					if (lastLevelId != -1) {
+						structure->ucPreviousLevel = lastLevelId;
+					}
+
+					GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
 				}
 				return;
 			}
@@ -1926,6 +1939,7 @@ void MOD_CheckVariables() {
 		// In accessible portals mode we show all portals for which we have enough lums!
 		BOOL unlockLevels = AP_HasUnlockLevels();
 		BOOL accessiblePortals = AP_HasAccessiblePortals();
+		BOOL showUnlockMessages = unlockLevels && !accessiblePortals;
 		BOOL showBatchMessages = accessiblePortals && !unlockLevels;
 		BOOL showAllLevels = accessiblePortals && unlockLevels;
 		int lums = MOD_GetLums();
@@ -1937,7 +1951,7 @@ void MOD_CheckVariables() {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
-						if (unlockLevels) {
+						if (showUnlockMessages) {
 							if (i == 0) {
 								MOD_ShowScreenText(3, "Fairy Glade Portal unlocked!");
 							} else if (i == 1) {
@@ -1966,7 +1980,7 @@ void MOD_CheckVariables() {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i], TRUE);
-						if (unlockLevels) {
+						if (showUnlockMessages) {
 							if (i == 0) {
 								MOD_ShowScreenText(3, "Menhir Hills Portal unlocked!");
 							} else if (i == 1) {
@@ -1995,7 +2009,7 @@ void MOD_CheckVariables() {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i], TRUE);
-						if (unlockLevels) {
+						if (showUnlockMessages) {
 							if (i == 0) {
 								MOD_ShowScreenText(3, "Echoing Caves Portal unlocked!");
 							} else if (i == 1) {
@@ -2024,7 +2038,7 @@ void MOD_CheckVariables() {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i], TRUE);
-						if (unlockLevels) {
+						if (showUnlockMessages) {
 							if (i == 0) {
 								MOD_ShowScreenText(3, "Tomb of the Ancients Portal unlocked!");
 							} else if (i == 1) {
@@ -2047,7 +2061,7 @@ void MOD_CheckVariables() {
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
-						if (unlockLevels) {
+						if (showUnlockMessages) {
 							MOD_ShowScreenText(3, "Prison Ship Portal unlocked!");
 						}
 						changed = TRUE;
@@ -2844,7 +2858,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 			SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Power /o0:%d of %d", AP_GetMasks(), upgrades, totalPower);
 			SPTXT_vPrintFmtLine("/o400:Elixir %s/o400:, Knowledge %s", AP_HasElixir() ? "/o0:Yes" : "/o200:No", AP_HasKnowledge() ? "/o0:Yes" : "/o200:No");
 			if (AP_HasRandomizeAbilities()) {
-				SPTXT_vPrintFmtLine("/o400:Hover %s/o400:, Lava Hover %s", AP_HasHover() ? "/o0:Yes" : "/o200:No", AP_HasLavaHover ? "/o0:Yes" : "/o200:No");
+				SPTXT_vPrintFmtLine("/o400:Hover %s/o400:, Lava Hover %s", AP_HasHover() ? "/o0:Yes" : "/o200:No", AP_HasLavaHover() ? "/o0:Yes" : "/o200:No");
 				SPTXT_vPrintFmtLine("/o400:Ledge Grab %s/o400:, Swim %s", AP_HasLedgeGrab() ? "/o0:Yes" : "/o200:No", AP_HasSwim() ? "/o0:Yes" : "/o200:No");
 			}
 			if (AP_HasUnlockLevels()) {
@@ -2970,6 +2984,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 							pInfo->xSize = 7;
 							pInfo->bRightAlign = FALSE;
 							pInfo->X = 15;
+							pInfo->Y = 320;
 
 							long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
 
@@ -2979,8 +2994,8 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 							if (lumGateRequired > -1) {
 								required = AP_GetLumGate(lumGateRequired);
 							}
-							int portal = getPortalId(chainId);
-							if (portal > 0 && !AP_HasUnlockedLevel(portal)) {
+							int portalId = getPortalId(chainId);
+							if (portalId > 0 && !AP_HasUnlockedLevel(portal)) {
 								SPTXT_vPrintFmtLine("/o200:You have not unlocked");
 								SPTXT_vPrintFmtLine("/o200:this portal!");
 							} else if (lums < required) {
@@ -2994,7 +3009,6 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 
 								// Draw the level info in a list, start with a header showing portal number and room count
 								long spacer = lineHeight - 2;
-								pInfo->Y = 320;
 								SPTXT_vPrintFmtLine("/o200:Portal nr. %d", portal + 1);
 								pInfo->X = 22;
 								SPTXT_vPrintFmtLine("/o0:%d rooms", length);

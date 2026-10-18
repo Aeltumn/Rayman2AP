@@ -794,8 +794,8 @@ int AP_GetUnlockedPortals() {
 }
 
 BOOL AP_HasUnlockedLevel(int portal) {
-    // You always have access to the walk of life/power!
-    return !unlockLevels || portal == 969 || portal == 992 || std::find(unlockedLevels.begin(), unlockedLevels.end(), portal) != unlockedLevels.end();
+    // You always have access to the woods of light and walk of life/power!
+    return !unlockLevels || portal == 960 || portal == 969 || portal == 992 || std::find(unlockedLevels.begin(), unlockedLevels.end(), portal) != unlockedLevels.end();
 }
 
 BitSet* AP_GetUnlockedChecks() {

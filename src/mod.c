@@ -488,24 +488,22 @@ BOOL MOD_SendToCurrentLevel() {
 					int lums = MOD_GetLums();
 					int required = AP_GetLumGate(lumGateRequired);
 					if (required > lums) {
-						MOD_ShowScreenText(3, "Need %d more lums to enter level!", lums - required);
+						MOD_ShowScreenText(3, "Need %d more lums to enter level! (%d total)", required - lums, required);
 						blockEntry = TRUE;
 					}
 				}
 				if (blockEntry) {
-					MOD_ForfeitChain();
-
 					// Update the current exit first so you exit at the right spot!
+					MOD_ForfeitChain();
 					GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 					structure->ucExitIdToQuitPrevLevel = 0;
 					int lastLevelId = getLevelChainEntryId(chainId);
 					if (lastLevelId != -1) {
 						structure->ucPreviousLevel = lastLevelId;
 					}
-
 					GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
+					return;
 				}
-				return;
 			}
 
 			// Learn_32 is the internal ID for the fairy glade revisit!
@@ -1812,7 +1810,7 @@ void MOD_CheckVariables() {
 					}
 
 					// Don't send portal unlocks here, we manually send them on chain completion!
-					if (i >= 960 && i <= 1002) continue;
+					if (i >= 960 && i <= 1007) continue;
 
 					// Send up the id of the item directly
 					AP_MarkCollected(i);
@@ -2995,7 +2993,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 								required = AP_GetLumGate(lumGateRequired);
 							}
 							int portalId = getPortalId(chainId);
-							if (portalId > 0 && !AP_HasUnlockedLevel(portal)) {
+							if (portalId > 0 && !AP_HasUnlockedLevel(portalId)) {
 								SPTXT_vPrintFmtLine("/o200:You have not unlocked");
 								SPTXT_vPrintFmtLine("/o200:this portal!");
 							} else if (lums < required) {

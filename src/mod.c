@@ -1528,7 +1528,7 @@ void MOD_CheckVariables() {
 						AP_SendDeathLink("Rayman took damage");
 						MOD_StoredDeathLinks = 0;
 					} else {
-						MOD_ShowScreenText(3, "Took damage! Death link will send after %d more!", AP_GetDeathLinkAmnesty() - MOD_StoredDeathLinks);
+						MOD_ShowScreenText(3, "Damage link in %d damage!", AP_GetDeathLinkAmnesty() - MOD_StoredDeathLinks);
 					}
 				}
 				MOD_IgnoreDeath = FALSE;
@@ -1560,7 +1560,7 @@ void MOD_CheckVariables() {
 							AP_SendDeathLink("Rayman died");
 							MOD_StoredDeathLinks = 0;
 						} else {
-							MOD_ShowScreenText(3, "Rayman died! Death link will send after %d more!", AP_GetDeathLinkAmnesty() - MOD_StoredDeathLinks);
+							MOD_ShowScreenText(3, "Death link in %d deaths!", AP_GetDeathLinkAmnesty() - MOD_StoredDeathLinks);
 						}
 					}
 

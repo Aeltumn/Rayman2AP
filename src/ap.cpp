@@ -420,7 +420,7 @@ void handleFragmentedLums(std::string data) {
     fragmented = std::stoi(data) == 1;
 }
 void handleDeathLinkAmnesty(std::string data) {
-    deathLinkAmnesty = std::stoi(data) == 1;
+    deathLinkAmnesty = std::stoi(data);
 }
 void handleBetterLevelPortals(std::string data) {
     betterLevelPortals = std::stoi(data) == 1;

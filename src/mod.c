@@ -23,34 +23,6 @@ int COMPLETED_PIRATE_SHIP = 938;
 int BASE_GAME_LUMS[6] = { 100, 300, 475, 550, 60, 450 };
 int SUPER_LUM_IDS[290] = { 1, 2, 3, 4, 5, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 51, 52, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 161, 162, 163, 164, 165, 172, 173, 174, 175, 176, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 292, 293, 294, 295, 296, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 491, 492, 493, 494, 495, 496, 497, 498, 499, 500, 556, 557, 558, 559, 560, 613, 614, 615, 616, 617, 618, 619, 620, 621, 622, 631, 632, 633, 634, 635, 636, 637, 638, 639, 640, 646, 647, 648, 649, 650, 661, 662, 663, 664, 665, 666, 667, 668, 669, 670, 671, 672, 673, 674, 675, 676, 677, 678, 679, 680, 681, 682, 683, 684, 685, 686, 687, 688, 689, 690, 721, 722, 723, 724, 725, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741, 742, 743, 744, 745, 746, 747, 748, 749, 750, 762, 763, 764, 765, 766, 776, 777, 778, 779, 780, 781, 782, 783, 784, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 1311, 1312, 1313, 1314, 1315, 1354, 1355, 1356, 1357, 1358, 1389, 1390, 1391, 1392, 1393 };
 
-// Store archipelago progression
-int MOD_Lums = 0;
-int MOD_CollectedLums = 0;
-int MOD_Cages = 0;
-int MOD_Masks = 0;
-BOOL MOD_FragmentedUpgrades = FALSE;
-int MOD_Upgrades = 0;
-int MOD_EndGoal = 1;
-BOOL MOD_Elixir = FALSE;
-BOOL MOD_Knowledge = FALSE;
-BOOL MOD_Hover = TRUE;
-BOOL MOD_LedgeGrab = TRUE;
-BOOL MOD_Swim = TRUE;
-BOOL MOD_LavaHover = TRUE;
-BOOL MOD_UnlockLevels = FALSE;
-
-// Store archipelago settings
-BOOL MOD_Connected = FALSE;
-BOOL MOD_DeathLink = FALSE;
-BOOL MOD_DamageLink = FALSE;
-BOOL MOD_Lumsanity = FALSE;
-BOOL MOD_RoomRandomisation = FALSE;
-BOOL MOD_AccessiblePortals = FALSE;
-int MOD_DeathLinkAmnesty = 1;
-BOOL MOD_BetterLevelPortals = FALSE;
-int MOD_LumBundleSize = 0;
-int MOD_LumGates[6];
-
 // Store tracking variables used at runtime
 BOOL MOD_Finished = FALSE;
 int MOD_StoredDeathLinks = 0;
@@ -65,6 +37,10 @@ int MOD_CurrentHealth = 0;
 int MOD_LastHealth = 0;
 int MOD_CurrentLumGate = -1;
 int MOD_TicksDead = 0;
+int MOD_CachedLums = 0;
+int MOD_CollectedLums = 0;
+BOOL MOD_WasCachingLums = FALSE;
+BOOL MOD_WasCachingCollected = FALSE;
 
 // Store variables for the screen text system
 char MOD_ScreenText[10][128];
@@ -118,15 +94,6 @@ BOOL MOD_HasSavedThatOneTeensiePreviously = FALSE;
 // Whether we override DSG 100 to false to stop hovering in this level.
 BOOL MOD_InHoverOverrideLevel = FALSE;
 
-// Level chain settings info
-BOOL MOD_InitLevelChains = FALSE;
-char MOD_LevelIds[LEVEL_COUNT][MAX_LENGTH];
-int MOD_LevelChainsLengths[CHAIN_COUNT];
-int* MOD_LevelChainContents[CHAIN_COUNT];
-
-// Unlocked portals
-int MOD_UnlockDsgLevels[PORTAL_COUNT];
-
 // Level chain dynamic info
 BOOL MOD_InLevelChain = FALSE;
 int MOD_LevelCurrentChain = -1;
@@ -146,21 +113,8 @@ int getVisitedDsg(int levelId) {
 	return dsg;
 }
 
-/** Returns whether the given portal id is unlocked. */
-bool hasUnlocked(int portal) {
-	if (!MOD_UnlockLevels) return true;
-	for (int i = 0; i < PORTAL_COUNT; i++) {
-		int id = MOD_UnlockDsgLevels[i];
-		if (id == -1) break;
-		if (id == portal) {
-			return true;
-		}
-	}
-	return false;
-}
-
 /** Returns the next portal id. */
-int getNextId(int portal) {
+int getIdOfNextPortal(int portal) {
 	int id = 0;
 	if (portal == 960) {
 		id = 961;
@@ -198,43 +152,91 @@ int getNextId(int portal) {
 	return id;
 }
 
-/** Removes a substring from a larger string. */
-char* removeSubstring(const char* string, char const* substring) {
-	char* _substr = strstr(string, substring);
-	while (_substr != NULL && strcmp(substring, "") != 0) {
-		sprintf(_substr, "%s%s", "", _substr + strlen(substring));
-		_substr = strstr(string, substring);
-	}
-	return _substr;
-}
+/** Updates the current lum bundle collected amount. */
+void MOD_UpdateLumBundles() {
+	int oldCollected = MOD_CollectedLums;
+	BOOL cacheCollected = AP_IsConnected() && AP_GetLumBundleSize() > 1;
+	MOD_CollectedLums = 0;
+	MOD_WasCachingCollected = cacheCollected;
 
-/** Replaces a char with another char. */
-void replaceSubstring(char* string, char from, char to) {
-	int length = strlen(string);
-	for (int i = 0; i < length; i++) {
-		if (string[i] == from) {
-			string[i] = to;
+	if (cacheCollected) {
+		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+		if (pGlobal) {
+			for (int i = 1; i <= 800; i++) {
+				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+				if (dsg) {
+					// Ignore any super lums!
+					if (MOD_IsSuperLum(i)) continue;
+					MOD_CollectedLums++;
+				}
+			}
+			for (int i = 1201; i <= 1400; i++) {
+				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+				if (dsg) {
+					// Ignore any super lums!
+					if (MOD_IsSuperLum(i)) continue;
+					MOD_CollectedLums++;
+				}
+			}
+		}
+		if (oldCollected != MOD_CollectedLums) {
+			AP_UpdateLums(MOD_CollectedLums);
 		}
 	}
 }
 
+/** Updates the lum cache when not in lumsanity. */
+void MOD_UpdateLumsanityCache() {
+	BOOL cacheLums = AP_IsConnected() && !AP_HasLumsanity();
+	MOD_CachedLums = 0;
+	MOD_WasCachingLums = cacheLums;
+
+	// If we're not on lumsanity we need to include any non-super lums collected locally!
+	if (cacheLums) {
+		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+		if (pGlobal) {
+			for (int i = 1; i <= 800; i++) {
+				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+				if (dsg) {
+					// Ignore any super lums!
+					if (MOD_IsSuperLum(i)) continue;
+					MOD_CachedLums++;
+				}
+			}
+			for (int i = 1201; i <= 1400; i++) {
+				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+				if (dsg) {
+					// Ignore any super lums!
+					if (MOD_IsSuperLum(i)) continue;
+					MOD_CachedLums++;
+				}
+			}
+		}
+	}
+}
+
+/** Returns the total amount of lums. */
+int MOD_GetLums() {
+	return AP_GetLums() + MOD_CachedLums;
+}
 
 /** Returns whether the win condition is done. */
-bool MOD_FinishedWinCondition() {
-	if (MOD_EndGoal == 2) {
+BOOL MOD_FinishedWinCondition() {
+	int endGoal = AP_GetEndGoal();
+	if (endGoal == 2) {
 		return false;
 	}
-	if (MOD_EndGoal == 1) {
-		return MOD_Masks >= 4;
+	if (endGoal == 1) {
+		return AP_GetMasks() >= 4;
 	}
-	if (MOD_EndGoal == 4) {
+	if (endGoal == 4) {
 		return true;
 	}
-	if (MOD_EndGoal == 3) {
-		return MOD_Masks >= 4 && MOD_Lums >= 1000 && MOD_Cages >= 80;
+	if (endGoal == 3) {
+		return AP_GetMasks() >= 4 && MOD_GetLums() >= 1000 && AP_GetCages() >= 80;
 	}
-	if (MOD_EndGoal == 5) {
-		return MOD_Masks >= 4 && MOD_Cages >= 80;
+	if (endGoal == 5) {
+		return AP_GetMasks() >= 4 && AP_GetCages() >= 80;
 	}
 	return false;
 }
@@ -271,49 +273,27 @@ void MOD_Reset() {
 	clearBitSet(&MOD_LastCollected);
 	clearBitSet(&MOD_DevCollected);
 
-	for (int i = 0; i < PORTAL_COUNT; i++) {
-		MOD_UnlockDsgLevels[i] = -1;
-	}
-
 	MOD_ClearLumGateOverrides();
-}
-
-/** Compares to integers in an array. */
-static int cmpInt(const void* a, const void* b) {
-	int x = *(const int*)a;
-	int y = *(const int*)b;
-	return (x > y) - (x < y);
+	MOD_UpdateLumBundles();
+	MOD_UpdateLumsanityCache();
 }
 
 /** Returns whether x is a lum or super lum. */
-bool isLumLike(int x) {
+BOOL MOD_IsLumLike(int x) {
 	return (x >= 1 && x <= 800) || (x >= 1201 && x <= 1400);
 }
 
 /** Returns whether the given integer is a super lum's id. */
-bool isSuperLum(int x) {
+BOOL MOD_IsSuperLum(int x) {
 	return bsearch(&x, SUPER_LUM_IDS, 290, sizeof(int), cmpInt);
 }
 
-// https://stackoverflow.com/questions/5820810/case-insensitive-string-comparison-in-c
-int compareStringCaseInsensitive(char const* a, char const* b) {
-	return _stricmp(a, b);
-}
-
-int compareStringCaseInsensitiveLimited(char const* a, char const* b) {
-	return _strnicmp(a, b, strlen(b));
-}
-
-// Copied from https://github.com/raytools/ACP_Ray2/blob/master/src/Ray2x/SPTXT/SPTXT.c
-long SPTXT_fn_lGetFmtStringLength(char const* szFmt, va_list args) {
-	long lSize = vsnprintf(NULL, 0, szFmt, args);
-	return lSize + 1;
-}
-
+/** Updates the current dev mode state. */
 void MOD_SetDevMode(BOOL state) {
 	MOD_DevMode = state;
 }
 
+/** Returns whether dev mode is enabled. */
 BOOL MOD_InDevMode() {
 	return MOD_DevMode;
 }
@@ -350,11 +330,11 @@ void MOD_LieBeforeLevelEntry(const char* levelName) {
 			if (!MOD_InMenhirHills) {
 				// DSG 1123 stores whether you are in the cutscene.
 				MOD_HadElixirPreviously = AI_fn_bGetBooleanInArray(pGlobal, 42, 1123);
-				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
+				AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, AP_HasElixir());
 				MOD_InMenhirHills = TRUE;
 			}
 		}
-		if (MOD_RoomRandomisation) {
+		if (AP_HasRoomRandomisation()) {
 			// Before moving into The Canopy we need to ensure Globox is there!
 			// 979 is portal but also whether globox is present in the level
 			if (compareStringCaseInsensitive(levelName, "glob_10") == 0) {
@@ -425,7 +405,7 @@ BOOL MOD_SendToCurrentLevel() {
 	// If we're in a level chain, continue it!
 	if (MOD_InLevelChain) {
 		// Get the level we are meant to be in and load into it
-		int chainLength = MOD_LevelChainsLengths[MOD_LevelCurrentChain];
+		int chainLength = AP_GetChainLength(MOD_LevelCurrentChain);
 		if (MOD_DevMode) MOD_Print("Sending to level in chain %d at index %d and length %d", MOD_LevelCurrentChain, MOD_LevelCurrentIndex, chainLength);
 
 		if (MOD_LevelCurrentIndex < 0 || MOD_LevelCurrentIndex >= chainLength) {
@@ -433,8 +413,8 @@ BOOL MOD_SendToCurrentLevel() {
 			MOD_ExitChain();
 		} else {
 			// Find which level ID we are meant to be in!
-			int levelId = MOD_LevelChainContents[MOD_LevelCurrentChain][MOD_LevelCurrentIndex];
-			char* levelName = MOD_LevelIds[levelId];
+			int levelId = AP_GetLevelInChain(MOD_LevelCurrentChain, MOD_LevelCurrentIndex);
+			const char* levelName = AP_GetLevelName(levelId);
 			if (MOD_DevMode) MOD_Print("Target is level %s", levelName);
 
 			// Learn_32 is the internal ID for the fairy glade revisit!
@@ -604,10 +584,10 @@ BOOL MOD_JumpToLevel(const char* levelName) {
 	int targetChain = -1;
 	int targetIndex = 0;
 	for (int i = 0; i < CHAIN_COUNT; i++) {
-		int thisChainLength = MOD_LevelChainsLengths[i];
+		int thisChainLength = AP_GetChainLength(i);
 		for (int j = 0; j < thisChainLength; j++) {
-			int chainLevelId = MOD_LevelChainContents[i][j];
-			char* chainLevelName = MOD_LevelIds[chainLevelId];
+			int chainLevelId = AP_GetLevelInChain(i, j);
+			const char* chainLevelName = AP_GetLevelName(chainLevelId);
 			if (compareStringCaseInsensitive(chainLevelName, levelName) == 0) {
 				targetChain = i;
 				targetIndex = j;
@@ -647,7 +627,7 @@ void MOD_ExitChain() {
 
 	// Determine if this chain was completed and we should unlock the next level!
 	int chainId = MOD_LevelCurrentChain;
-	int chainLength = MOD_LevelChainsLengths[chainId];
+	int chainLength = AP_GetChainLength(chainId);
 	BOOL completedChain = MOD_LevelCurrentIndex >= chainLength;
 	if (MOD_DevMode) MOD_Print("Exiting chain %d as we are in %d which exceeds length %d, completed? %s", chainId, MOD_LevelCurrentIndex, chainLength, completedChain ? "TRUE" : "FALSE");
 
@@ -663,7 +643,7 @@ void MOD_ExitChain() {
 			structure->ucExitIdToQuitPrevLevel = 1;
 			structure->ucPreviousLevel = 137;
 
-			// Award the check for completing COBD
+			// Award the check for completing COBD since we skip the code below!
 			if (pGlobal) {
 				int id = 966;
 				AI_fn_vSetBooleanInArray(pGlobal, 42, id, TRUE);
@@ -693,8 +673,9 @@ void MOD_ExitChain() {
 			structure->ucPreviousLevel = 190;
 			MOD_SendToCurrentLevel();
 			return;
-		} else if (chainId == CHAIN_PRISON) { 
-			// Award a custom completion for this level chain!
+		} else if (chainId == CHAIN_PRISON) {
+			// Award a custom completion for this level chain! This is only used
+			// when not on portal unlock mode!
 			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 			if (pGlobal) {
 				AI_fn_vSetBooleanInArray(pGlobal, 42, COMPLETED_PIRATE_SHIP, TRUE);
@@ -831,8 +812,8 @@ void MOD_ExitChain() {
 				AP_MarkCollected(801 + chainId);
 			}
 
-			// If you haven't unlocked hte next portal we don't let you unlock it!
-			if (!hasUnlocked(getNextId(id))) {
+			// If you haven't unlocked the next portal we don't let you unlock it!
+			if (!AP_HasUnlockedLevel(getIdOfNextPortal(id))) {
 				structure->ucExitIdToQuitPrevLevel = 0;
 				if (entryLevelId != -1) {
 					structure->ucPreviousLevel = entryLevelId;
@@ -895,7 +876,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {
 		// Look for being connected, not being in Woods!
-		if (MOD_Connected) {
+		if (AP_IsConnected()) {
 			// Always ensure we are sent to the Hall of Doors not the Woods of Light
 			// when loading a new save file!
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1133, TRUE);
@@ -930,7 +911,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		// Don't undo the menhir hills changes if you internally move within Menhir Hills 2!
 		if (compareStringCaseInsensitiveLimited(szLevelName, "Rodeo_40") != 0 && MOD_InMenhirHills) {
 			// Inform the user why they are being turned away if they are being sent to mapmonde without having an Elixir.
-			if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && !MOD_Elixir) {
+			if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && !AP_HasElixir()) {
 				MOD_ShowScreenText(3, "Return back with the Elixir of Life to proceed!");
 			}
 			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_HadElixirPreviously);
@@ -955,7 +936,7 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// If not connected, don't do anything else!
 	// We do run the earlier code to reset any state we may have changed
 	// while connected.
-	if (!MOD_Connected) {
+	if (!AP_IsConnected()) {
 		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 		return;
 	}
@@ -1311,11 +1292,10 @@ BOOL AI_fn_bSetDsgVar(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarI
 	return TRUE;
 }
 
-/** Sets the value of the boolean array. */
+/** Sets the value of the BOOLean array. */
 void AI_fn_vSetBooleanInArray(HIE_tdstSuperObject* p_stSuperObj, unsigned char ucDsgVarId, unsigned int ulIndex, ACP_tdxBool value) {
 	AI_tdstArray* p_stArray;
 	AI_fn_bGetDsgVar(p_stSuperObj, ucDsgVarId, NULL, &p_stArray);
-
 	ulIndex--;
 	unsigned long ulIndexFirstLong = (ulIndex >> 5);
 	unsigned long ulIndexFirstBit = (ulIndex & 31);
@@ -1355,7 +1335,7 @@ void MOD_ClearLumGateOverrides() {
 		MOD_CurrentLumGate = -1;
 		for (int i = 1; i <= 1400; i++) {
 			// Only update lumlike values!
-			if (isLumLike(i)) {
+			if (MOD_IsLumLike(i)) {
 				AI_fn_vSetBooleanInArray(pGlobal, 42, i, getBitSet(&MOD_RealCollected, i));
 			}
 		}
@@ -1378,8 +1358,8 @@ void setLumGateOverride(int lumGateId) {
 		// Determine how many lums we should have and what the base game will
 		// expect, then change lums to be at exactly the right value to jank it all together.
 		int baseGameLums = BASE_GAME_LUMS[lumGateId];
-		int lumGateLums = MOD_LumGates[lumGateId];
-		int missingLums = lumGateLums - MOD_Lums;
+		int lumGateLums = AP_GetLumGate(lumGateId);
+		int missingLums = lumGateLums - MOD_GetLums();
 		if (missingLums < 0) {
 			missingLums = 0;
 		}
@@ -1390,13 +1370,18 @@ void setLumGateOverride(int lumGateId) {
 		clearBitSet(&MOD_RealCollected);
 
 		for (int i = 1; i <= 1400; i++) {
-			if (isLumLike(i)) {
+			if (MOD_IsLumLike(i)) {
 				// Copy out the data into the real collection
 				setBitSet(&MOD_RealCollected, i, AI_fn_bGetBooleanInArray(pGlobal, 42, i));
 
 				// Update the data to set the correct lum count we want
 				AI_fn_vSetBooleanInArray(pGlobal, 42, i, givenLums++ < finalLums);
 			}
+		}
+
+		// For the walks tell the player what they need!
+		if (missingLums > 0 && lumGateId >= 4) {
+			MOD_ShowScreenText(3, "You need %d more lums to enter! (%d total)", missingLums, lumGateLums);
 		}
 	}
 }
@@ -1424,7 +1409,6 @@ void MOD_CheckVariables() {
 					}
 				}
 
-				MOD_Print("Active is %d", activeReflex);
 				if (activeReflex == 2) {
 					// Temporarily replace the previous level and set it back later!
 					MOD_LastPreviousLevel = structure->ucPreviousLevel;
@@ -1470,7 +1454,7 @@ void MOD_CheckVariables() {
 		MOD_CurrentHealth = pRayEngine->hStandardGame->ucHitPoints;
 
 		// Prevent swimming!
-		if (!MOD_Swim) {
+		if (!AP_HasSwim()) {
 			unsigned char* etat;
 			AI_fn_bGetDsgVar(pRayman, 9, NULL, &etat);
 			if (*etat == 25) {
@@ -1481,7 +1465,7 @@ void MOD_CheckVariables() {
 		}
 
 		// Prevent being on a ledge!
-		if (!MOD_LedgeGrab) {
+		if (!AP_HasLedgeGrab()) {
 			// Set can grab to false every frame.
 			ACP_tdxBool canGrab = FALSE;
 			AI_fn_bSetDsgVar(pRayman, 44, &canGrab);
@@ -1511,13 +1495,13 @@ void MOD_CheckVariables() {
 		}
 
 		// Prevent being on a ledge!
-		if (!MOD_Hover) {
+		if (!AP_HasHover()) {
 			// Force prevent hovering every frame.
 			ACP_tdxBool cantHover = TRUE;
 			AI_fn_bSetDsgVar(pRayman, 92, &cantHover);
 
 			// Ensure you can't hover!
-			bool* currentlyHoverOnIce;
+			BOOL* currentlyHoverOnIce;
 			AI_fn_bGetDsgVar(pRayman, 100, NULL, &currentlyHoverOnIce);
 			if (*currentlyHoverOnIce == TRUE) {
 				MOD_InHoverOverrideLevel = TRUE;
@@ -1533,15 +1517,18 @@ void MOD_CheckVariables() {
 		}
 
 		// Check for death or damage link
-		if (MOD_DamageLink) {
+		if (AP_HasDamageLink()) {
 			if (MOD_CurrentHealth < MOD_LastHealth) {
 				// Rayman took damage, store a death link if enabled!
 				if (!MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
 					if (MOD_DevMode) MOD_Print("Damage link sent");
 					MOD_StoredDeathLinks++;
-					if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
+					if (MOD_StoredDeathLinks >= AP_GetDeathLinkAmnesty()) {
+						MOD_ShowScreenText(3, "Rayman took damage!");
 						AP_SendDeathLink("Rayman took damage");
 						MOD_StoredDeathLinks = 0;
+					} else {
+						MOD_ShowScreenText(3, "Took damage! Death link will send after %d more!", AP_GetDeathLinkAmnesty() - MOD_StoredDeathLinks);
 					}
 				}
 				MOD_IgnoreDeath = FALSE;
@@ -1568,9 +1555,12 @@ void MOD_CheckVariables() {
 					if (!MOD_AwaitingRespawn && !MOD_IgnoreDeath && MOD_GetDeathLink(FALSE)) {
 						if (MOD_DevMode) MOD_Print("Death link sent from %s", GAM_fn_p_szGetLevelName());
 						MOD_StoredDeathLinks++;
-						if (MOD_StoredDeathLinks >= MOD_DeathLinkAmnesty) {
+						if (MOD_StoredDeathLinks >= AP_GetDeathLinkAmnesty()) {
+							MOD_ShowScreenText(3, "Rayman died!");
 							AP_SendDeathLink("Rayman died");
 							MOD_StoredDeathLinks = 0;
+						} else {
+							MOD_ShowScreenText(3, "Rayman died! Death link will send after %d more!", AP_GetDeathLinkAmnesty() - MOD_StoredDeathLinks);
 						}
 					}
 
@@ -1698,10 +1688,29 @@ void MOD_CheckVariables() {
 			}
 		}
 
+		// Update the cached values if necessary
+		BOOL cacheLums = AP_IsConnected() && !AP_HasLumsanity();
+		BOOL cacheCollected = AP_IsConnected() && AP_GetLumBundleSize() > 1;
+		if (cacheLums != MOD_WasCachingLums) {
+			MOD_UpdateLumsanityCache();
+		}
+		if (cacheCollected != MOD_WasCachingCollected) {
+			MOD_UpdateLumBundles();
+		}
+		BitSet* unlockedChecks = AP_GetUnlockedChecks();
+
 		// Check if any items have been collected
 		for (int i = 1; i <= 1400; i++) {
 			unsigned char last = getBitSet(&MOD_LastCollected, i);
+			unsigned char unlocked = getBitSet(unlockedChecks, i);
 			ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+
+			// Ensure unlocked checks are unlocked!
+			if (unlocked && !dsg) {
+				AI_fn_vSetBooleanInArray(pGlobal, 42, i, TRUE);
+				dsg = TRUE;
+				if (MOD_DevMode) MOD_Print("Marking check %d as complete due to remote completion", i);
+			}
 
 			// If there's a desync between the local storage and the DSG variables
 			// we collected an item, send it across!
@@ -1710,12 +1719,13 @@ void MOD_CheckVariables() {
 
 				// Only if the item is now collected, send a check!
 				if (dsg) {
-					// When connected in non-lumsanity update the lum counter immediately for any non-super lums gathered!
-					if (MOD_Connected && isLumLike(i) && !isSuperLum(i)) {
-						if (!MOD_Lumsanity) {
-							// Outside lumsanity, add this to lums directly!
-							MOD_Lums++;
-						} else if (MOD_LumBundleSize > 1) {
+					// When in non-lumsanity update the lum counter immediately for any non-super lums gathered!
+					if ((cacheLums || cacheCollected) && MOD_IsLumLike(i) && !MOD_IsSuperLum(i)) {
+						if (cacheLums) {
+							// Outside lumsanity, increment the lum cache!
+							MOD_CachedLums++;
+						}
+						if (cacheCollected) {
 							// In lum bundle mode, send the new lum amount!
 							MOD_CollectedLums++;
 							AP_UpdateLums(MOD_CollectedLums);
@@ -1755,7 +1765,7 @@ void MOD_CheckVariables() {
 
 		// If the end goal is treasure% we have to detect if you are in the treasure area
 		// as there is no check for it.
-		if (MOD_EndGoal == 2 && !MOD_TreasureComplete) {
+		if (AP_GetEndGoal() == 2 && !MOD_TreasureComplete) {
 			if (compareStringCaseInsensitive(szLevelName, "vulca_20") == 0) {
 				HIE_tdstSuperObject* pMain = HIE_fn_p_stFindObjectByName("StdCamer");
 				if (pMain) {
@@ -1790,7 +1800,7 @@ void MOD_CheckVariables() {
 		// Set the collected cages for health to the custom value so health is overridden,
 		// if the value would be 9 always make it 8 so it doesn't incorrectly give a health
 		// increase when a new cage is collected for one frame.
-		int fakeCages = MOD_Cages;
+		int fakeCages = AP_GetCages();
 		if (fakeCages % 10 == 9) {
 			fakeCages -= 1;
 		}
@@ -1798,16 +1808,16 @@ void MOD_CheckVariables() {
 		AI_fn_bSetDsgVar(pGlobal, 46, &cages);
 
 		// Set the silver lum states based on the amount of upgrades
-		if (MOD_FragmentedUpgrades) {
+		if (AP_HasFragmentedSilverLums()) {
 			// Determine the level id in the upgrades value to check based on the id!
 			int levelId = MOD_GetUpgradeLevelId(szLevelName);
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, levelId == 0 || (MOD_Upgrades & levelId) > 0);
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, (MOD_Upgrades & 2097152) > 0);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, levelId == 0 || (AP_GetUpgrades() & levelId) > 0);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, (AP_GetUpgrades() & 2097152) > 0);
 		} else {
-			if (MOD_Upgrades == 0) {
+			if (AP_GetUpgrades() == 0) {
 				AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, FALSE);
 				AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, FALSE);
-			} else if (MOD_Upgrades == 1) {
+			} else if (AP_GetUpgrades() == 1) {
 				AI_fn_vSetBooleanInArray(pGlobal, 42, 1095, TRUE);
 				AI_fn_vSetBooleanInArray(pGlobal, 42, 1143, FALSE);
 			} else {
@@ -1819,7 +1829,7 @@ void MOD_CheckVariables() {
 		// Give lava hover ability
 		if (pRayman) {
 			ACP_tdxBool lavaHover = FALSE;
-			if (MOD_LavaHover) {
+			if (AP_HasLavaHover()) {
 				// In Revo the lava hover works on all lava but only when above lava,
 				// on PC lava hover just always works so you could fly away in any map
 				// that isn't made to have roofs, so we only let you have this in helic.
@@ -1832,13 +1842,21 @@ void MOD_CheckVariables() {
 		}
 
 		// Set whether you have knowledge of the cave of bad dreams always
-		AI_fn_vSetBooleanInArray(pGlobal, 42, 1101, MOD_Knowledge);
+		AI_fn_vSetBooleanInArray(pGlobal, 42, 1101, AP_HasKnowledge());
 
 		// Show the final portal if and only if you have enough masks!
-		bool inMapMondeLoaded = compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && MOD_LastHoveredLevel != -1;
+		BOOL inMapMondeLoaded = compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && MOD_LastHoveredLevel != -1;
 		ACP_tdxBool reloadMapMonde = FALSE;
-		bool finished = MOD_FinishedWinCondition();
-		bool completedPirateShip = AI_fn_bGetBooleanInArray(pGlobal, 42, COMPLETED_PIRATE_SHIP);
+		BOOL finished = MOD_FinishedWinCondition();
+
+		// Determine if the portal is unlocked!
+		BOOL completedPirateShip;
+		if (AP_HasUnlockLevels()) {
+			completedPirateShip = AP_HasUnlockedLevel(COMPLETED_PIRATE_SHIP);
+		} else {
+			completedPirateShip = AI_fn_bGetBooleanInArray(pGlobal, 42, COMPLETED_PIRATE_SHIP);
+		}
+
 		if (inMapMondeLoaded && !AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && finished && completedPirateShip) {
 			// Open up the portal!
 			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, TRUE);
@@ -1858,19 +1876,22 @@ void MOD_CheckVariables() {
 
 		// While in the menhir hills we sync the elixir state! 
 		if (MOD_InMenhirHills) {
-			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, MOD_Elixir);
+			AI_fn_vSetBooleanInArray(pGlobal, 42, 1123, AP_HasElixir());
 		}
 
 		// In accessible portals mode we show all portals for which we have enough lums!
-		if (inMapMondeLoaded && (MOD_AccessiblePortals || MOD_UnlockLevels)) {
+		BOOL unlockLevels = AP_HasUnlockLevels();
+		BOOL showBatchMessages = AP_HasAccessiblePortals() && !unlockLevels;
+		int lums = MOD_GetLums();
+		if (inMapMondeLoaded && (AP_HasAccessiblePortals() || unlockLevels)) {
 			{
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
-					if (!hasUnlocked(NO_LUM_GATE_LEVELS[i])) continue;
+					if (!AP_HasUnlockedLevel(NO_LUM_GATE_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
-						if (MOD_UnlockLevels) {
+						if (unlockLevels) {
 							if (i == 0) {
 								MOD_ShowScreenText(3, "Fairy Glade Portal unlocked!");
 							} else if (i == 1) {
@@ -1885,21 +1906,21 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "First level set unlocked!");
+					if (showBatchMessages) MOD_ShowScreenText(3, "First level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
 
 			// Don't open the gate after Canopy while in the Canopy as it makes
 			// Globox upset and leave.
-			if (MOD_Lums >= MOD_LumGates[0] && !MOD_InCanopy) {
+			if (lums >= AP_GetLumGate(0) && !MOD_InCanopy) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
-					if (!hasUnlocked(LUM_GATE_ONE_LEVELS[i])) continue;
+					if (!AP_HasUnlockedLevel(LUM_GATE_ONE_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i], TRUE);
-						if (MOD_UnlockLevels) {
+						if (unlockLevels) {
 							if (i == 0) {
 								MOD_ShowScreenText(3, "Menhir Hills Portal unlocked!");
 							} else if (i == 1) {
@@ -1914,21 +1935,21 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "Second level set unlocked!");
+					if (showBatchMessages) MOD_ShowScreenText(3, "Second level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
 
 			// Don't open the gate after Top of the World while in Top of the World
 			// as it breaks the teensie.
-			if (MOD_Lums >= MOD_LumGates[1] && !MOD_InTopOfTheWorld) {
+			if (lums >= AP_GetLumGate(1) && !MOD_InTopOfTheWorld) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 5; i++) {
-					if (!hasUnlocked(LUM_GATE_TWO_LEVELS[i])) continue;
+					if (!AP_HasUnlockedLevel(LUM_GATE_TWO_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i], TRUE);
-						if (MOD_UnlockLevels) {
+						if (unlockLevels) {
 							if (i == 0) {
 								MOD_ShowScreenText(3, "Echoing Caves Portal unlocked!");
 							} else if (i == 1) {
@@ -1945,19 +1966,19 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "Third level set unlocked!");
+					if (showBatchMessages) MOD_ShowScreenText(3, "Third level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
 
-			if (MOD_Lums >= MOD_LumGates[2]) {
+			if (lums >= AP_GetLumGate(2)) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 2; i++) {
-					if (!hasUnlocked(LUM_GATE_THREE_LEVELS[i])) continue;
+					if (!AP_HasUnlockedLevel(LUM_GATE_THREE_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i], TRUE);
-						if (MOD_UnlockLevels) {
+						if (unlockLevels) {
 							if (i == 0) {
 								MOD_ShowScreenText(3, "Tomb of the Ancients Portal unlocked!");
 							} else if (i == 1) {
@@ -1968,26 +1989,26 @@ void MOD_CheckVariables() {
 					}
 				}
 				if (changed) {
-					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "Fourth level set unlocked!");
+					if (showBatchMessages) MOD_ShowScreenText(3, "Fourth level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
 
-			if (MOD_Lums >= MOD_LumGates[3]) {
+			if (lums >= AP_GetLumGate(3)) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 1; i++) {
-					if (!hasUnlocked(LUM_GATE_FOUR_LEVELS[i])) continue;
+					if (!AP_HasUnlockedLevel(LUM_GATE_FOUR_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
-						if (MOD_UnlockLevels) {
+						if (unlockLevels) {
 							MOD_ShowScreenText(3, "Prison Ship Portal unlocked!");
 						}
 						changed = TRUE;
 					}
 				}
 				if (changed) {
-					if (MOD_AccessiblePortals) MOD_ShowScreenText(3, "Last level set unlocked!");
+					if (showBatchMessages) MOD_ShowScreenText(3, "Last level set unlocked!");
 					reloadMapMonde = TRUE;
 				}
 			}
@@ -2014,10 +2035,10 @@ void MOD_CheckVariables() {
 /** Handles user input for scrolling in the menu. */
 LRESULT CALLBACK MOD_WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	if (uMsg == WM_KEYDOWN && (wParam == 'K' || wParam == 'J')) {
-		if (MOD_Connected && MOD_BetterLevelPortals) {
+		if (AP_IsConnected() && AP_HasBetterPortals()) {
 			const char* szLevelName = GAM_fn_p_szGetLevelName();
 			const auto inMapMonde = compareStringCaseInsensitive(szLevelName, "mapmonde") == 0;
-			if (MOD_RoomRandomisation && inMapMonde) {
+			if (inMapMonde) {
 				HIE_tdstSuperObject* pLums = HIE_fn_p_stFindObjectByName("YAM_Lums_I1");
 				HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 				if (pLums && pGlobal) {
@@ -2063,32 +2084,32 @@ LRESULT CALLBACK MOD_WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 /** Ticked by the engine every frame, runs all messages received since last tick. */
 void MOD_EngineTick() {
-	// In dev mode we send console messages whenever checks happen!
-	if (MOD_DevMode) {
-		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-		if (pGlobal) {
-			for (int i = 1; i <= 1400; i++) {
-				unsigned char last = getBitSet(&MOD_DevCollected, i);
-				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
+	// Don't check for updates unless we're in-game!
+	const char* szLevelName = GAM_fn_p_szGetLevelName();
+	if ((MOD_DevMode || AP_IsConnected()) && compareStringCaseInsensitive(szLevelName, "menu") != 0) {
+		// In dev mode we send console messages whenever checks happen!
+		if (MOD_DevMode) {
+			HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
+			if (pGlobal) {
+				for (int i = 1; i <= 1400; i++) {
+					unsigned char last = getBitSet(&MOD_DevCollected, i);
+					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
 
-				// If there's a desync between the local storage and the DSG variables
-				// we collected an item, send it across!
-				if (last != dsg) {
-					setBitSet(&MOD_DevCollected, i, dsg);
+					// If there's a desync between the local storage and the DSG variables
+					// we collected an item, send it across!
+					if (last != dsg) {
+						setBitSet(&MOD_DevCollected, i, dsg);
 
-					// Only if the item is now collected, send a check!
-					if (dsg) {
-						// While testing we show collected items on screen
-						MOD_PrintConsolePlusScreen("Collected %d", i);
+						// Only if the item is now collected, send a check!
+						if (dsg) {
+							// While testing we show collected items on screen
+							MOD_PrintConsolePlusScreen("Collected %d", i);
+						}
 					}
 				}
 			}
 		}
-	}
 
-	// Don't check for updates unless we're in-game!
-	const char* szLevelName = GAM_fn_p_szGetLevelName();
-	if ((MOD_DevMode || MOD_Connected) && compareStringCaseInsensitive(szLevelName, "menu") != 0) {
 		MOD_CheckVariables();
 	}
 	GAM_fn_vEngine();
@@ -2098,107 +2119,6 @@ void MOD_EngineTick() {
 void MOD_Init() {
 	MOD_TriggeredDeathAnimation = FALSE;
 	GAM_fn_vChooseTheGoodInit();
-}
-
-/** Updates the current archipelago settings. */
-void MOD_UpdateSettings(bool connected, bool deathLink, bool damageLink, int endGoal, bool lumsanity, bool roomRandomisation, bool accessiblePortals, int deathLinkAmnesty, bool betterLevelPortals, int lumBundleSize, int* lumGates, const char** levelIds, int* chainLengths, int** chainContents, bool unlockLevels) {
-	MOD_Connected = connected;
-	MOD_DeathLink = deathLink;
-	MOD_DamageLink = damageLink;
-	MOD_EndGoal = endGoal;
-	MOD_Lumsanity = lumsanity;
-	MOD_RoomRandomisation = roomRandomisation;
-	MOD_AccessiblePortals = accessiblePortals;
-	MOD_DeathLinkAmnesty = deathLinkAmnesty;
-	MOD_BetterLevelPortals = betterLevelPortals;
-	MOD_LumBundleSize = lumBundleSize;
-	MOD_UnlockLevels = unlockLevels;
-	for (int i = 0; i < 6; i++) {
-		MOD_LumGates[i] = lumGates[i];
-	}
-	for (int i = 0; i < LEVEL_COUNT; i++) {
-		strncpy(MOD_LevelIds[i], levelIds[i], MAX_LENGTH - 1);
-	}
-	for (int i = 0; i < CHAIN_COUNT; i++) {
-		MOD_LevelChainsLengths[i] = chainLengths[i];
-	}
-	for (int i = 0; i < CHAIN_COUNT; i++) {
-		MOD_LevelChainContents[i] = chainContents[i];
-	}
-	MOD_InitLevelChains = TRUE;
-}
-
-/** Updates the current progression state. */
-void MOD_UpdateState(int lums, int cages, int masks, int upgrades, bool elixir, bool knowledge, bool fragmented, bool hover, bool ledge, bool swim, bool lavaHover, int unlockedLevelCount, int* unlockedLevels) {
-	MOD_Lums = lums;
-	MOD_Cages = cages;
-	MOD_Masks = masks;
-	MOD_Upgrades = upgrades;
-	MOD_Elixir = elixir;
-	MOD_Knowledge = knowledge;
-	MOD_FragmentedUpgrades = fragmented;
-	MOD_Hover = hover;
-	MOD_LedgeGrab = ledge;
-	MOD_Swim = swim;
-	MOD_LavaHover = lavaHover;
-
-	for (int i = 0; i < PORTAL_COUNT; i++) {
-		if (i >= unlockedLevelCount) {
-			MOD_UnlockDsgLevels[i] = -1;
-		} else {
-			MOD_UnlockDsgLevels[i] = unlockedLevels[i];
-		}
-	}
-
-	// If we're not on lumsanity we need to include any non-super lums collected locally!
-	if (!MOD_Lumsanity) {
-		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-		if (pGlobal) {
-			for (int i = 1; i <= 800; i++) {
-				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
-				if (dsg) {
-					// Ignore any super lums!
-					if (isSuperLum(i)) continue;
-					MOD_Lums++;
-				}
-			}
-			for (int i = 1201; i <= 1400; i++) {
-				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
-				if (dsg) {
-					// Ignore any super lums!
-					if (isSuperLum(i)) continue;
-					MOD_Lums++;
-				}
-			}
-		}
-	} else if (MOD_LumBundleSize > 1) {
-		// If we're in lum bundle mode we have to re-determinet he collected lums!
-		// Send an update if it changed.
-		int oldCollected = MOD_CollectedLums;
-		MOD_CollectedLums = 0;
-		HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
-		if (pGlobal) {
-			for (int i = 1; i <= 800; i++) {
-				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
-				if (dsg) {
-					// Ignore any super lums!
-					if (isSuperLum(i)) continue;
-					MOD_CollectedLums++;
-				}
-			}
-			for (int i = 1201; i <= 1400; i++) {
-				ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, i);
-				if (dsg) {
-					// Ignore any super lums!
-					if (isSuperLum(i)) continue;
-					MOD_CollectedLums++;
-				}
-			}
-		}
-		if (oldCollected != MOD_CollectedLums) {
-			AP_UpdateLums(MOD_CollectedLums);
-		}
-	}
 }
 
 /** Tests if a death link can be triggered. */
@@ -2219,6 +2139,9 @@ void MOD_TestDeathLink() {
 
 	// Attempt to kill Rayman.
 	if (MOD_KillRayman()) {
+		// Reset death link counter on death receive!
+		MOD_StoredDeathLinks = 0;
+
 		MOD_IgnoreDeath = TRUE;
 		MOD_PendingDeathLink = FALSE;
 	}
@@ -2379,9 +2302,9 @@ void MOD_ShowScreenText(int type, const char* text, ...) {
 /** Returns whether death link is currently enabled. */
 BOOL MOD_GetDeathLink(BOOL ignoreOverride) {
 	if (ignoreOverride) {
-		return MOD_DeathLink;
+		return AP_HasDeathLink();
 	} else {
-		return MOD_DeathLink && !MOD_DeathLinkOverride;
+		return AP_HasDeathLink() && !MOD_DeathLinkOverride;
 	}
 }
 
@@ -2398,7 +2321,7 @@ void MOD_ToggleDeathLink() {
 /** Crawls through the level chains and appends to the output list. */
 void MOD_CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* length, int depth) {
 	// Determine the level to place here
-	int chainLength = MOD_LevelChainsLengths[chainId];
+	int chainLength = AP_GetChainLength(chainId);
 	if (currentLevel < 0 || currentLevel >= chainLength) return;
 
 	// Extend the length and array with this new level
@@ -2413,8 +2336,8 @@ void MOD_CrawlLevelInfo(int chainId, int currentLevel, LevelInfo** info, int* le
 	level->depth = depth;
 
 	// Determine the level in this spot
-	int levelId = MOD_LevelChainContents[chainId][currentLevel];
-	char* levelName = MOD_LevelIds[levelId];
+	int levelId = AP_GetLevelInChain(chainId, currentLevel);
+	const char* levelName = AP_GetLevelName(levelId);
 
 	// Store the level name on the info
 	level->id = levelId;
@@ -2841,7 +2764,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 		SPTXT_vPrint(screen);
 	}
 
-	if (MOD_Connected) {
+	if (AP_IsConnected()) {
 		// Draw the current Archipelago progression to the bottom in the hall of doors or on the pause screen
 		const char* szLevelName = GAM_fn_p_szGetLevelName();
 		const auto inMapMonde = compareStringCaseInsensitive(szLevelName, "mapmonde") == 0;
@@ -2849,29 +2772,38 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 			pInfo->xSize = 6;
 			pInfo->bRightAlign = TRUE;
 			long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
+			int lineCount = 4;
+			if (AP_HasRandomizeAbilities()) lineCount += 2;
+			if (AP_HasUnlockLevels()) lineCount += 1;
 
 			pInfo->X = 995;
-			pInfo->Y = 990 - 6 * lineHeight;
+			pInfo->Y = 990 - lineCount * lineHeight;
 			SPTXT_vPrintFmtLine("/o200:Archipelago Received");
-			SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_Lums, MOD_Cages);
+			SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_GetLums(), AP_GetCages());
+			int apUpgrades = AP_GetUpgrades();
 			int upgrades = 0;
 			int totalPower = 2;
-			if (MOD_FragmentedUpgrades) {
+			if (AP_HasFragmentedSilverLums()) {
 				int j = 1;
 				for (int i = 0; i < 22; i++) {
-					if ((MOD_Upgrades & j) > 0) {
+					if ((apUpgrades & j) > 0) {
 						upgrades++;
 					}
 					j = j << 1;
 				}
 				totalPower = 22;
 			} else {
-				upgrades = MOD_Upgrades;
+				upgrades = apUpgrades;
 			}
-			SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Power /o0:%d of %d", MOD_Masks, upgrades, totalPower);
-			SPTXT_vPrintFmtLine("/o400:Elixir %s/o400:, Knowledge %s", MOD_Elixir ? "/o0:Yes" : "/o200:No", MOD_Knowledge ? "/o0:Yes" : "/o200:No");
-			SPTXT_vPrintFmtLine("/o400:Hover %s/o400:, Lava Hover %s", MOD_Hover ? "/o0:Yes" : "/o200:No", MOD_LavaHover ? "/o0:Yes" : "/o200:No");
-			SPTXT_vPrintFmtLine("/o400:Ledge Grab %s/o400:, Swim %s", MOD_LedgeGrab ? "/o0:Yes" : "/o200:No", MOD_Swim ? "/o0:Yes" : "/o200:No");
+			SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Power /o0:%d of %d", AP_GetMasks(), upgrades, totalPower);
+			SPTXT_vPrintFmtLine("/o400:Elixir %s/o400:, Knowledge %s", AP_HasElixir() ? "/o0:Yes" : "/o200:No", AP_HasKnowledge() ? "/o0:Yes" : "/o200:No");
+			if (AP_HasRandomizeAbilities()) {
+				SPTXT_vPrintFmtLine("/o400:Hover %s/o400:, Lava Hover %s", AP_HasHover() ? "/o0:Yes" : "/o200:No", AP_HasLavaHover ? "/o0:Yes" : "/o200:No");
+				SPTXT_vPrintFmtLine("/o400:Ledge Grab %s/o400:, Swim %s", AP_HasLedgeGrab() ? "/o0:Yes" : "/o200:No", AP_HasSwim() ? "/o0:Yes" : "/o200:No");
+			}
+			if (AP_HasUnlockLevels()) {
+				SPTXT_vPrintFmtLine("/o400:Portals /o0:%d of %d", AP_GetUnlockedPortals(), PORTAL_COUNT);
+			}
 		}
 
 		// When hovering over a portal in mapmonde we show information on the level chain inside
@@ -2897,7 +2829,8 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 						// Draw information based on the chain
 						int chainId = -1;
 						int portal = 1;
-						int lumGate = -1;
+						int lumGatePresent = -1;
+						int lumGateRequired = -1;
 
 						// Determine which chain this is and what the next level is for checking if this was completed
 						if (*p_stLevelId == 1) {
@@ -2912,54 +2845,67 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 							chainId = CHAIN_BAYOU;
 							portal = 4;
 						} else if (*p_stLevelId == 9) {
-							lumGate = 4;
+							lumGatePresent = 4;
 							chainId = CHAIN_WALK_LIFE;
 							portal = 5;
 						} else if (*p_stLevelId == 10) {
-							lumGate = 0;
+							lumGateRequired = 0;
+							lumGatePresent = 0;
 							chainId = CHAIN_SANC_WATER;
 							portal = 6;
 						} else if (*p_stLevelId == 12) {
+							lumGateRequired = 0;
 							chainId = CHAIN_MENHIR;
 							portal = 7;
 						} else if (*p_stLevelId == 16) {
+							lumGateRequired = 0;
 							chainId = CHAIN_CANOPY;
 							portal = 8;
 						} else if (*p_stLevelId == 19) {
+							lumGateRequired = 0;
 							chainId = CHAIN_WHALE;
 							portal = 9;
 						} else if (*p_stLevelId == 21) {
-							lumGate = 1;
+							lumGateRequired = 1;
+							lumGatePresent = 1;
 							chainId = CHAIN_SANC_STONE;
 							portal = 10;
 						} else if (*p_stLevelId == 15) {
+							lumGateRequired = 1;
 							chainId = CHAIN_ECHOING;
 							portal = 11;
 						} else if (*p_stLevelId == 25) {
+							lumGateRequired = 1;
 							chainId = CHAIN_PRECIPICE;
 							portal = 12;
 						} else if (*p_stLevelId == 28) {
+							lumGateRequired = 1;
 							chainId = CHAIN_TOP;
 							portal = 13;
 						} else if (*p_stLevelId == 32) {
-							lumGate = 5;
+							lumGatePresent = 5;
 							chainId = CHAIN_WALK_POWER;
 							portal = 15;
 						} else if (*p_stLevelId == 30) {
+							lumGateRequired = 1;
 							chainId = CHAIN_SANC_ROCK;
 							portal = 14;
 						} else if (*p_stLevelId == 33) {
-							lumGate = 2;
+							lumGateRequired = 2;
+							lumGatePresent = 2;
 							chainId = CHAIN_BENEATH;
 							portal = 16;
 						} else if (*p_stLevelId == 47) {
+							lumGateRequired = 2;
 							chainId = CHAIN_TOMB;
 							portal = 17;
 						} else if (*p_stLevelId == 40) {
-							lumGate = 3;
+							lumGateRequired = 3;
+							lumGatePresent = 3;
 							chainId = CHAIN_IRON_MOUNT;
 							portal = 18;
 						} else if (*p_stLevelId == 42) {
+							lumGateRequired = 3;
 							chainId = CHAIN_PRISON;
 							portal = 19;
 						} else if (*p_stLevelId == 0) {
@@ -2981,68 +2927,79 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 
 							long lineHeight = SPTXT_fn_lGetCharHeight(pInfo->xSize);
 
-							// Determine the level contents!
-							LevelInfo* levelInfo = NULL;
-							int length = 0;
-							MOD_CrawlLevelInfo(chainId, 0, &levelInfo, &length, 0);
-
-							// Draw the level info in a list, start with a header showing portal number and room count
-							long spacer = lineHeight - 2;
-							pInfo->Y = 320;
-							SPTXT_vPrintFmtLine("/o200:Portal nr. %d", portal + 1);
-							pInfo->X = 22;
-							SPTXT_vPrintFmtLine("/o0:%d rooms", length);
-							if (lumGate >= 0) {
-								SPTXT_vPrintFmtLine("/o0:%d lums required", MOD_LumGates[lumGate]);
+							// If this portal has its lum gate met, show info otherwise require the lums!
+							int lums = MOD_GetLums();
+							int required = 0;
+							if (lumGateRequired > -1) {
+								required = AP_GetLumGate(lumGateRequired);
 							}
-							pInfo->Y = pInfo->Y + spacer;
+							if (lums < required) {
+								SPTXT_vPrintFmtLine("/o200:You need %d lums", required);
+								SPTXT_vPrintFmtLine("/o200:to enter this portal!");
+							} else {
+								// Determine the level contents!
+								LevelInfo* levelInfo = NULL;
+								int length = 0;
+								MOD_CrawlLevelInfo(chainId, 0, &levelInfo, &length, 0);
 
-							for (int i = 0; i < length; i++) {
-								LevelInfo info = levelInfo[i];
-								pInfo->X = 15 + info.depth * 10;
-
-								// If you haven't finished this level, don't show it!
-								int finishDsg = getVisitedDsg(info.id);
-								if (!AI_fn_bGetBooleanInArray(pGlobal, 42, finishDsg)) {
-									// If this is not a sub-level, stop showing further rooms!
-									if (info.depth == 0) {
-										SPTXT_vPrintFmtLine("/o200:Progress this level");
-										SPTXT_vPrintFmtLine("/o200:to reveal more rooms!");
-										pInfo->Y = pInfo->Y + spacer;
-										break;
-									} else {
-										SPTXT_vPrintFmtLine("/o200:Search for another exit!");
-										pInfo->Y = pInfo->Y + spacer;
-										continue;
-									}
-								}
-
-								if (MOD_BetterLevelPortals && i == MOD_LastSubLevelIndex) {
-									SPTXT_vPrintFmtLine("/o200:- /o400:%s", info.name);
-								} else {
-									SPTXT_vPrintFmtLine("/o400:%s", info.name);
-								}
-								pInfo->X = 22 + info.depth * 10;
-								int upgradeId = MOD_GetUpgradeLevelId(info.levelName);
-								if (upgradeId > 0 && MOD_FragmentedUpgrades) {
-									if (info.cagesMax == 0) {
-										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Swings %s", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, ((MOD_Upgrades & upgradeId) > 0) ? "/o0:Yes" : "/o200:No");
-									} else {
-										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Cages %s%d of %d/o400:, Swings %s", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, info.cages >= info.cagesMax ? "/o200:" : "/o0:", info.cages, info.cagesMax, ((MOD_Upgrades & upgradeId) > 0) ? "/o0:Yes" : "/o200:No");
-									}
-								} else {
-									if (info.cagesMax == 0) {
-										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax);
-									} else {
-										SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Cages %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, info.cages >= info.cagesMax ? "/o200:" : "/o0:", info.cages, info.cagesMax);
-									}
+								// Draw the level info in a list, start with a header showing portal number and room count
+								long spacer = lineHeight - 2;
+								pInfo->Y = 320;
+								SPTXT_vPrintFmtLine("/o200:Portal nr. %d", portal + 1);
+								pInfo->X = 22;
+								SPTXT_vPrintFmtLine("/o0:%d rooms", length);
+								if (lumGatePresent >= 0) {
+									SPTXT_vPrintFmtLine("/o0:%d lums required", AP_GetLumGate(lumGatePresent));
 								}
 								pInfo->Y = pInfo->Y + spacer;
-							}
 
-							if (MOD_BetterLevelPortals) {
-								SPTXT_vPrintFmtLine("/o400:Press /o0:K /o400:to scroll to next sub-level");
-								SPTXT_vPrintFmtLine("/o400:Press /o0:J /o400:to scroll to previous sub-level");
+								for (int i = 0; i < length; i++) {
+									LevelInfo info = levelInfo[i];
+									pInfo->X = 15 + info.depth * 10;
+
+									// If you haven't finished this level, don't show it!
+									int finishDsg = getVisitedDsg(info.id);
+									if (!AI_fn_bGetBooleanInArray(pGlobal, 42, finishDsg)) {
+										// If this is not a sub-level, stop showing further rooms!
+										if (info.depth == 0) {
+											SPTXT_vPrintFmtLine("/o200:Progress this level");
+											SPTXT_vPrintFmtLine("/o200:to reveal more rooms!");
+											pInfo->Y = pInfo->Y + spacer;
+											break;
+										} else {
+											SPTXT_vPrintFmtLine("/o200:Search for another exit!");
+											pInfo->Y = pInfo->Y + spacer;
+											continue;
+										}
+									}
+
+									if (AP_HasBetterPortals() && i == MOD_LastSubLevelIndex) {
+										SPTXT_vPrintFmtLine("/o200:- /o400:%s", info.name);
+									} else {
+										SPTXT_vPrintFmtLine("/o400:%s", info.name);
+									}
+									pInfo->X = 22 + info.depth * 10;
+									int upgradeId = MOD_GetUpgradeLevelId(info.levelName);
+									if (upgradeId > 0 && AP_HasFragmentedSilverLums()) {
+										if (info.cagesMax == 0) {
+											SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Swings %s", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, ((AP_GetUpgrades() & upgradeId) > 0) ? "/o0:Yes" : "/o200:No");
+										} else {
+											SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Cages %s%d of %d/o400:, Swings %s", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, info.cages >= info.cagesMax ? "/o200:" : "/o0:", info.cages, info.cagesMax, ((AP_GetUpgrades() & upgradeId) > 0) ? "/o0:Yes" : "/o200:No");
+										}
+									} else {
+										if (info.cagesMax == 0) {
+											SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax);
+										} else {
+											SPTXT_vPrintFmtLine("/o400:Lums %s%d of %d/o400:, Cages %s%d of %d", info.lums >= info.lumsMax ? "/o200:" : "/o0:", info.lums, info.lumsMax, info.cages >= info.cagesMax ? "/o200:" : "/o0:", info.cages, info.cagesMax);
+										}
+									}
+									pInfo->Y = pInfo->Y + spacer;
+								}
+
+								if (AP_HasBetterPortals()) {
+									SPTXT_vPrintFmtLine("/o400:Press /o0:K /o400:to scroll to next sub-level");
+									SPTXT_vPrintFmtLine("/o400:Press /o0:J /o400:to scroll to previous sub-level");
+								}
 							}
 						}
 					}
@@ -3104,46 +3061,22 @@ void MOD_BugReport() {
 		return;
 	}
 
+	// Get level name for report
+	const char* szLevelName = GAM_fn_p_szGetLevelName();
+
 	// Write the contents of the report
 	fprintf(f, "Bug Report\n");
 	fprintf(f, "Version: %s\n", CURRENT_VERSION);
 	fprintf(f, "Timestamp: %s\n", timestamp);
 	fprintf(f, "\n");
 
-	fprintf(f, "Code Variables:\n");
-	const char* szLevelName = GAM_fn_p_szGetLevelName();
+	fprintf(f, "C Variables:\n");
 	fprintf(f, "szLevelName: %s\n", szLevelName);
-	fprintf(f, "MOD_Lums: %d\n", MOD_Lums);
+	fprintf(f, "MOD_Lums: %d\n", MOD_GetLums());
+	fprintf(f, "MOD_CachedLums: %d\n", MOD_CachedLums);
 	fprintf(f, "MOD_CollectedLums: %d\n", MOD_CollectedLums);
-	fprintf(f, "MOD_Cages: %d\n", MOD_Cages);
-	fprintf(f, "MOD_Masks: %d\n", MOD_Masks);
-	fprintf(f, "MOD_Upgrades: %d\n", MOD_Upgrades);
-	fprintf(f, "MOD_FragmentedUpgrades: %d\n", MOD_FragmentedUpgrades);
-	fprintf(f, "MOD_EndGoal: %d\n", MOD_EndGoal);
-	fprintf(f, "MOD_Elixir: %d\n", MOD_Elixir);
-	fprintf(f, "MOD_Knowledge: %d\n", MOD_Knowledge);
-	fprintf(f, "MOD_Hover: %d\n", MOD_Hover);
-	fprintf(f, "MOD_LedgeGrab: %d\n", MOD_LedgeGrab);
-	fprintf(f, "MOD_Swim: %d\n", MOD_Swim);
-	fprintf(f, "MOD_LavaHover: %d\n", MOD_LavaHover);
-	fprintf(f, "MOD_UnlockLevels: %d\n", MOD_UnlockLevels);
-	fprintf(f, "\n");
-	fprintf(f, "MOD_Connected: %d\n", MOD_Connected);
-	fprintf(f, "MOD_DeathLink: %d\n", MOD_DeathLink);
-	fprintf(f, "MOD_DamageLink: %d\n", MOD_DamageLink);
-	fprintf(f, "MOD_Lumsanity: %d\n", MOD_Lumsanity);
-	fprintf(f, "MOD_FinishedWinCondition: %d\n", MOD_FinishedWinCondition());
-	fprintf(f, "MOD_RoomRandomisation: %d\n", MOD_RoomRandomisation);
-	fprintf(f, "MOD_AccessiblePortals: %d\n", MOD_AccessiblePortals);
-	fprintf(f, "MOD_DeathLinkAmnesty: %d\n", MOD_DeathLinkAmnesty);
-	fprintf(f, "MOD_BetterLevelPortals: %d\n", MOD_BetterLevelPortals);
-	fprintf(f, "MOD_LumBundleSize: %d\n", MOD_LumBundleSize);
-	for (int i = 0; i < 6; i++) {
-		fprintf(f, "MOD_LumGates[%d]: %d\n", i, MOD_LumGates[i]);
-	}
-	for (int i = 0; i < PORTAL_COUNT; i++) {
-		fprintf(f, "MOD_UnlockDsgLevels[%d]: %d\n", i, MOD_UnlockDsgLevels[i]);
-	}
+	fprintf(f, "MOD_WasCachingLums: %d\n", MOD_WasCachingLums);
+	fprintf(f, "MOD_WasCachingCollected: %d\n", MOD_WasCachingCollected);
 	fprintf(f, "\n");
 	fprintf(f, "MOD_PendingDeathLink: %d\n", MOD_PendingDeathLink);
 	fprintf(f, "MOD_DeathLinkOverride: %d\n", MOD_DeathLinkOverride);
@@ -3178,25 +3111,9 @@ void MOD_BugReport() {
 	fprintf(f, "MOD_ShowScreenItems: %d\n", MOD_ShowScreenItems);
 	fprintf(f, "MOD_ShowScreenNotifications: %d\n", MOD_ShowScreenNotifications);
 	fprintf(f, "\n");
-
-	if (MOD_InitLevelChains) {
-		fprintf(f, "Level Chains:\n");
-		for (int i = 0; i < CHAIN_COUNT; i++) {
-			fprintf(f, "Chain #%d:\n", i);
-			int chainLength = MOD_LevelChainsLengths[i];
-			for (int j = 0; j < chainLength; j++) {
-				int levelId = MOD_LevelChainContents[i][j];
-				char* levelName = MOD_LevelIds[levelId];
-				fprintf(f, " - %s\n", levelName);
-			}
-		}
-		fprintf(f, "\n");
-		fprintf(f, "Level Ids:\n");
-		for (int i = 0; i < LEVEL_COUNT; i++) {
-			fprintf(f, "Id %d: %s\n", i, MOD_LevelIds[i]);
-		}
-		fprintf(f, "\n");
-	}
+	fprintf(f, "C++ Variables:\n");
+	AP_PrintReport(f);
+	fprintf(f, "\n");
 
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (pGlobal) {

@@ -7,6 +7,9 @@
 #include <thread>
 #include <algorithm>
 
+// Ids of all portals in order of item
+int PORTAL_IDS[PORTAL_COUNT] = { 961, 964, 967, 970, 972, 976, 979, 981, 975, 985, 988, 990, 993, 1007, 1000, 1002, 938 };
+
 // Current Archipelago item state
 int lums = 0;
 int cages = 0;
@@ -19,46 +22,29 @@ bool hover = true;
 bool ledge = true;
 bool swim = true;
 bool lavaHover = true;
-bool unlockLevels = false;
 
 // Current Archipelago settings
 bool deathLink = false;
+int deathLinkAmnesty = 1;
+bool damageLink = false;
+bool unlockLevels = false;
 int endGoal = 1;
 bool lumsanity = false;
 bool roomRandomisation = false;
 bool accessiblePortals = false;
-int deathLinkAmnesty = 1;
 bool betterLevelPortals = false;
+bool randomizeMovement = false;
 int lumBundleSize = 0;
-bool damageLink = false;
 int previousCommunicatedLumBundle = 0;
 int lumGates[6] = { 100, 300, 475, 550, 60, 450 };
-std::unordered_map<std::string, std::vector<std::string>> levelChains;
 std::string lastIp;
 bool connected = false;
 std::chrono::steady_clock::time_point connectStart;
 std::chrono::seconds timeout = std::chrono::seconds(5);
-
-const char* levelIds[LEVEL_COUNT];
-int levelChainLengths[CHAIN_COUNT];
-int* levelChainContents[CHAIN_COUNT];
-
-int unlockedLevelCount = 0;
-int unlockedLevels[PORTAL_COUNT];
-
-int PORTAL_IDS[PORTAL_COUNT] = { 961, 964, 967, 970, 972, 976, 979, 981, 975, 985, 988, 990, 993, 1007, 1000, 1002 };
-
-/** Sends a state update to the game client. */
-void sendStateUpdate(bool force) {
-    if (!force && !AP_IsConnected()) return;
-    MOD_UpdateState(lums, cages, masks, upgrades, elixir, knowledge, fragmented, hover, ledge, swim, lavaHover, unlockedLevelCount, unlockedLevels);
-}
-
-/** Sends the current settings to game client. */
-void sendSettings(bool force) {
-    if (!force && !AP_IsConnected()) return;
-    MOD_UpdateSettings(AP_IsConnected(), deathLink, damageLink, endGoal, lumsanity, roomRandomisation, accessiblePortals, deathLinkAmnesty, betterLevelPortals, lumBundleSize, lumGates, levelIds, levelChainLengths, levelChainContents, unlockLevels);
-}
+std::vector<int> unlockedLevels;
+std::vector<std::string> levelIds;
+std::unordered_map<int, std::vector<int>> levelChains;
+BitSet unlockedChecks;
 
 /** Handles clearing cached item checks. */
 void handleItemClear() {
@@ -73,12 +59,9 @@ void handleItemClear() {
     ledge = true;
     swim = true;
     lavaHover = true;
-    unlockedLevelCount = 0;
-    for (int i = 0; i < PORTAL_COUNT; i++) {
-        unlockedLevels[i] = -1;
-    }
+    unlockedLevels.clear();
+    clearBitSet(&unlockedChecks);
     previousCommunicatedLumBundle = 0;
-    sendStateUpdate(connected);
 }
 
 /** Resets received settings. */
@@ -93,6 +76,8 @@ void handleReset() {
     accessiblePortals = false;
     deathLinkAmnesty = 1;
     betterLevelPortals = false;
+    randomizeMovement = false;
+    unlockLevels = false;
     lumBundleSize = 0;
     lumGates[0] = 100;
     lumGates[1] = 300;
@@ -100,16 +85,8 @@ void handleReset() {
     lumGates[3] = 550;
     lumGates[4] = 60;
     lumGates[5] = 450;
+    levelIds.clear();
     levelChains.clear();
-    for (int i = 0; i < LEVEL_COUNT; i++) {
-        levelIds[i] = "";
-    }
-    for (int i = 0; i < CHAIN_COUNT; i++) {
-        levelChainLengths[i] = 0;
-        levelChainContents[i] = NULL;
-    }
-    unlockLevels = false;
-    sendSettings(wasConnected);
 }
 
 /** Handles an item being checked. */
@@ -301,19 +278,15 @@ void handleItem(int64_t id, bool notify) {
                 type = "Tomb of the Ancients Portal";
             } else if (id == 1651667) {
                 type = "Iron Mountains Portal";
-            } else {
+            } else if (id == 1651668) {
                 type = "Prison Ship Portal";
+            } else {
+                type = "Crow's Nest Portal";
             }
 
             int portalId = PORTAL_IDS[id - 1651653];
-            for (int i = 0; i < PORTAL_COUNT; i++) {
-                // If we already noted this portal, don't do it again!
-                if (unlockedLevels[i] == portalId) break;
-                if (unlockedLevels[i] == -1) {
-                    unlockedLevels[i] = portalId;
-                    unlockedLevelCount++;
-                    break;
-                }
+            if (!AP_HasUnlockedLevel(portalId)) {
+                unlockedLevels.push_back(portalId);
             }
             break;
         } else {
@@ -322,9 +295,6 @@ void handleItem(int64_t id, bool notify) {
             return;
         }
     }
-
-    // Send an update to the client with the new information
-    sendStateUpdate(false);
 
     // If we have to notify the player we send a second message with the information that
     // they received the item externally!
@@ -335,14 +305,25 @@ void handleItem(int64_t id, bool notify) {
 
 /** Handles a location being checked. */
 void handleLocation(int64_t id) {
-    // We currently don't support checking off locations.
+    int dsg = id - 1651615;
+    if (MOD_IsLumLike(dsg)) {
+        setBitSet(&unlockedChecks, dsg, TRUE);
+        if (MOD_IsSuperLum(dsg)) {
+            // If it's a super lum we need to mark off the other 4 DSG vars
+            // but we always use the first as the AP id.
+            setBitSet(&unlockedChecks, dsg + 1, TRUE);
+            setBitSet(&unlockedChecks, dsg + 2, TRUE);
+            setBitSet(&unlockedChecks, dsg + 3, TRUE);
+            setBitSet(&unlockedChecks, dsg + 4, TRUE);
+        }
+    }
 }
 
 /** Handles level chain data being delivered. */
 void handleLevelChains(std::string data) {
     // Parses the level swaps from the archipelago input
+    std::unordered_map<std::string, std::vector<std::string>> raw;
     try {
-        levelChains.clear();
         if (data.length() < 4) return;
         std::string inner = data.substr(1, data.length() - 3);
         std::stringstream stream(inner);
@@ -362,7 +343,7 @@ void handleLevelChains(std::string data) {
             }
 
             auto levelId = level.substr(first ? 1 : 2, first ? level.length() - 2 : level.length() - 3);
-            levelChains[levelId] = levels;
+            raw[levelId] = levels;
             first = false;
         }
     } catch (const std::exception& e) {
@@ -373,28 +354,24 @@ void handleLevelChains(std::string data) {
 
     // Sort the level ids alphabetically so the game can just index from there
     std::vector<std::string> keys;
-    keys.reserve(levelChains.size());
-    for (const auto& pair : levelChains) {
+    keys.reserve(raw.size());
+    for (const auto& pair : raw) {
         keys.push_back(pair.first);
     }
     std::sort(keys.begin(), keys.end());
 
+    // Build the correct level chain map
     int chainId = 0;
     int levelId = 0;
     for (const auto& key : keys) {
-        auto& chain = levelChains[key];
-        int* chainArray = levelChainContents[chainId];
-        int chainLength = 0;
+        std::vector<int> output;
+        auto& chain = raw[key];
         for (const auto& second : chain) {
-            chainLength++;
-            chainArray = (int*) realloc(chainArray, chainLength * sizeof(int));
-
-            levelIds[levelId] = second.c_str();
-            chainArray[chainLength - 1] = levelId;
+            levelIds.push_back(second);
+            output.push_back(levelId);
             levelId++;
         }
-        levelChainContents[chainId] = chainArray;
-        levelChainLengths[chainId] = chainLength;
+        levelChains[chainId] = output;
         chainId++;
     }
 }
@@ -421,52 +398,44 @@ void handleLumGates(std::string data) {
 /** Handles slot information ingestion. */
 void handleDeathLinkEnabled(std::string data) {
     deathLink = std::stoi(data) == 1;
-    sendSettings(false);
 }
 void handleDamageLink(std::string data) {
     damageLink = std::stoi(data) == 1;
-    sendSettings(false);
 }
 void handleUnlockLevels(std::string data) {
     unlockLevels = std::stoi(data) == 1;
-    sendSettings(false);
 }
 void handleAutomaticMovement(std::string data) {
     auto value = std::stoi(data);
+
     if ((value & 1) > 0) hover = false;
     if ((value & 2) > 0) swim = false;
     if ((value & 4) > 0) ledge = false;
     if ((value & 8) > 0) lavaHover = false;
-    sendStateUpdate(false);
+
+    // If the value is 0 nothing is locked so we don't show it as such!
+    randomizeMovement = value > 0;
 }
 void handleFragmentedLums(std::string data) {
     fragmented = std::stoi(data) == 1;
-    sendStateUpdate(false);
 }
 void handleDeathLinkAmnesty(std::string data) {
     deathLinkAmnesty = std::stoi(data) == 1;
-    sendSettings(false);
 }
 void handleBetterLevelPortals(std::string data) {
     betterLevelPortals = std::stoi(data) == 1;
-    sendSettings(false);
 }
 void handleLumBundleSize(std::string data) {
     lumBundleSize = std::stoi(data);
-    sendSettings(false);
 }
 void handleEndGoal(std::string data) {
     endGoal = std::stoi(data);
-    sendSettings(false);
 }
 void handleLumsanity(std::string data) {
     lumsanity = std::stoi(data);
-    sendSettings(false);
-    sendStateUpdate(false);
 }
 void handleAccessiblePortals(std::string data) {
     accessiblePortals = std::stoi(data);
-    sendSettings(false);
 }
 void handleRoomRandomisation(std::string data) {
     roomRandomisation = std::stoi(data);
@@ -476,7 +445,6 @@ void handleRoomRandomisation(std::string data) {
         connected = true;
         MOD_Print("Successfully connected to Archipelago server!");
     }
-    sendSettings(false);
 }
 
 /** Handles an incoming death link from other games. */
@@ -666,17 +634,12 @@ bool AP_StartArchipelagoConnector() {
     // Start a new thread to listen to Archipelago
     auto listener = std::make_shared<APListener>();
     std::thread(&APListener::wait, listener.get()).detach();
-
-    // Immediately send a state update so every variable is initialized on boot
-    sendSettings(true);
-    sendStateUpdate(true);
     return false;
 }
 
 /** Stops the Archipelago connection. */
 void AP_StopArchipelagoConnector() {
     if (AP_IsConnected()) disconnect();
-
     MOD_Print("Shutdown completed");
 }
 
@@ -716,4 +679,179 @@ void APListener::wait() {
     } catch (...) {
         MOD_Print("[waitForAP] Caught an unknown exception!");
     }
+}
+
+/*
+ * Below you will find the boilerplate zone where there's tons of empty obvious
+ * methods to forward fields!
+ */
+
+BOOL AP_HasDeathLink() {
+    return deathLink;
+}
+
+int AP_GetDeathLinkAmnesty() {
+    return deathLinkAmnesty;
+}
+
+BOOL AP_HasDamageLink() {
+    return damageLink;
+}
+
+int AP_GetEndGoal() {
+    return endGoal;
+}
+
+BOOL AP_HasLumsanity() {
+    return lumsanity;
+}
+
+BOOL AP_HasBetterPortals() {
+    return betterLevelPortals;
+}
+
+BOOL AP_HasRandomizeAbilities() {
+    return randomizeMovement;
+}
+
+BOOL AP_HasRoomRandomisation() {
+    return roomRandomisation;
+}
+
+BOOL AP_HasAccessiblePortals() {
+    return accessiblePortals;
+}
+
+BOOL AP_HasFragmentedSilverLums() {
+    return fragmented;
+}
+
+int AP_GetLumBundleSize() {
+    return lumBundleSize;
+}
+
+int AP_GetLumGate(int lumGate) {
+    return lumGates[lumGate];
+}
+
+BOOL AP_HasUnlockLevels() {
+    return unlockLevels;
+}
+
+int AP_GetChainLength(int chainId) {
+    return levelChains[chainId].size();
+}
+
+int AP_GetLevelInChain(int chainId, int index) {
+    return levelChains[chainId][index];
+}
+
+const char* AP_GetLevelName(int id) {
+    return levelIds[id].c_str();
+}
+
+int AP_GetLums() {
+    return lums;
+}
+
+int AP_GetCages() {
+    return cages;
+}
+
+int AP_GetMasks() {
+    return masks;
+}
+
+int AP_GetUpgrades() {
+    return upgrades;
+}
+
+BOOL AP_HasElixir() {
+    return elixir;
+}
+
+BOOL AP_HasKnowledge() {
+    return knowledge;
+}
+
+BOOL AP_HasHover() {
+    return hover;
+}
+
+BOOL AP_HasLedgeGrab() {
+    return ledge;
+}
+
+BOOL AP_HasSwim() {
+    return swim;
+}
+
+BOOL AP_HasLavaHover() {
+    return lavaHover;
+}
+int AP_GetUnlockedPortals() {
+    return unlockedLevels.size();
+}
+
+BOOL AP_HasUnlockedLevel(int portal) {
+    return !unlockLevels || std::find(unlockedLevels.begin(), unlockedLevels.end(), portal) != unlockedLevels.end();
+}
+
+BitSet* AP_GetUnlockedChecks() {
+    return &unlockedChecks;
+}
+
+void AP_PrintReport(FILE* f) {
+    fprintf(f, "lums: %d\n", lums);
+    fprintf(f, "cages: %d\n", cages);
+    fprintf(f, "masks: %d\n", masks);
+    fprintf(f, "upgrades: %d\n", upgrades);
+    fprintf(f, "elixir: %d\n", elixir);
+    fprintf(f, "knowledge: %d\n", knowledge);
+    fprintf(f, "fragmented: %d\n", fragmented);
+    fprintf(f, "hover: %d\n", hover);
+    fprintf(f, "ledge: %d\n", ledge);
+    fprintf(f, "swim: %d\n", swim);
+    fprintf(f, "lavaHover: %d\n", lavaHover);
+    fprintf(f, "\n");
+    fprintf(f, "deathLink: %d\n", deathLink);
+    fprintf(f, "deathLinkAmnesty: %d\n", deathLinkAmnesty);
+    fprintf(f, "damageLink: %d\n", damageLink);
+    fprintf(f, "unlockLevels: %d\n", unlockLevels);
+    fprintf(f, "endGoal: %d\n", endGoal);
+    fprintf(f, "lumsanity: %d\n", lumsanity);
+    fprintf(f, "roomRandomisation: %d\n", roomRandomisation);
+    fprintf(f, "accessiblePortals: %d\n", accessiblePortals);
+    fprintf(f, "betterLevelPortals: %d\n", betterLevelPortals);
+    fprintf(f, "randomizeMovement: %d\n", randomizeMovement);
+    fprintf(f, "lumBundleSize: %d\n", lumBundleSize);
+    fprintf(f, "previousCommunicatedLumBundle: %d\n", previousCommunicatedLumBundle);
+    for (int i = 0; i < 6; i++) {
+        fprintf(f, "lumGates[%d]: %d\n", i, lumGates[i]);
+    }
+    fprintf(f, "connected: %d\n", connected);
+    for (int i = 0; i < unlockedLevels.size(); i++) {
+        fprintf(f, "unlockedLevels[%d]: %d\n", i, unlockedLevels[i]);
+    }
+    fprintf(f, "\n");
+    fprintf(f, "Level Chains:\n");
+    if (!levelChains.empty()) {
+        for (int i = 0; i < CHAIN_COUNT; i++) {
+            fprintf(f, "Chain #%d:\n", i);
+            if (levelChains.find(i) == levelChains.end()) continue;
+            auto chain = levelChains[i];
+            for (int j = 0; j < chain.size(); j++) {
+                int levelId = chain[j];
+                const char* levelName = levelIds[levelId].c_str();
+                fprintf(f, " - %s\n", levelName);
+            }
+        }
+    }
+    fprintf(f, "\n");
+    fprintf(f, "Level Ids:\n");
+    for (int i = 0; i < LEVEL_COUNT; i++) {
+        if (i >= levelIds.size()) continue;
+        fprintf(f, "Id %d: %s\n", i, levelIds[i].c_str());
+    }
+    fprintf(f, "\n");
 }

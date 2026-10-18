@@ -2,8 +2,10 @@
 
 #include "framework.h"
 #include "mod_ext.h"
+#include "ap_ext.h"
 #include "ap.h"
 #include "bitset.h"
+#include "util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +27,10 @@ void MOD_EngineTick();
 void MOD_Init();
 
 void MOD_StartMod();
+
+void MOD_UpdateLumsanityCache();
+void MOD_UpdateLumBundles();
+int MOD_GetLums();
 
 BOOL MOD_InDevMode();
 void MOD_SetDevMode(BOOL state);

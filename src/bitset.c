@@ -1,4 +1,5 @@
 #include "bitset.h"
+#include <stdbool.h>
 
 /** Clears a bitset. */
 void clearBitSet(BitSet* set) {

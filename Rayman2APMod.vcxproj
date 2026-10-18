@@ -106,6 +106,8 @@
     <ClInclude Include="src/framework.h" />
     <ClInclude Include="src/mod.h" />
     <ClInclude Include="src/mod_ext.h" />
+    <ClInclude Include="src/ap_ext.h" />
+    <ClInclude Include="src/util.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="APCpp\Archipelago.cpp" />
@@ -116,6 +118,7 @@
     <ClCompile Include="src/dllmain.c" />
     <ClCompile Include="src/mod.c" />
     <ClCompile Include="src/commands.c" />
+    <ClCompile Include="src/util.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

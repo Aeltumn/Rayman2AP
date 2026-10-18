@@ -11,6 +11,7 @@
 #include <string.h>
 #include <direct.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <ACP_Ray2.h>
 #include <AI/AI_Array.h>
@@ -23,7 +24,7 @@
 #define MAX_LEVEL_NAME_LENGTH 46
 #define MAX_LENGTH 32
 #define CHAIN_COUNT 22
-#define PORTAL_COUNT 16
+#define PORTAL_COUNT 17
 
 #define CHAIN_BAYOU 0
 #define CHAIN_BENEATH 1
@@ -48,4 +49,4 @@
 #define CHAIN_WHALE 20
 #define CHAIN_WOODS 21
 
-#define CURRENT_VERSION "1.3.0"
+#define CURRENT_VERSION "1.4.0"

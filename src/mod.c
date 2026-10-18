@@ -32,6 +32,7 @@ BOOL MOD_IgnoreDeath = FALSE;
 BOOL MOD_AwaitingRespawn = FALSE;
 BOOL MOD_PendingDeathLink = FALSE;
 BOOL MOD_TreasureComplete = FALSE;
+BOOL MOD_ComingFromMapMonde = TRUE;
 BOOL MOD_InLumGate = FALSE;
 int MOD_CurrentHealth = 0;
 int MOD_LastHealth = 0;
@@ -148,6 +149,51 @@ int getIdOfNextPortal(int portal) {
 		id = 1000;
 	} else if (portal == 1000) {
 		id = 1002;
+	}
+	return id;
+}
+
+/** Returns the id of the portal for each chain. */
+int getPortalId(int chainId) {
+	int id = 0;
+	if (chainId == CHAIN_WALK_LIFE) {
+		id = 969;
+	} else if (chainId == CHAIN_WALK_POWER) {
+		id = 992;
+	} else if (chainId == CHAIN_FAIRY_GLADE) {
+		id = 961;
+	} else if (chainId == CHAIN_MARSHES) {
+		id = 964;
+	} else if (chainId == CHAIN_BAYOU) {
+		id = 967;
+	} else if (chainId == CHAIN_SANC_WATER) {
+		id = 970;
+	} else if (chainId == CHAIN_MENHIR) {
+		id = 972;
+	} else if (chainId == CHAIN_CANOPY) {
+		id = 976;
+	} else if (chainId == CHAIN_WHALE) {
+		id = 979;
+	} else if (chainId == CHAIN_SANC_STONE) {
+		id = 981;
+	} else if (chainId == CHAIN_ECHOING) {
+		id = 975;
+	} else if (chainId == CHAIN_PRECIPICE) {
+		id = 985;
+	} else if (chainId == CHAIN_TOP) {
+		id = 988;
+	} else if (chainId == CHAIN_SANC_ROCK) {
+		id = 990;
+	} else if (chainId == CHAIN_BENEATH) {
+		id = 993;
+	} else if (chainId == CHAIN_TOMB) {
+		id = 1007;
+	} else if (chainId == CHAIN_IRON_MOUNT) {
+		id = 1000;
+	} else if (chainId == CHAIN_PRISON) {
+		id = 1002;
+	} else if (chainId == CHAIN_WOODS) {
+		id = 960;
 	}
 	return id;
 }
@@ -402,6 +448,10 @@ BOOL MOD_SendToCurrentLevel() {
 	// When we exit the lum gate, restore the data again!
 	MOD_ClearLumGateOverrides();
 
+	// Store whether we entered from map monde
+	BOOL fromMapMonde = MOD_ComingFromMapMonde;
+	MOD_ComingFromMapMonde = TRUE;
+
 	// If we're in a level chain, continue it!
 	if (MOD_InLevelChain) {
 		// Get the level we are meant to be in and load into it
@@ -416,6 +466,34 @@ BOOL MOD_SendToCurrentLevel() {
 			int levelId = AP_GetLevelInChain(MOD_LevelCurrentChain, MOD_LevelCurrentIndex);
 			const char* levelName = AP_GetLevelName(levelId);
 			if (MOD_DevMode) MOD_Print("Target is level %s", levelName);
+
+			if (MOD_LevelCurrentIndex == 0) {
+				// Check if we're allowed to be here! We have to check both the lum gate and the portal unlock!
+				int portal = getPortalId(MOD_LevelCurrentChain);
+				int lumGateRequired = -1;
+				int chainId = MOD_LevelCurrentChain;
+				if (chainId == CHAIN_SANC_WATER || chainId == CHAIN_MENHIR || chainId == CHAIN_CANOPY || chainId == CHAIN_WHALE) {
+					lumGateRequired = 0;
+				} else if (chainId == CHAIN_SANC_STONE || chainId == CHAIN_ECHOING || chainId == CHAIN_PRECIPICE || chainId == CHAIN_TOP || chainId == CHAIN_SANC_ROCK) {
+					lumGateRequired = 1;
+				} else if (chainId == CHAIN_BENEATH || chainId == CHAIN_TOMB) {
+					lumGateRequired = 2;
+				} else if (chainId == CHAIN_IRON_MOUNT || chainId == CHAIN_PRISON) {
+					lumGateRequired = 3;
+				}
+
+				// Prevent them from entering!
+				if ((portal > 0 && !AP_HasUnlockedLevel(portal)) || lumGateRequired >= 0) {
+					int lums = MOD_GetLums();
+					int required = AP_GetLumGate(lumGateRequired);
+					if (required > lums) {
+						MOD_ShowScreenText(3, "Need %d more lums to enter level!", lums - required);
+						MOD_ForfeitChain();
+						GAM_fn_vAskToChangeLevel("mapmonde", TRUE);
+					}
+				}
+				return;
+			}
 
 			// Learn_32 is the internal ID for the fairy glade revisit!
 			if (compareStringCaseInsensitive(levelName, "Learn_31") == 0) {
@@ -460,6 +538,7 @@ BOOL MOD_SendToCurrentLevel() {
 /** Progress the current level chain to the next step. */
 BOOL MOD_ProgressLevelChain() {
 	MOD_LevelCurrentIndex += 1;
+	MOD_ComingFromMapMonde = FALSE;
 	return MOD_SendToCurrentLevel();
 }
 
@@ -637,6 +716,9 @@ void MOD_ExitChain() {
 	// If we finish a revisit or sub-level we have to place you back where you entered!
 	HIE_tdstSuperObject* pGlobal = HIE_fn_p_stFindObjectByName("global");
 	if (completedChain) {
+		// Mark down that we're not in map monde so we don't do lum gate checks!
+		MOD_ComingFromMapMonde = FALSE;
+
 		GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
 		if (chainId == CHAIN_COBD) {
 			MOD_JumpToLevel("Ski_10");
@@ -760,46 +842,7 @@ void MOD_ExitChain() {
 		}
 	
 		// Make exiting from a level spawn its portal so EEC works properly!
-		int id = 0;
-		if (chainId == CHAIN_WALK_LIFE) {
-			id = 969;
-		} else if (chainId == CHAIN_WALK_POWER) {
-			id = 992;
-		} else if (chainId == CHAIN_FAIRY_GLADE) {
-			id = 961;
-		} else if (chainId == CHAIN_MARSHES) {
-			id = 964;
-		} else if (chainId == CHAIN_BAYOU) {
-			id = 967;
-		} else if (chainId == CHAIN_SANC_WATER) {
-			id = 970;
-		} else if (chainId == CHAIN_MENHIR) {
-			id = 972;
-		} else if (chainId == CHAIN_CANOPY) {
-			id = 976;
-		} else if (chainId == CHAIN_WHALE) {
-			id = 979;
-		} else if (chainId == CHAIN_SANC_STONE) {
-			id = 981;
-		} else if (chainId == CHAIN_ECHOING) {
-			id = 975;
-		} else if (chainId == CHAIN_PRECIPICE) {
-			id = 985;
-		} else if (chainId == CHAIN_TOP) {
-			id = 988;
-		} else if (chainId == CHAIN_SANC_ROCK) {
-			id = 990;
-		} else if (chainId == CHAIN_BENEATH) {
-			id = 993;
-		} else if (chainId == CHAIN_TOMB) {
-			id = 1007;
-		} else if (chainId == CHAIN_IRON_MOUNT) {
-			id = 1000;
-		} else if (chainId == CHAIN_PRISON) {
-			id = 1002;
-		} else if (chainId == CHAIN_WOODS) {
-			id = 960;
-		}
+		int id = getPortalId(chainId);
 		if (id > 0) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, id, TRUE);
 
@@ -849,6 +892,7 @@ void MOD_SetExitPortal() {
 	structure->ucExitIdToQuitPrevLevel = 0;
 }
 
+/** Changes the level to the given [szLevelName]. */
 void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 	// Fetch the base game strucure as we'll have to modify it
 	GAM_tdstEngineStructure* structure = GAM_g_stEngineStructure;
@@ -1881,13 +1925,15 @@ void MOD_CheckVariables() {
 
 		// In accessible portals mode we show all portals for which we have enough lums!
 		BOOL unlockLevels = AP_HasUnlockLevels();
-		BOOL showBatchMessages = AP_HasAccessiblePortals() && !unlockLevels;
+		BOOL accessiblePortals = AP_HasAccessiblePortals();
+		BOOL showBatchMessages = accessiblePortals && !unlockLevels;
+		BOOL showAllLevels = accessiblePortals && unlockLevels;
 		int lums = MOD_GetLums();
-		if (inMapMondeLoaded && (AP_HasAccessiblePortals() || unlockLevels)) {
+		if (inMapMondeLoaded && (accessiblePortals || unlockLevels)) {
 			{
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
-					if (!AP_HasUnlockedLevel(NO_LUM_GATE_LEVELS[i])) continue;
+					if (!showAllLevels && !AP_HasUnlockedLevel(NO_LUM_GATE_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, NO_LUM_GATE_LEVELS[i], TRUE);
@@ -1913,10 +1959,10 @@ void MOD_CheckVariables() {
 
 			// Don't open the gate after Canopy while in the Canopy as it makes
 			// Globox upset and leave.
-			if (lums >= AP_GetLumGate(0) && !MOD_InCanopy) {
+			if ((showAllLevels || lums >= AP_GetLumGate(0)) && !MOD_InCanopy) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
-					if (!AP_HasUnlockedLevel(LUM_GATE_ONE_LEVELS[i])) continue;
+					if (!showAllLevels && !AP_HasUnlockedLevel(LUM_GATE_ONE_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_ONE_LEVELS[i], TRUE);
@@ -1942,10 +1988,10 @@ void MOD_CheckVariables() {
 
 			// Don't open the gate after Top of the World while in Top of the World
 			// as it breaks the teensie.
-			if (lums >= AP_GetLumGate(1) && !MOD_InTopOfTheWorld) {
+			if ((showAllLevels || lums >= AP_GetLumGate(1)) && !MOD_InTopOfTheWorld) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 5; i++) {
-					if (!AP_HasUnlockedLevel(LUM_GATE_TWO_LEVELS[i])) continue;
+					if (!showAllLevels && !AP_HasUnlockedLevel(LUM_GATE_TWO_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_TWO_LEVELS[i], TRUE);
@@ -1971,10 +2017,10 @@ void MOD_CheckVariables() {
 				}
 			}
 
-			if (lums >= AP_GetLumGate(2)) {
+			if (showAllLevels || lums >= AP_GetLumGate(2)) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 2; i++) {
-					if (!AP_HasUnlockedLevel(LUM_GATE_THREE_LEVELS[i])) continue;
+					if (!showAllLevels && !AP_HasUnlockedLevel(LUM_GATE_THREE_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_THREE_LEVELS[i], TRUE);
@@ -1994,10 +2040,10 @@ void MOD_CheckVariables() {
 				}
 			}
 
-			if (lums >= AP_GetLumGate(3)) {
+			if (showAllLevels || lums >= AP_GetLumGate(3)) {
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 1; i++) {
-					if (!AP_HasUnlockedLevel(LUM_GATE_FOUR_LEVELS[i])) continue;
+					if (!showAllLevels && !AP_HasUnlockedLevel(LUM_GATE_FOUR_LEVELS[i])) continue;
 					ACP_tdxBool dsg = AI_fn_bGetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i]);
 					if (!dsg) {
 						AI_fn_vSetBooleanInArray(pGlobal, 42, LUM_GATE_FOUR_LEVELS[i], TRUE);
@@ -2933,7 +2979,11 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 							if (lumGateRequired > -1) {
 								required = AP_GetLumGate(lumGateRequired);
 							}
-							if (lums < required) {
+							int portal = getPortalId(chainId);
+							if (portal > 0 && !AP_HasUnlockedLevel(portal)) {
+								SPTXT_vPrintFmtLine("/o200:You have not unlocked");
+								SPTXT_vPrintFmtLine("/o200:this portal!");
+							} else if (lums < required) {
 								SPTXT_vPrintFmtLine("/o200:You need %d lums", required);
 								SPTXT_vPrintFmtLine("/o200:to enter this portal!");
 							} else {

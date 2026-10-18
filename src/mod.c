@@ -451,6 +451,7 @@ BOOL MOD_SendToCurrentLevel() {
 	// Store whether we entered from map monde
 	BOOL fromMapMonde = MOD_ComingFromMapMonde;
 	MOD_ComingFromMapMonde = TRUE;
+	MOD_LastHoveredLevel = -1;
 
 	// If we're in a level chain, continue it!
 	if (MOD_InLevelChain) {
@@ -1020,6 +1021,11 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
 		return;
 	} else if (compareStringCaseInsensitive(szLevelName, "mapmonde") == 0) {
+		if (actualPreviousLevel == 3 && structure->ucExitIdToQuitPrevLevel == 1) {
+			// If you just did an actual completion of Woods we always give out talking to Globoxes!
+			AP_MarkCollected(1092);
+		}
+
 		if (structure->ucExitIdToQuitPrevLevel == 99) {
 			// We ignore exit 99 as that's what is used when moving to the menu and back.
 			GAM_fn_vAskToChangeLevel(szLevelName, bSaveGame);
@@ -1131,6 +1137,9 @@ void MOD_ChangeLevel(const char* szLevelName, ACP_tdxBool bSaveGame) {
 		} else if (compareStringCaseInsensitive(szLevelName, "glob_10") == 0) {
 			if (MOD_ProgressLevelChain()) return;
 		} else if (compareStringCaseInsensitive(szLevelName, "glob_20") == 0) {
+			// If you just did an actual completion of Canopy #2 we always give out the Silver Lum!
+			AP_MarkCollected(1143);
+
 			if (MOD_ProgressLevelChain()) return;
 		}
 
@@ -1899,8 +1908,9 @@ void MOD_CheckVariables() {
 		// Set whether you have knowledge of the cave of bad dreams always
 		AI_fn_vSetBooleanInArray(pGlobal, 42, 1101, AP_HasKnowledge());
 
-		// Show the final portal if and only if you have enough masks!
-		BOOL inMapMondeLoaded = compareStringCaseInsensitive(szLevelName, "mapmonde") == 0 && MOD_LastHoveredLevel != -1;
+		// Show the final portal if and only if you have enough masks
+		BOOL inMapMonde = compareStringCaseInsensitive(szLevelName, "mapmonde") == 0;
+		BOOL canEditMapMonde = !inMapMonde || MOD_LastHoveredLevel != -1;
 		ACP_tdxBool reloadMapMonde = FALSE;
 		BOOL finished = MOD_FinishedWinCondition();
 
@@ -1912,7 +1922,7 @@ void MOD_CheckVariables() {
 			completedPirateShip = AI_fn_bGetBooleanInArray(pGlobal, 42, COMPLETED_PIRATE_SHIP);
 		}
 
-		if (inMapMondeLoaded && !AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && finished && completedPirateShip) {
+		if (canEditMapMonde && !AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && finished && completedPirateShip) {
 			// Open up the portal!
 			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, TRUE);
 
@@ -1924,7 +1934,7 @@ void MOD_CheckVariables() {
 		}
 
 		// Remove final portal if it somehow spawned!
-		if (inMapMondeLoaded && AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && (!finished || !completedPirateShip)) {
+		if (canEditMapMonde && AI_fn_bGetBooleanInArray(pGlobal, 42, FINAL_LEVEL) && (!finished || !completedPirateShip)) {
 			AI_fn_vSetBooleanInArray(pGlobal, 42, FINAL_LEVEL, FALSE);
 			reloadMapMonde = TRUE;
 		}
@@ -1941,7 +1951,7 @@ void MOD_CheckVariables() {
 		BOOL showBatchMessages = accessiblePortals && !unlockLevels;
 		BOOL showAllLevels = accessiblePortals && unlockLevels;
 		int lums = MOD_GetLums();
-		if (inMapMondeLoaded && (accessiblePortals || unlockLevels)) {
+		if (canEditMapMonde && (accessiblePortals || unlockLevels)) {
 			{
 				ACP_tdxBool changed = FALSE;
 				for (int i = 0; i < 4; i++) {
@@ -2073,7 +2083,7 @@ void MOD_CheckVariables() {
 		}
 	
 		// Reload mapmonde if we have to!
-		if (inMapMondeLoaded && reloadMapMonde) {
+		if (inMapMonde && reloadMapMonde) {
 			// Update the current exit first!
 			structure->ucExitIdToQuitPrevLevel = 0;
 			int lastLevelId = getLevelChainEntryId(MOD_LastHoveredLevel);
@@ -2835,9 +2845,13 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 			if (AP_HasUnlockLevels()) lineCount += 1;
 
 			pInfo->X = 995;
-			pInfo->Y = 990 - lineCount * lineHeight;
+			if (inMapMonde) {
+				pInfo->Y = 320;
+			} else {
+				pInfo->Y = 990 - lineCount * lineHeight;
+			}
 			SPTXT_vPrintFmtLine("/o200:Archipelago Received");
-			SPTXT_vPrintFmtLine("/o400:Lums /o0:%d of 1000/o400:, Cages /o0:%d of 80", MOD_GetLums(), AP_GetCages());
+			SPTXT_vPrintFmtLine("/o400:Lums /o0:%d;1000/o400:  Cages /o0:%d;80", MOD_GetLums(), AP_GetCages());
 			int apUpgrades = AP_GetUpgrades();
 			int upgrades = 0;
 			int totalPower = 2;
@@ -2853,14 +2867,16 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 			} else {
 				upgrades = apUpgrades;
 			}
-			SPTXT_vPrintFmtLine("/o400:Masks /o0:%d of 4/o400:, Power /o0:%d of %d", AP_GetMasks(), upgrades, totalPower);
-			SPTXT_vPrintFmtLine("/o400:Elixir %s/o400:, Knowledge %s", AP_HasElixir() ? "/o0:Yes" : "/o200:No", AP_HasKnowledge() ? "/o0:Yes" : "/o200:No");
+			SPTXT_vPrintFmtLine("/o400:Masks /o0:%d;4/o400:  Power /o0:%d;%d", AP_GetMasks(), upgrades, totalPower);
+			SPTXT_vPrintFmtLine("/o400:Elixir %s/o400:  Knowledge %s", AP_HasElixir() ? "/o0:Yes" : "/o200:No", AP_HasKnowledge() ? "/o0:Yes" : "/o200:No");
 			if (AP_HasRandomizeAbilities()) {
-				SPTXT_vPrintFmtLine("/o400:Hover %s/o400:, Lava Hover %s", AP_HasHover() ? "/o0:Yes" : "/o200:No", AP_HasLavaHover() ? "/o0:Yes" : "/o200:No");
-				SPTXT_vPrintFmtLine("/o400:Ledge Grab %s/o400:, Swim %s", AP_HasLedgeGrab() ? "/o0:Yes" : "/o200:No", AP_HasSwim() ? "/o0:Yes" : "/o200:No");
+				SPTXT_vPrintFmtLine("/o400:Hover %s/o400:  Lava Hover %s", AP_HasHover() ? "/o0:Yes" : "/o200:No", AP_HasLavaHover() ? "/o0:Yes" : "/o200:No");
+				SPTXT_vPrintFmtLine("/o400:Ledge Grab %s/o400:  Swim %s", AP_HasLedgeGrab() ? "/o0:Yes" : "/o200:No", AP_HasSwim() ? "/o0:Yes" : "/o200:No");
 			}
 			if (AP_HasUnlockLevels()) {
-				SPTXT_vPrintFmtLine("/o400:Portals /o0:%d of %d", AP_GetUnlockedPortals(), PORTAL_COUNT);
+				SPTXT_vPrintFmtLine("/o400:Portals /o0:%d;%d", AP_GetUnlockedPortals(), PORTAL_COUNT);
+
+				// We can print the portal ids but it's too much stuff to put on screen and it looks bad.
 			}
 		}
 
@@ -2940,14 +2956,14 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 							lumGateRequired = 1;
 							chainId = CHAIN_TOP;
 							portal = 13;
-						} else if (*p_stLevelId == 32) {
-							lumGatePresent = 5;
-							chainId = CHAIN_WALK_POWER;
-							portal = 15;
 						} else if (*p_stLevelId == 30) {
 							lumGateRequired = 1;
 							chainId = CHAIN_SANC_ROCK;
 							portal = 14;
+						} else if (*p_stLevelId == 32) {
+							lumGatePresent = 5;
+							chainId = CHAIN_WALK_POWER;
+							portal = 15;
 						} else if (*p_stLevelId == 33) {
 							lumGateRequired = 2;
 							lumGatePresent = 2;
@@ -2979,7 +2995,7 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 							}
 							MOD_LastHoveredLevel = chainId;
 
-							pInfo->xSize = 7;
+							pInfo->xSize = 6;
 							pInfo->bRightAlign = FALSE;
 							pInfo->X = 15;
 							pInfo->Y = 320;
@@ -3059,8 +3075,8 @@ void CALLBACK MOD_vTextCallback(SPTXT_tdstTextInfo* pInfo) {
 								}
 
 								if (AP_HasBetterPortals()) {
-									SPTXT_vPrintFmtLine("/o400:Press /o0:K /o400:to scroll to next sub-level");
-									SPTXT_vPrintFmtLine("/o400:Press /o0:J /o400:to scroll to previous sub-level");
+									SPTXT_vPrintFmtLine("/o400:Press /o0:K;J /o400:to scroll");
+									SPTXT_vPrintFmtLine("/o400:between sub-levels");
 								}
 							}
 						}

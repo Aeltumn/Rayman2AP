@@ -789,6 +789,7 @@ BOOL AP_HasSwim() {
 BOOL AP_HasLavaHover() {
     return lavaHover;
 }
+
 int AP_GetUnlockedPortals() {
     return unlockedLevels.size();
 }

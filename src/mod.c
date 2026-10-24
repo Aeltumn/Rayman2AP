@@ -1565,7 +1565,7 @@ void MOD_CheckVariables() {
 			AI_fn_bSetDsgVar(pRayman, 92, &cantHover);
 
 			// Ensure you can't hover!
-			BOOL* currentlyHoverOnIce;
+			bool* currentlyHoverOnIce;
 			AI_fn_bGetDsgVar(pRayman, 100, NULL, &currentlyHoverOnIce);
 			if (*currentlyHoverOnIce == TRUE) {
 				MOD_InHoverOverrideLevel = TRUE;

@@ -489,7 +489,7 @@ BOOL MOD_SendToCurrentLevel() {
 					int lums = MOD_GetLums();
 					int required = AP_GetLumGate(lumGateRequired);
 					if (required > lums) {
-						MOD_ShowScreenText(3, "Need %d more lums to enter level! (%d total)", required - lums, required);
+						MOD_ShowScreenText(3, "Need %d more lums to enter level, %d total", required - lums, required);
 						blockEntry = TRUE;
 					}
 				}
@@ -1445,7 +1445,7 @@ void setLumGateOverride(int lumGateId) {
 
 		// For the walks tell the player what they need!
 		if (missingLums > 0 && lumGateId >= 4) {
-			MOD_ShowScreenText(3, "You need %d more lums to enter! (%d total)", missingLums, lumGateLums);
+			MOD_ShowScreenText(3, "You need %d more lums to enter, %d total", missingLums, lumGateLums);
 		}
 	}
 }

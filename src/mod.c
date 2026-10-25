@@ -1821,6 +1821,11 @@ void MOD_CheckVariables() {
 					// Don't send portal unlocks here, we manually send them on chain completion!
 					if (i >= 960 && i <= 1007) continue;
 
+					// Don't send the custom visited checks.
+					// 801-839 and 920-937
+					if (i >= 801 && i <= 839) continue;
+					if (i >= 920 && i <= 937) continue;
+
 					// Send up the id of the item directly
 					AP_MarkCollected(i);
 				}

@@ -247,7 +247,7 @@ void handleItem(int64_t id, bool notify) {
         upgrades |= 2097152;
         break;
     default:
-        if (id >= 1651653 && id <= 1651668) {
+        if (id >= 1651653 && id <= 1651669) {
             if (id == 1651653) {
                 type = "Fairy Glade Portal";
             } else if (id == 1651654) {

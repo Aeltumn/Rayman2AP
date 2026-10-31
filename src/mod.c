@@ -1445,7 +1445,7 @@ void setLumGateOverride(int lumGateId) {
 
 		// For the walks tell the player what they need!
 		if (missingLums > 0 && lumGateId >= 4) {
-			MOD_ShowScreenText(3, "You need %d more lums to enter, %d total", missingLums, lumGateLums);
+			MOD_ShowScreenText(3, "Need %d more lums for Ly, %d total", missingLums, lumGateLums);
 		}
 	}
 }
